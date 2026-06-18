@@ -1,18 +1,18 @@
 # 3D Virtual Store Implementation Roadmap
 
 <!-- 
-Foundation - Next.js route + deps
-Scene - Canvas + HDRI lighting
-Multi-Model Loader - Array of GLBs (first = collision wireframe)
-Physics - Octree + Capsule collision
-Collision Response - Wall sliding + gravity
-Joystick - Virtual joystick + WASD
-POV Camera - Mouse/touch tracking
-PCSS Shadows - Contact-hardening soft shadows
-Reflective Floor - MeshReflectorMaterial
-Post-Processing - N8AO, bloom, vignette
-Performance - Octree optimization + LOD
-Polish - Loading screens + error boundaries -->
+1.Foundation - Next.js route + deps
+ 2.Scene - Canvas + HDRI lighting
+ 3.Multi-Model Loader - Array of GLBs (first = collision wireframe)
+ 4.Physics - Octree + Capsule collision
+ 5.Collision Response - Wall sliding + gravity
+ 6.Joystick - Virtual joystick + WASD
+ 7.POV Camera - Mouse/touch tracking
+ 8.PCSS Shadows - Contact-hardening soft shadows
+ 9.Reflective Floor - MeshReflectorMaterial
+ 10.Post-Processing - N8AO, bloom, vignette
+ 11.Performance - Octree optimization + LOD
+ 12.Polish - Loading screens + error boundaries -->
 
 
 ## Project Overview

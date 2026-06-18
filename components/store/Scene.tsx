@@ -5,6 +5,8 @@ import * as THREE from 'three'
 import { Suspense } from 'react'
 import { useStoreConfig } from './hooks/useStoreConfig'
 import { ModelLoader } from './ModelLoader'
+import { usePhysics } from './PhysicsSystem'
+import { usePlayerPhysics } from './PlayerController'
 
 function LoadingScreen() {
   return (
@@ -26,6 +28,12 @@ function ErrorScreen({ message }: { message: string }) {
       </div>
     </div>
   )
+}
+
+function PhysicsManager() {
+  const physics = usePhysics()
+  usePlayerPhysics(physics)
+  return null
 }
 
 export default function Scene() {
@@ -81,6 +89,9 @@ export default function Scene() {
       <Suspense fallback={null}>
         <ModelLoader files={config.files} />
       </Suspense>
+
+      {/* Physics system (Octree + Capsule + Gravity) */}
+      <PhysicsManager />
 
       {/* Temporary ground */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>

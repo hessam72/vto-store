@@ -1,0 +1,42 @@
+'use client'
+import { useFrame } from '@react-three/fiber'
+import { useRef } from 'react'
+import * as THREE from 'three'
+import type { usePhysics } from './PhysicsSystem'
+
+const GRAVITY = 30 // units/second²
+
+export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
+  const damping = useRef(0)
+
+  useFrame((state, delta) => {
+    const { playerVelocity, playerOnFloor, playerCollider } = physics
+
+    // Apply gravity when airborne
+    if (!playerOnFloor.current) {
+      playerVelocity.current.y -= GRAVITY * delta
+    }
+
+    // Apply damping (friction/air resistance)
+    damping.current = Math.exp(-4 * delta) - 1
+    playerVelocity.current.addScaledVector(
+      playerVelocity.current,
+      damping.current
+    )
+
+    // Move capsule by velocity
+    const deltaPosition = playerVelocity.current.clone().multiplyScalar(delta)
+    playerCollider.current.translate(deltaPosition)
+
+    // Update camera position to follow capsule
+    state.camera.position.copy(playerCollider.current.end)
+
+    // Safety: teleport if fallen through floor
+    if (state.camera.position.y < -5) {
+      playerCollider.current.start.set(0, 0.35, 0)
+      playerCollider.current.end.set(0, 1.45, 0)
+      state.camera.position.copy(playerCollider.current.end)
+      playerVelocity.current.set(0, 0, 0)
+    }
+  })
+}
