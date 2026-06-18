@@ -27,10 +27,12 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
   }, [])
 
   const setJoystickInput = useCallback((x: number, y: number) => {
+    console.log('setJoystickInput:', { x, y })
     joystickInput.current = { x, y }
   }, [])
 
   const updateMovement = (delta: number) => {
+    // console.log('Updating movement with delta:', delta)
     const speed = 5 // units/second
     const keys = keysPressed.current
 
@@ -75,11 +77,13 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
       size: 120,
     })
 
-    manager.on('move', (evt, data) => {
-      const angle = data.angle.radian
-      const force = Math.min(data.force, 2) / 2
+    manager.on('move', (evt) => {
+      if (!evt.data?.angle) return
+      const angle = evt.data.angle.radian
+      const force = Math.min(evt.data.force, 2) / 2
       const x = Math.cos(angle) * force
       const y = Math.sin(angle) * force
+      console.log('Calling onMove:', { x, y })
       onMove(x, y)
     })
 
