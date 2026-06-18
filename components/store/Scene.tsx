@@ -48,6 +48,13 @@ function PhysicsManager({ onSetJoystickInput }: { onSetJoystickInput: (callback:
 export default function Scene() {
   const { config, loading, error } = useStoreConfig()
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
+  const [showClickHint, setShowClickHint] = useState(true)
+
+  useEffect(() => {
+    const hideHint = () => setShowClickHint(false)
+    document.addEventListener('pointerlockchange', hideHint)
+    return () => document.removeEventListener('pointerlockchange', hideHint)
+  }, [])
 
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
@@ -113,6 +120,15 @@ export default function Scene() {
 
       {/* Virtual joystick for mobile */}
       {joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
+
+      {/* Click to look around hint */}
+      {showClickHint && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
+            Click to look around • WASD to move • ESC to exit
+          </div>
+        </div>
+      )}
     </>
   )
 }

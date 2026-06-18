@@ -12,8 +12,12 @@ export function usePOVCamera() {
   useEffect(() => {
     const canvas = gl.domElement
 
-    const onPointerDown = () => {
-      canvas.requestPointerLock()
+    const onClick = () => {
+      if (document.pointerLockElement !== canvas) {
+        canvas.requestPointerLock().catch((err) => {
+          console.warn('Pointer lock failed:', err)
+        })
+      }
     }
 
     const onPointerLockChange = () => {
@@ -31,12 +35,12 @@ export function usePOVCamera() {
       pitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch.current))
     }
 
-    canvas.addEventListener('pointerdown', onPointerDown)
+    canvas.addEventListener('click', onClick)
     document.addEventListener('pointerlockchange', onPointerLockChange)
     canvas.addEventListener('pointermove', onPointerMove)
 
     return () => {
-      canvas.removeEventListener('pointerdown', onPointerDown)
+      canvas.removeEventListener('click', onClick)
       document.removeEventListener('pointerlockchange', onPointerLockChange)
       canvas.removeEventListener('pointermove', onPointerMove)
     }
