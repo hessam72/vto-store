@@ -7,6 +7,7 @@ const StoreScene = dynamic(() => import('@/components/store/Scene'), {
 
 export default function StorePage() {
   return (
+    
     <div className="h-screen w-screen overflow-hidden">
       <StoreScene />
     </div>

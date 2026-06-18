@@ -1,6 +1,6 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
-import { Environment, OrbitControls } from '@react-three/drei'
+import { Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { Suspense } from 'react'
 import { useStoreConfig } from './hooks/useStoreConfig'
@@ -8,6 +8,7 @@ import { ModelLoader } from './ModelLoader'
 import { usePhysics } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
 import { VirtualJoystick } from './Joystick'
+import { usePOVCamera } from './POVCamera'
 import { useState, useEffect } from 'react'
 
 function LoadingScreen() {
@@ -35,6 +36,7 @@ function ErrorScreen({ message }: { message: string }) {
 function PhysicsManager({ onSetJoystickInput }: { onSetJoystickInput: (callback: (x: number, y: number) => void) => void }) {
   const physics = usePhysics()
   const { setJoystickInput } = usePlayerController(physics)
+  usePOVCamera()
 
   useEffect(() => {
     onSetJoystickInput(setJoystickInput)
@@ -107,8 +109,6 @@ export default function Scene() {
         <planeGeometry args={[50, 50]} />
         <meshStandardMaterial color="#222" />
       </mesh>
-
-      <OrbitControls target={[0, 1, 0]} />
       </Canvas>
 
       {/* Virtual joystick for mobile */}
