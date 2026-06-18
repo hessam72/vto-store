@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
 import type { usePhysics } from './PhysicsSystem'
+import { useJoystickControls } from './Joystick'
 
 const GRAVITY = 30 // units/second²
 
@@ -39,4 +40,17 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
       playerVelocity.current.set(0, 0, 0)
     }
   })
+}
+
+export function usePlayerController(physics: ReturnType<typeof usePhysics>) {
+  const { updateMovement, setJoystickInput } = useJoystickControls(physics.playerVelocity)
+
+  usePlayerPhysics(physics)
+
+  useFrame((state, delta) => {
+    // Apply WASD/joystick input
+    updateMovement(delta)
+  })
+
+  return { setJoystickInput }
 }

@@ -6,7 +6,9 @@ import { Suspense } from 'react'
 import { useStoreConfig } from './hooks/useStoreConfig'
 import { ModelLoader } from './ModelLoader'
 import { usePhysics } from './PhysicsSystem'
-import { usePlayerPhysics } from './PlayerController'
+import { usePlayerController } from './PlayerController'
+import { VirtualJoystick } from './Joystick'
+import { useState, useEffect } from 'react'
 
 function LoadingScreen() {
   return (
@@ -30,30 +32,37 @@ function ErrorScreen({ message }: { message: string }) {
   )
 }
 
-function PhysicsManager() {
+function PhysicsManager({ onSetJoystickInput }: { onSetJoystickInput: (callback: (x: number, y: number) => void) => void }) {
   const physics = usePhysics()
-  usePlayerPhysics(physics)
+  const { setJoystickInput } = usePlayerController(physics)
+
+  useEffect(() => {
+    onSetJoystickInput(setJoystickInput)
+  }, [setJoystickInput, onSetJoystickInput])
+
   return null
 }
 
 export default function Scene() {
   const { config, loading, error } = useStoreConfig()
+  const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
 
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
   if (!config) return <ErrorScreen message="No store config found" />
 
   return (
-    <Canvas
-      shadows
-      dpr={[1, 2]}
-      gl={{
-        antialias: true,
-        toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.0,
-      }}
-      camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
-    >
+    <>
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        gl={{
+          antialias: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.0,
+        }}
+        camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
+      >
       {/* Dark background */}
       <color attach="background" args={['#0c0d0f']} />
 
@@ -91,7 +100,7 @@ export default function Scene() {
       </Suspense>
 
       {/* Physics system (Octree + Capsule + Gravity) */}
-      <PhysicsManager />
+      <PhysicsManager onSetJoystickInput={setJoystickCallback} />
 
       {/* Temporary ground */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -100,6 +109,10 @@ export default function Scene() {
       </mesh>
 
       <OrbitControls target={[0, 1, 0]} />
-    </Canvas>
+      </Canvas>
+
+      {/* Virtual joystick for mobile */}
+      {joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
+    </>
   )
 }
