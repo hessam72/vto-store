@@ -12,7 +12,7 @@
 public/models
 # testing
 /coverage
-
+3d-scene-shadow-reflections-demo
 # next.js
 /.next/
 /out/
