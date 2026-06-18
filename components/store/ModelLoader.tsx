@@ -32,7 +32,8 @@ export function ModelLoader({ files, onModelsLoaded }: ModelLoaderProps) {
   }, [])
 
   useEffect(() => {
-    if (loadedCount === sortedFiles.length && loadedCount > 0) {
+    console.log(`Loaded ${loadedCount} of ${sortedFiles.length} models`)
+    if (loadedCount >= sortedFiles.length && loadedCount > 0) {
       console.log('All models loaded:', loadedCount)
       onModelsLoaded?.()
     }

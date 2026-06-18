@@ -9,7 +9,7 @@ import { usePhysics } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
 import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 function LoadingScreen() {
   return (
@@ -50,6 +50,11 @@ export default function Scene() {
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
   const [showClickHint, setShowClickHint] = useState(true)
   const [modelsLoaded, setModelsLoaded] = useState(false)
+
+  const handleModelsLoaded = useCallback(() => {
+   
+    setModelsLoaded(true)
+  }, [])
 
   useEffect(() => {
     const hideHint = () => setShowClickHint(false)
@@ -107,7 +112,7 @@ export default function Scene() {
 
       {/* Load models from config */}
       <Suspense fallback={null}>
-        <ModelLoader files={config.files} onModelsLoaded={() => setModelsLoaded(true)} />
+        <ModelLoader files={config.files} onModelsLoaded={handleModelsLoaded} />
       </Suspense>
 
       {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
@@ -124,7 +129,7 @@ export default function Scene() {
       {!modelsLoaded && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
-            Loading 3D models...
+            Loading 3D models... {modelsLoaded}e4
           </div>
         </div>
       )}
