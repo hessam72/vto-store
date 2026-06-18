@@ -39,7 +39,7 @@ function PhysicsManager({ onSetJoystickInput }: { onSetJoystickInput: (callback:
   usePOVCamera()
 
   useEffect(() => {
-    onSetJoystickInput(setJoystickInput)
+    onSetJoystickInput(() => setJoystickInput)
   }, [setJoystickInput, onSetJoystickInput])
 
   return null
