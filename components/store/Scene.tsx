@@ -49,6 +49,7 @@ export default function Scene() {
   const { config, loading, error } = useStoreConfig()
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
   const [showClickHint, setShowClickHint] = useState(true)
+  const [modelsLoaded, setModelsLoaded] = useState(false)
 
   useEffect(() => {
     const hideHint = () => setShowClickHint(false)
@@ -72,8 +73,9 @@ export default function Scene() {
         }}
         camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
       >
+        
       {/* Dark background */}
-      <color attach="background" args={['#0c0d0f']} />
+      <color attach="background" args={['#1a1a1a']} />
 
       {/* HDRI lighting */}
       <Suspense fallback={null}>
@@ -105,11 +107,11 @@ export default function Scene() {
 
       {/* Load models from config */}
       <Suspense fallback={null}>
-        <ModelLoader files={config.files} />
+        <ModelLoader files={config.files} onModelsLoaded={() => setModelsLoaded(true)} />
       </Suspense>
 
-      {/* Physics system (Octree + Capsule + Gravity) */}
-      <PhysicsManager onSetJoystickInput={setJoystickCallback} />
+      {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
+      {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} />}
 
       {/* Temporary ground */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -118,11 +120,20 @@ export default function Scene() {
       </mesh>
       </Canvas>
 
-      {/* Virtual joystick for mobile */}
-      {joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
+      {/* Loading indicator while models load */}
+      {!modelsLoaded && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
+            Loading 3D models...
+          </div>
+        </div>
+      )}
+
+      {/* Virtual joystick for mobile - only after models loaded */}
+      {modelsLoaded && joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
 
       {/* Click to look around hint */}
-      {showClickHint && (
+      {modelsLoaded && showClickHint && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
             Click to look around • WASD to move • ESC to exit

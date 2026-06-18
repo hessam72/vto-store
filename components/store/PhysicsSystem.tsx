@@ -18,11 +18,17 @@ export function usePhysics() {
   const playerVelocity = useRef(new THREE.Vector3())
   const playerOnFloor = useRef(false)
 
-  // Build octree once on mount
+  // Build octree after mount (models should be in scene by now)
   useEffect(() => {
-    console.log('Building collision octree...')
-    worldOctree.current.fromGraphNode(scene)
-    console.log('Octree built from', scene.children.length, 'objects')
+    // Small delay to ensure models are in scene.children
+    const timer = setTimeout(() => {
+      console.log('Building collision octree...')
+      console.log('Scene children before build:', scene.children.length)
+      worldOctree.current.fromGraphNode(scene)
+      console.log('Octree built successfully')
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [scene])
 
   // Collision detection every frame

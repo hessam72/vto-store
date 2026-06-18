@@ -1,6 +1,6 @@
 'use client'
 import { useGLTF } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -16,13 +16,27 @@ const configureDracoLoader = () => {
 
 type ModelLoaderProps = {
   files: ModelFile[]
+  onModelsLoaded?: () => void
 }
 
-export function ModelLoader({ files }: ModelLoaderProps) {
+export function ModelLoader({ files, onModelsLoaded }: ModelLoaderProps) {
+  const [loadedCount, setLoadedCount] = useState(0)
+
   // Sort by priority (0 = wireframe first)
   const sortedFiles = useMemo(() => {
     return [...files].sort((a, b) => a.priority - b.priority)
   }, [files])
+
+  const handleModelLoaded = useCallback(() => {
+    setLoadedCount(prev => prev + 1)
+  }, [])
+
+  useEffect(() => {
+    if (loadedCount === sortedFiles.length && loadedCount > 0) {
+      console.log('All models loaded:', loadedCount)
+      onModelsLoaded?.()
+    }
+  }, [loadedCount, sortedFiles.length, onModelsLoaded])
 
   return (
     <>
@@ -31,23 +45,33 @@ export function ModelLoader({ files }: ModelLoaderProps) {
           key={file.url}
           url={file.url}
           isWireframe={file.priority === 0}
+          onLoaded={handleModelLoaded}
         />
       ))}
     </>
   )
 }
 
+
+
 type ModelProps = {
   url: string
   isWireframe: boolean
+  onLoaded?: () => void
 }
 
-function Model({ url, isWireframe }: ModelProps) {
+function Model({ url, isWireframe, onLoaded }: ModelProps) {
   // Use custom loader with DRACO support
   const gltf = useLoader(GLTFLoader, url, (loader) => {
     const dracoLoader = configureDracoLoader()
     loader.setDRACOLoader(dracoLoader)
   })
+
+  useEffect(() => {
+    if (gltf && onLoaded) {
+      onLoaded()
+    }
+  }, [gltf, onLoaded])
 
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true)
