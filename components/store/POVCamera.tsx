@@ -7,42 +7,51 @@ export function usePOVCamera() {
   const { camera, gl } = useThree()
   const yaw = useRef(0)
   const pitch = useRef(0)
-  const isPointerLocked = useRef(false)
+  const isDragging = useRef(false)
+  const previousMouse = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     const canvas = gl.domElement
 
-    const onClick = () => {
-      if (document.pointerLockElement !== canvas) {
-        canvas.requestPointerLock().catch((err) => {
-          console.warn('Pointer lock failed:', err)
-        })
+    const onPointerDown = (e: PointerEvent) => {
+      isDragging.current = true
+      previousMouse.current = { x: e.clientX, y: e.clientY }
+      canvas.setPointerCapture(e.pointerId)
+    }
+
+    const onPointerUp = (e: PointerEvent) => {
+      isDragging.current = false
+      if (canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId)
       }
     }
 
-    const onPointerLockChange = () => {
-      isPointerLocked.current = document.pointerLockElement === canvas
-    }
-
     const onPointerMove = (e: PointerEvent) => {
-      if (!isPointerLocked.current) return
+      if (!isDragging.current) return
+
+      const deltaX = e.clientX - previousMouse.current.x
+      const deltaY = e.clientY - previousMouse.current.y
 
       const sensitivity = 0.002
-      yaw.current -= e.movementX * sensitivity
-      pitch.current -= e.movementY * sensitivity
+      yaw.current -= deltaX * sensitivity
+      pitch.current -= deltaY * sensitivity
 
       // Clamp pitch to prevent flipping
       pitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch.current))
+
+      previousMouse.current = { x: e.clientX, y: e.clientY }
     }
 
-    canvas.addEventListener('click', onClick)
-    document.addEventListener('pointerlockchange', onPointerLockChange)
+    canvas.addEventListener('pointerdown', onPointerDown)
+    canvas.addEventListener('pointerup', onPointerUp)
     canvas.addEventListener('pointermove', onPointerMove)
+    canvas.addEventListener('pointercancel', onPointerUp)
 
     return () => {
-      canvas.removeEventListener('click', onClick)
-      document.removeEventListener('pointerlockchange', onPointerLockChange)
+      canvas.removeEventListener('pointerdown', onPointerDown)
+      canvas.removeEventListener('pointerup', onPointerUp)
       canvas.removeEventListener('pointermove', onPointerMove)
+      canvas.removeEventListener('pointercancel', onPointerUp)
     }
   }, [gl])
 

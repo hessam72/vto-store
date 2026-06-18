@@ -27,7 +27,6 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
   }, [])
 
   const setJoystickInput = useCallback((x: number, y: number) => {
-    console.log('setJoystickInput:', { x, y })
     joystickInput.current = { x, y }
   }, [])
 
@@ -83,7 +82,6 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
       const force = Math.min(evt.data.force, 2) / 2
       const x = Math.cos(angle) * force
       const y = Math.sin(angle) * force
-      console.log('Calling onMove:', { x, y })
       onMove(x, y)
     })
 

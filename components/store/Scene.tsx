@@ -58,8 +58,8 @@ export default function Scene() {
 
   useEffect(() => {
     const hideHint = () => setShowClickHint(false)
-    document.addEventListener('pointerlockchange', hideHint)
-    return () => document.removeEventListener('pointerlockchange', hideHint)
+    window.addEventListener('mousedown', hideHint, { once: true })
+    return () => window.removeEventListener('mousedown', hideHint)
   }, [])
 
   if (loading) return <LoadingScreen />
@@ -69,6 +69,7 @@ export default function Scene() {
   return (
     <>
       <Canvas
+        style={{ touchAction: 'none' }}
         shadows
         dpr={[1, 2]}
         gl={{
@@ -137,11 +138,11 @@ export default function Scene() {
       {/* Virtual joystick for mobile - only after models loaded */}
       {modelsLoaded && joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
 
-      {/* Click to look around hint */}
+      {/* Drag to look around hint */}
       {modelsLoaded && showClickHint && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
-            Click to look around • WASD to move • ESC to exit
+            Drag to look around • WASD to move
           </div>
         </div>
       )}
