@@ -1,5 +1,20 @@
 # 3D Virtual Store Implementation Roadmap
 
+<!-- 
+Foundation - Next.js route + deps
+Scene - Canvas + HDRI lighting
+Multi-Model Loader - Array of GLBs (first = collision wireframe)
+Physics - Octree + Capsule collision
+Collision Response - Wall sliding + gravity
+Joystick - Virtual joystick + WASD
+POV Camera - Mouse/touch tracking
+PCSS Shadows - Contact-hardening soft shadows
+Reflective Floor - MeshReflectorMaterial
+Post-Processing - N8AO, bloom, vignette
+Performance - Octree optimization + LOD
+Polish - Loading screens + error boundaries -->
+
+
 ## Project Overview
 
 A first-person 3D virtual store built with **Next.js 16 + React 19 + Three.js + React Three Fiber**, featuring:

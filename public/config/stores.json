@@ -1,0 +1,38 @@
+{
+  "stores": [
+    {
+      "id": "mall",
+     
+      "files": [
+        {
+          "priority": 0,
+          "quality": "low",
+          "url": "/store-models/store/compressed_raw-wireframe.glb"
+        },
+      
+        {
+          "priority": 1,
+          "quality": "high",
+          "url": "/store-models/store/HQ/compressed__hq-shop-details.glb"
+        },
+        {
+          "priority": 2,
+          "quality": "high",
+          "url": "/store-models/store/HQ/hq-compressed-clothes.glb"
+        }
+      ]
+    },
+    {
+      "id": "test",
+      
+     "files": [
+        {
+          "priority": 0,
+          "quality": "low",
+          "url": "/store-models/test/no-light.glb"
+        }
+      
+      ]
+    }
+  ]
+}
