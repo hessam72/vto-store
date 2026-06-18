@@ -80,7 +80,7 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_09_1k.hdr"
+          files="/hdr/studio_small_09_1k.hdr"
           background={false}
           environmentIntensity={1.0}
           resolution={256}
