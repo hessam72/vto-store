@@ -1,3 +1,4 @@
+'use client'
 import dynamic from 'next/dynamic'
 
 const StoreScene = dynamic(() => import('@/components/store/Scene'), {
