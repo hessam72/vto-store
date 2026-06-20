@@ -5,8 +5,10 @@ import * as THREE from 'three'
 
 export function usePOVCamera() {
   const { camera, gl } = useThree()
-  const yaw = useRef(0)
-  const pitch = useRef(0)
+  const targetYaw = useRef(0)
+  const targetPitch = useRef(0)
+  const currentYaw = useRef(0)
+  const currentPitch = useRef(0)
   const isDragging = useRef(false)
   const previousMouse = useRef({ x: 0, y: 0 })
 
@@ -33,11 +35,11 @@ export function usePOVCamera() {
       const deltaY = e.clientY - previousMouse.current.y
 
       const sensitivity = 0.002
-      yaw.current += deltaX * sensitivity
-      pitch.current += deltaY * sensitivity
+      targetYaw.current += deltaX * sensitivity
+      targetPitch.current += deltaY * sensitivity
 
       // Clamp pitch to prevent flipping
-      pitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch.current))
+      targetPitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetPitch.current))
 
       previousMouse.current = { x: e.clientX, y: e.clientY }
     }
@@ -55,9 +57,17 @@ export function usePOVCamera() {
     }
   }, [gl])
 
-  useFrame(() => {
-    // Apply rotation to camera
-    const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ')
+  useFrame((_, delta) => {
+    // Smooth damping factor (higher = snappier, lower = smoother)
+    const dampingFactor = 15
+    const t = 1 - Math.exp(-dampingFactor * delta)
+
+    // Lerp current rotation towards target
+    currentYaw.current += (targetYaw.current - currentYaw.current) * t
+    currentPitch.current += (targetPitch.current - currentPitch.current) * t
+
+    // Apply smoothed rotation to camera
+    const euler = new THREE.Euler(currentPitch.current, currentYaw.current, 0, 'YXZ')
     camera.quaternion.setFromEuler(euler)
   })
 }
