@@ -126,9 +126,30 @@
         padding: 12px;
       }
 
+      #backBtn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        transition: background 0.3s;
+      }
+      #backBtn:hover {
+        background: rgba(0, 0, 0, 0.8);
+      }
+
     </style>
   </head>
   <body>
+    <!-- Back button -->
+    <button id="backBtn" onclick="window.location.href='/store'">← فروشگاه</button>
 
     <!-- loading modal: -->
     <div id='loading' class='modal'>

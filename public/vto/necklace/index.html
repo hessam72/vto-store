@@ -99,14 +99,36 @@
         background: rgba(50, 50, 50, 0.5);
         color: #fff;
       }
+
+      #backBtn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        transition: background 0.3s;
+      }
+      #backBtn:hover {
+        background: rgba(0, 0, 0, 0.8);
+      }
     </style>
   </head>
   <body>
+    <!-- Back button -->
+    <button id="backBtn" onclick="window.location.href='/store'">← فروشگاه</button>
+
      <!--
       The first canvas is used by WebAR.rocks.mirror
       It is linked to a WebGL context used by the deep learning engine
       And it displays the video of the webcam.
-      
+
       Since we need to transfer the video to a texture for face detection,
       it is not costly at all to use this texture for display.
 
