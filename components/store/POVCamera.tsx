@@ -33,8 +33,8 @@ export function usePOVCamera() {
       const deltaY = e.clientY - previousMouse.current.y
 
       const sensitivity = 0.002
-      yaw.current -= deltaX * sensitivity
-      pitch.current -= deltaY * sensitivity
+      yaw.current += deltaX * sensitivity
+      pitch.current += deltaY * sensitivity
 
       // Clamp pitch to prevent flipping
       pitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch.current))
