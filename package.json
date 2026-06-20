@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "pm2-stop": "pm2 kill",
+    "pm2-start": "pm2 start ecosystem.config.cjs",
+    "deploy": "npm run build && npm run pm2-start"
   },
   "dependencies": {
     "@react-three/drei": "9.114.3",
