@@ -13,6 +13,8 @@ import { ShadowSystem } from './ShadowSystem'
 import { ReflectiveFloor } from './ReflectiveFloor'
 import { PostProcessing } from './PostProcessing'
 import { useState, useEffect, useCallback } from 'react'
+import ProductInteraction, { type ProductData } from './ProductInteraction'
+import ProductPopup from './ProductPopup'
 
 function LoadingScreen() {
   return (
@@ -53,6 +55,7 @@ export default function Scene() {
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
   const [showClickHint, setShowClickHint] = useState(true)
   const [modelsLoaded, setModelsLoaded] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null)
 
   const handleModelsLoaded = useCallback(() => {
    
@@ -131,6 +134,9 @@ export default function Scene() {
       {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
       {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} />}
 
+      {/* Product click interaction */}
+      {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
+
       {/* Reflective Floor (Phase 9) */}
       <ReflectiveFloor size={60} mixStrength={.5} blur={1} roughness={.82} />
 
@@ -158,6 +164,9 @@ export default function Scene() {
           </div>
         </div>
       )}
+
+      {/* Product popup */}
+      <ProductPopup product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>
   )
 }
