@@ -24,8 +24,22 @@ export function usePhysics() {
     const timer = setTimeout(() => {
       console.log('Building collision octree...')
       console.log('Scene children before build:', scene.children.length)
-      worldOctree.current.fromGraphNode(scene)
-      console.log('Octree built successfully')
+
+      // Find and use ONLY the wireframe model (first GLB, priority 0)
+      let wireframeFound = false
+      scene.traverse((obj) => {
+        if (obj.userData.isWireframeCollision && !wireframeFound) {
+          console.log('Building octree from wireframe model only')
+          worldOctree.current.fromGraphNode(obj)
+          wireframeFound = true
+        }
+      })
+
+      if (!wireframeFound) {
+        console.warn('No wireframe collision model found! Physics may not work.')
+      } else {
+        console.log('Octree built successfully from wireframe')
+      }
     }, 100)
 
     return () => clearTimeout(timer)

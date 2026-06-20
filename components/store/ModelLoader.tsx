@@ -77,6 +77,11 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true)
 
+    // Tag wireframe for physics system
+    if (isWireframe) {
+      clone.userData.isWireframeCollision = true
+    }
+
     clone.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
         if (isWireframe) {
