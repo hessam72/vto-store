@@ -3,27 +3,27 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
-    "@react-three/postprocessing": "^3.0.4",
+    "@react-three/drei": "9.114.3",
+    "@react-three/fiber": "8.17.10",
+    "@react-three/postprocessing": "2.16.3",
     "next": "16.2.9",
     "nipplejs": "^1.0.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "three": "^0.184.0"
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "three": "0.161.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/three": "^0.184.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.161.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",

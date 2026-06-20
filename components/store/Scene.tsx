@@ -9,6 +9,7 @@ import { usePhysics } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
 import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
+import { ShadowSystem } from './ShadowSystem'
 import { useState, useEffect, useCallback } from 'react'
 
 function LoadingScreen() {
@@ -81,7 +82,7 @@ export default function Scene() {
       >
         
       {/* Dark background */}
-      <color attach="background" args={['#1a1a1a']} />
+      {/* <color attach="background" args={['#1a1a1a']} /> */}
 
       {/* HDRI lighting */}
       <Suspense fallback={null}>
@@ -110,6 +111,9 @@ export default function Scene() {
 
       {/* Fill light */}
       <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#cdd6ff" />
+
+      {/* PCSS Soft Shadows */}
+      <ShadowSystem size={20} samples={17} focus={0} />
 
       {/* Load models from config */}
       <Suspense fallback={null}>
