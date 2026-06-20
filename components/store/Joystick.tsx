@@ -72,7 +72,7 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
       zone: zoneRef.current,
       mode: 'static',
       position: { left: '80px', bottom: '80px' },
-      color: 'cyan',
+      color: '#2a2a2a',
       size: 120,
     })
 
@@ -93,8 +93,19 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
   return (
     <div
       ref={zoneRef}
-      className="fixed bottom-0 left-0 w-40 h-40 pointer-events-auto z-50"
+      className="fixed bottom-0 right-0 w-40 h-40 pointer-events-auto z-50"
       style={{ touchAction: 'none' }}
-    />
+    >
+      <style jsx>{`
+        div :global(.back) {
+          background: rgba(20, 20, 20, 0.4) !important;
+          border: 2px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        div :global(.front) {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border: 2px solid rgba(255, 255, 255, 0.95) !important;
+        }
+      `}</style>
+    </div>
   )
 }
