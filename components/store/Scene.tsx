@@ -11,6 +11,7 @@ import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
 import { ShadowSystem } from './ShadowSystem'
 import { ReflectiveFloor } from './ReflectiveFloor'
+import { PostProcessing } from './PostProcessing'
 import { useState, useEffect, useCallback } from 'react'
 
 function LoadingScreen() {
@@ -132,6 +133,9 @@ export default function Scene() {
 
       {/* Reflective Floor (Phase 9) */}
       <ReflectiveFloor size={60} mixStrength={.5} blur={1} roughness={.82} />
+
+      {/* Post-Processing (Phase 10) */}
+      <PostProcessing />
       </Canvas>
 
       {/* Loading indicator while models load */}
