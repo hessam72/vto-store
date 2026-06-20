@@ -96,13 +96,19 @@ export default function Scene() {
 
       {/* Key light (sun) */}
       <directionalLight
-        position={[10, 15, 5]}
+        position={[10, 5, 5]}
         intensity={2.8}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.025}
       >
+                {/* Param	Value	Effect
+        left/right	±20	Shadow width: 40 units total
+        top/bottom	±20	Shadow depth: 40 units total
+        near	0.1	Closest shadow distance from light
+        far	60	Farthest shadow distance from light */}
+          {/* In your scene: Everything within ±20 units horizontally and up to 60 units deep will cast shadows. Objects outside this area won't cast shadows.  */}
         <orthographicCamera
           attach="shadow-camera"
           args={[-20, 20, 20, -20, 0.1, 60]}
@@ -110,10 +116,10 @@ export default function Scene() {
       </directionalLight>
 
       {/* Fill light */}
-      <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#cdd6ff" />
+      {/* <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#cdd6ff" /> */}
 
       {/* PCSS Soft Shadows */}
-      <ShadowSystem size={20} samples={17} focus={0} />
+      <ShadowSystem size={25} samples={17} focus={0} />
 
       {/* Load models from config */}
       <Suspense fallback={null}>

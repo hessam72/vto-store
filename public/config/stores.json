@@ -7,19 +7,16 @@
         {
           "priority": 0,
           "quality": "low",
-          "url": "/store-models/store/compressed_raw-wireframe.glb"
+          "url": "/store-models/scene-shadow-light.glb"
         },
-      
+
         {
           "priority": 1,
           "quality": "high",
-          "url": "/store-models/store/HQ/compressed__hq-shop-details.glb"
-        },
-        {
-          "priority": 2,
-          "quality": "high",
-          "url": "/store-models/store/HQ/hq-compressed-clothes.glb"
+          "url": "/store-models/scene-shadow-light.glb"
         }
+        
+      
       ]
     },
     {
