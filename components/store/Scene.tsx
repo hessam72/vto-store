@@ -15,17 +15,8 @@ import { PostProcessing } from './PostProcessing'
 import { useState, useEffect, useCallback } from 'react'
 import ProductInteraction, { type ProductData } from './ProductInteraction'
 import ProductPopup from './ProductPopup'
-
-function LoadingScreen() {
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black text-white">
-      <div className="text-center">
-        <div className="text-xl mb-2">Loading Store...</div>
-        <div className="animate-pulse">Please wait</div>
-      </div>
-    </div>
-  )
-}
+import { LoadingScreen } from './LoadingScreen'
+import { ModelsLoadingIndicator } from './ModelsLoadingIndicator'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -145,13 +136,7 @@ export default function Scene() {
       </Canvas>
 
       {/* Loading indicator while models load */}
-      {!modelsLoaded && (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
-            Loading 3D models... {modelsLoaded}e4
-          </div>
-        </div>
-      )}
+      {!modelsLoaded && <ModelsLoadingIndicator />}
 
       {/* Virtual joystick for mobile - only after models loaded */}
       {modelsLoaded && joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
