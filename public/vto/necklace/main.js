@@ -59,9 +59,9 @@ function main(){
 
     // The occluder is a placeholder for the head. It is rendered with a transparent color
     // (only the depth buffer is updated).
-    occluderURL: "assets/models3D/occluder.glb",
-    modelURL: window.VTO_MODEL_URL || "assets/models3D/blackPanther.glb", //initial model loaded. false or null -> no model
-    envmapURL: "assets/envmaps/venice_sunset_1k.hdr",
+    occluderURL: "/models/necklace/occluder.glb",
+    modelURL: window.VTO_MODEL_URL || "/models/necklace/black-panther.glb", //initial model loaded. false or null -> no model
+    envmapURL: "/models/envmaps/venice_sunset_1k.hdr",
 
     // lighting:
     pointLightIntensity: 0.8, //intensity of the point light. Set to 0 to disable

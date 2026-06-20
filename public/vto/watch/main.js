@@ -83,7 +83,7 @@ const _settings = {
   },
 
   // model settings:
-  modelURL: window.VTO_MODEL_URL || 'assets/watchCasio.glb',
+  modelURL: window.VTO_MODEL_URL || '/models/watch/default.glb',
   //modelOffset: [0.076, -0.916, -0.504],
   
   modelQuaternion: [0,0,0,1], // Format: X,Y,Z,W (and not W,X,Y,Z like Blender)
@@ -174,7 +174,7 @@ function setup_lighting(three){
   pmremGenerator.compileEquirectangularShader();
 
   new THREE.RGBELoader().setDataType( THREE.HalfFloatType )
-    .load('assets/hotel_room_1k.hdr', function ( texture ) {
+    .load('/models/envmaps/hotel_room_1k.hdr', function ( texture ) {
     const envMap = pmremGenerator.fromEquirectangular( texture ).texture;
     pmremGenerator.dispose();
     scene.environment = envMap;

@@ -1,10 +1,10 @@
 const PI = Math.PI;
 const _settings = {
   // 3D model:
-  GLTFModelURL: window.VTO_MODEL_URL || 'assets/earringsSimple.glb',
+  GLTFModelURL: window.VTO_MODEL_URL || '/models/earrings/default.glb',
 
   // lighting:
-  envmapURL: 'assets/venice_sunset_512.hdr',
+  envmapURL: '/models/envmaps/venice_sunset_512.hdr',
   pointLightIntensity: 0.8,
   pointLightY: 200, // larger -> move the pointLight to the top
   hemiLightIntensity: 0.8,
