@@ -10,6 +10,7 @@ import { usePlayerController } from './PlayerController'
 import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
 import { ShadowSystem } from './ShadowSystem'
+import { ReflectiveFloor } from './ReflectiveFloor'
 import { useState, useEffect, useCallback } from 'react'
 
 function LoadingScreen() {
@@ -129,11 +130,8 @@ export default function Scene() {
       {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
       {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} />}
 
-      {/* Temporary ground */}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial color="#222" />
-      </mesh>
+      {/* Reflective Floor (Phase 9) */}
+      <ReflectiveFloor size={60} mixStrength={.5} blur={1} roughness={.82} />
       </Canvas>
 
       {/* Loading indicator while models load */}
