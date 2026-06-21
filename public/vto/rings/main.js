@@ -2,31 +2,33 @@ const _settings = {
   threshold: 0.95, // detection sensitivity, between 0 and 1
 
   // pose computation and stabilization:
-  // Using wrist landmarks (NN_WRISTBACK_45) temporarily
-  // TODO: Find correct landmarks for NN_RING_14
+  // Ring finger landmarks (NN_RING_14)
   poseLandmarksLabels: [
-    'wristPinkySideBot',
-    'wristThumbSideBot',
-    'wristPinkySideTop',
-    'wristThumbSideTop',
-    'wristUpTop',
-    'wristUpBot',
-    'wristDownTop',
-    'wristDownBot'
+    'ringBack',
+    'ringLeft',
+    'ringRight',
+    'ringPalm',
+    'ringPalmTop',
+    'ringBackTop',
+    'ringBase0',
+    'ringBase1',
+    'ringMiddleFinger',
+    'ringPinkyFinger',
+    'ringBasePalm'
   ],
 
   modelOffset: [0, 0, 0], // adjust ring position on hand
-  modelScale: 0.3, // scale factor for ring model (much smaller than watch)
-  NNsPaths: ['./neuralNets/NN_WRISTBACK_45.json'],
+  modelScale: 0.3, // scale factor for ring model
+  NNsPaths: ['./neuralNets/NN_RING_13.json'],
   objectPointsPositionFactors: [1.0, 1.0, 1.0],
   isPoseFilter: true,
 
   // soft occluder parameters (soft because we apply a fading gradient)
-  occluderRadiusRange: [4, 4.7], // same as watch (wrist size)
-  occluderHeight: 48, // height of the cylinder
+  occluderRadiusRange: [1.2, 1.5], // finger size (much smaller than wrist)
+  occluderHeight: 30, // height of the cylinder (shorter for finger)
   occluderOffset: [0,0,0], // relative to the ring 3D model
   occluderQuaternion: [0.707,0,0,0.707], // rotation of Math.PI/2 along X axis
-  occluderFlattenCoeff: 0.6, // 1 -> occluder is a cylinder, 0.5 -> flatten by 50%
+  occluderFlattenCoeff: 0.7, // 1 -> occluder is a cylinder, 0.5 -> flatten by 50%
 
   stabilizerOptions: {
     minCutOff: 0.001,
