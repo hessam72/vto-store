@@ -83,11 +83,11 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="/hdr/satara_night_1k.hdr"
+          files="/hdr/satara_night_no_lamps_1k (1).hdr"
           background={false}
           environmentIntensity={0}
-          resolution={256}
-          blur={0.5}
+          resolution={1028}
+          // blur={1}
         />
       </Suspense>
 
@@ -111,6 +111,8 @@ export default function Scene() {
           args={[-20, 20, 20, -20, 0.1, 60]}
         />
       </directionalLight> */}
+
+      
 
       {/* Fill light */}
       {/* <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#cdd6ff" /> */}
