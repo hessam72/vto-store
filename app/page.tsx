@@ -2,12 +2,47 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Vazirmatn } from 'next/font/google';
+import localFont from 'next/font/local';
 import styles from './page.module.css';
 
-const vazirmatn = Vazirmatn({
-  subsets: ['arabic', 'latin'],
-  weight: ['200', '300', '400', '500', '600', '700', '800'],
+const vazirmatn = localFont({
+  src: [
+    {
+      path: '/fonts/Vazirmatn-ExtraLight.woff2',
+      weight: '200',
+      style: 'normal',
+    },
+    {
+      path: '/fonts/Vazirmatn-Light.woff2',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '/fonts/Vazirmatn-Regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '/fonts/Vazirmatn-Medium.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '/fonts/Vazirmatn-SemiBold.woff2',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '/fonts/Vazirmatn-Bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '/fonts/Vazirmatn-ExtraBold.woff2',
+      weight: '800',
+      style: 'normal',
+    },
+  ],
   display: 'swap',
 });
 

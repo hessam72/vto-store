@@ -10,8 +10,8 @@ export function usePhysics() {
   const worldOctree = useRef(new Octree())
   const playerCollider = useRef(
     new Capsule(
-      new THREE.Vector3(0, 0.35, 0),  // Bottom
-      new THREE.Vector3(0, 1.45, 0),  // Top (player eye height ~1.6m)
+      new THREE.Vector3(0, 0.55, 0),  // Bottom
+      new THREE.Vector3(0, 1.75, 0),  // Top (player eye height ~1.8m)
       0.35                             // Radius
     )
   )

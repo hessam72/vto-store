@@ -149,13 +149,13 @@ export default function Scene() {
       {modelsLoaded && joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
 
       {/* Drag to look around hint */}
-      {modelsLoaded && showClickHint && (
+      {/* {modelsLoaded && showClickHint && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-black/70 text-white px-6 py-3 rounded-lg text-sm">
             Drag to look around • WASD to move
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Product popup */}
       <ProductPopup product={selectedProduct} onClose={() => setSelectedProduct(null)} />
