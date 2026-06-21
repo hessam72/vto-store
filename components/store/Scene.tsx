@@ -72,7 +72,7 @@ export default function Scene() {
         gl={{
           antialias: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.0,
+          toneMappingExposure: 0.3,
         }}
         camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
       >
@@ -83,39 +83,40 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="/hdr/studio_small_09_1k.hdr"
+          files="/hdr/satara_night_1k.hdr"
           background={false}
-          environmentIntensity={1.0}
+          environmentIntensity={0}
           resolution={256}
+          blur={0.5}
         />
       </Suspense>
 
       {/* Key light (sun) */}
-      <directionalLight
+      {/* <directionalLight
         position={[10, 5, 5]}
         intensity={2.8}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.025}
-      >
+      > */}
                 {/* Param	Value	Effect
         left/right	±20	Shadow width: 40 units total
         top/bottom	±20	Shadow depth: 40 units total
         near	0.1	Closest shadow distance from light
-        far	60	Farthest shadow distance from light */}
-          {/* In your scene: Everything within ±20 units horizontally and up to 60 units deep will cast shadows. Objects outside this area won't cast shadows.  */}
-        <orthographicCamera
+        far	60	Farthest shadow distance from light 
+           In your scene: Everything within ±20 units horizontally and up to 60 units deep will cast shadows. Objects outside this area won't cast shadows.  */}
+        {/* <orthographicCamera
           attach="shadow-camera"
           args={[-20, 20, 20, -20, 0.1, 60]}
         />
-      </directionalLight>
+      </directionalLight> */}
 
       {/* Fill light */}
       {/* <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#cdd6ff" /> */}
 
       {/* PCSS Soft Shadows */}
-      <ShadowSystem size={25} samples={17} focus={0} />
+      {/* <ShadowSystem size={25} samples={17} focus={0} /> */}
 
       {/* Load models from config */}
       <Suspense fallback={null}>
@@ -129,7 +130,7 @@ export default function Scene() {
       {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
 
       {/* Reflective Floor (Phase 9) */}
-      <ReflectiveFloor size={60} mixStrength={.5} blur={1} roughness={.82} />
+      {/* <ReflectiveFloor size={120} mixStrength={.9} blur={0} roughness={62} /> */}
 
       {/* Post-Processing (Phase 10) */}
       <PostProcessing />

@@ -107,15 +107,16 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
 
           // String light emissive glow
           if (obj.name.toLowerCase().includes('light') && obj.material) {
+            console.log(`Applying emissive glow to ${obj.name}`)
             if (Array.isArray(obj.material)) {
               obj.material.forEach((mat) => {
-                mat.emissive = new THREE.Color('#eeff00')
+                mat.emissive = new THREE.Color('#ff0000')
                 mat.emissiveIntensity = 6.0
                 mat.needsUpdate = true
               })
             } else {
-              obj.material.emissive = new THREE.Color('#eeff00')
-              obj.material.emissiveIntensity = 6.5
+              obj.material.emissive = new THREE.Color('#ff5100')
+              obj.material.emissiveIntensity = 9.5
               obj.material.needsUpdate = true
             }
           }

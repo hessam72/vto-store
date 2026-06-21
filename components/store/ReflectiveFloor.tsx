@@ -16,7 +16,7 @@ export function ReflectiveFloor({
   return (
     <mesh
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, .25, 0]}
+      position={[0, 1, 0]}
       receiveShadow
     >
       <planeGeometry args={[size, size]} />
@@ -30,7 +30,7 @@ export function ReflectiveFloor({
         minDepthThreshold={0.4}
         maxDepthThreshold={1.4}
         roughness={roughness}
-        metalness={0.55}
+        metalness={.6}
         color="#0e0f12"
       />
     </mesh>
