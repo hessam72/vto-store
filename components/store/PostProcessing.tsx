@@ -13,11 +13,11 @@ export function PostProcessing() {
       /> */}
       {/* Bloom - MODERATE: Multiple blur passes with mipmapBlur */}
       <Bloom
-        intensity={0.5}
+        intensity={0.3}
         luminanceThreshold={0.5}
         luminanceSmoothing={0.2}
         mipmapBlur
-        radius={0.3}
+        radius={0.2}
       />
       {/* SMAA - LIGHT: Edge-detection anti-aliasing */}
       {/* <SMAA /> */}

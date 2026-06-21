@@ -116,7 +116,7 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
               })
             } else {
               obj.material.emissive = new THREE.Color('#ff5100')
-              obj.material.emissiveIntensity = 9.5
+              obj.material.emissiveIntensity = 20
               obj.material.needsUpdate = true
             }
           }
