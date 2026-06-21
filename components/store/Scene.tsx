@@ -83,10 +83,10 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="/hdr/satara_night_no_lamps_1k (1).hdr"
+          files="/hdr/040_hdrmaps_com_free_1K.exr"
           background={false}
           environmentIntensity={0}
-          resolution={1028}
+          resolution={256}
           // blur={1}
         />
       </Suspense>
@@ -112,13 +112,17 @@ export default function Scene() {
         />
       </directionalLight> */}
 
-      
+
 
       {/* Fill light */}
-      {/* <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#cdd6ff" /> */}
+      {/* <directionalLight position={[0, 2, -5]} intensity={0.5} color="#cdd6ff" /> */}
 
       {/* PCSS Soft Shadows */}
       {/* <ShadowSystem size={25} samples={17} focus={0} /> */}
+
+      {/* Vitrine spotlights */}
+      {/* <pointLight position={[0, 2.5, -1.5]} intensity={10} distance={1} decay={2} color="#ffffff" />
+      <pointLight position={[6.5, 2.5, 0.05]} intensity={10} distance={6} decay={2} color="#ffffff" /> */}
 
       {/* Load models from config */}
       <Suspense fallback={null}>

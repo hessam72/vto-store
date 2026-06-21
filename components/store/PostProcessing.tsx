@@ -17,7 +17,7 @@ export function PostProcessing() {
         luminanceThreshold={0.5}
         luminanceSmoothing={0.2}
         mipmapBlur
-        radius={0.2}
+        radius={0.1}
       />
       {/* SMAA - LIGHT: Edge-detection anti-aliasing */}
       {/* <SMAA /> */}
