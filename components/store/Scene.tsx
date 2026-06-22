@@ -18,6 +18,7 @@ import ProductPopup from './ProductPopup'
 import { LoadingScreen } from './LoadingScreen'
 import { ModelsLoadingIndicator } from './ModelsLoadingIndicator'
 import { Stats } from '@react-three/drei'
+import { AudioPlayer } from './AudioPlayer'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -161,6 +162,9 @@ export default function Scene() {
 
       {/* Product popup */}
       <ProductPopup product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+
+      {/* Background audio */}
+      <AudioPlayer />
     </>
   )
 }
