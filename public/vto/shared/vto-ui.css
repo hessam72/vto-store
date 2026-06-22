@@ -3,6 +3,9 @@
 /* Import Persian Font */
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap');
 
+/* Import Font Awesome Icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
+
 :root {
   --vto-primary: #d4af37;
   --vto-primary-rgb: 212, 175, 55;
@@ -355,10 +358,47 @@
     width: 60px;
     height: 60px;
     bottom: 30px;
+    font-size: 24px;
+  }
+
+  .vto-share-modal {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
   .vto-share-content {
     padding: 20px;
+    margin: 10px;
+    max-width: calc(100% - 20px);
+    max-height: calc(100% - 20px);
+    position: relative;
+  }
+
+  .vto-share-preview {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .vto-share-buttons {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .vto-share-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
+    font-size: 15px;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+
+  .vto-close-modal {
+    width: 44px;
+    height: 44px;
+    font-size: 28px;
   }
 }
 

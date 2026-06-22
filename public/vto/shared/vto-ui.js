@@ -29,7 +29,7 @@ class VTOUIManager {
     const card = document.createElement('div');
     card.className = 'vto-product-card';
     card.innerHTML = `
-      <button class="vto-collapse-btn" aria-label="کوچک کردن">−</button>
+      <button class="vto-collapse-btn" aria-label="کوچک کردن"><i class="fa-solid fa-minus"></i></button>
       <div class="vto-product-details">
         <h3 class="vto-product-name">${this.productData.name}</h3>
         ${this.productData.price ? `<p class="vto-product-price">${this.formatPrice(this.productData.price)}</p>` : ''}
@@ -44,7 +44,7 @@ class VTOUIManager {
     collapseBtn.addEventListener('click', () => {
       this.isCollapsed = !this.isCollapsed;
       card.classList.toggle('collapsed', this.isCollapsed);
-      collapseBtn.textContent = this.isCollapsed ? '+' : '−';
+      collapseBtn.innerHTML = this.isCollapsed ? '<i class="fa-solid fa-plus"></i>' : '<i class="fa-solid fa-minus"></i>';
       collapseBtn.setAttribute('aria-label', this.isCollapsed ? 'بزرگ کردن' : 'کوچک کردن');
     });
 
@@ -53,7 +53,7 @@ class VTOUIManager {
       if (this.isCollapsed && e.target === card) {
         this.isCollapsed = false;
         card.classList.remove('collapsed');
-        collapseBtn.textContent = '−';
+        collapseBtn.innerHTML = '<i class="fa-solid fa-minus"></i>';
         collapseBtn.setAttribute('aria-label', 'کوچک کردن');
       }
     });
@@ -65,7 +65,7 @@ class VTOUIManager {
   createCaptureButton() {
     const btn = document.createElement('button');
     btn.className = 'vto-capture-btn';
-    btn.innerHTML = '📷';
+    btn.innerHTML = '<i class="fa-solid fa-camera"></i>';
     btn.setAttribute('aria-label', 'عکس برداری');
 
     btn.addEventListener('click', () => {
@@ -156,17 +156,17 @@ class VTOUIManager {
     modal.className = 'vto-share-modal';
     modal.innerHTML = `
       <div class="vto-share-content">
-        <button class="vto-close-modal" aria-label="بستن">×</button>
+        <button class="vto-close-modal" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
         <img src="${this.capturedImage}" alt="تصویر گرفته شده" class="vto-share-preview">
         <div class="vto-share-buttons">
           <button class="vto-share-btn primary" data-action="download">
-            💾 دانلود
+            <i class="fa-solid fa-download"></i> دانلود
           </button>
           <button class="vto-share-btn" data-action="share">
-            📤 اشتراک‌گذاری
+            <i class="fa-solid fa-share-nodes"></i> اشتراک‌گذاری
           </button>
           <button class="vto-share-btn" data-action="back">
-            🔙 بازگشت به فروشگاه
+            <i class="fa-solid fa-arrow-right"></i> بازگشت به فروشگاه
           </button>
         </div>
       </div>
