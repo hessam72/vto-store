@@ -11,6 +11,8 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
   const damping = useRef(0)
 
   useFrame((state, delta) => {
+    if (!physics.octreeReady.current) return
+
     const { playerVelocity, playerOnFloor, playerCollider } = physics
 
     // Apply gravity when airborne
@@ -35,7 +37,7 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
     // Safety: teleport if fallen through floor
     if (state.camera.position.y < -5) {
       playerCollider.current.start.set(0, 0.55, 0)
-      playerCollider.current.end.set(0, 1.75, 7)
+      playerCollider.current.end.set(0, 1.75, 9)
       state.camera.position.copy(playerCollider.current.end)
       playerVelocity.current.set(0, 0, 0)
     }

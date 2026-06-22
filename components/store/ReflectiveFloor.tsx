@@ -1,10 +1,10 @@
 import { MeshReflectorMaterial } from '@react-three/drei'
-
 interface ReflectiveFloorProps {
   size?: number
   mixStrength?: number
   blur?: number
   roughness?: number
+  opacity?: number
 }
 
 export function ReflectiveFloor({
@@ -12,6 +12,7 @@ export function ReflectiveFloor({
   mixStrength = 0.62,
   blur = 0.85,
   roughness = 0.62,
+  opacity = 1,
 }: ReflectiveFloorProps) {
   return (
     <mesh
@@ -24,7 +25,6 @@ export function ReflectiveFloor({
         resolution={1080}
         mixBlur={0}
         mixStrength={mixStrength * 34}
-        // blur={10}
         mirror={.8}
         depthScale={.4}
         minDepthThreshold={.35}
@@ -32,6 +32,8 @@ export function ReflectiveFloor({
         roughness={1}
         metalness={.7}
         color="#3f3d39"
+        transparent
+        opacity={opacity}
       />
     </mesh>
   )

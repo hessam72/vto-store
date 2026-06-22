@@ -86,7 +86,7 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="/hdr/Jew HDRI 1.exr"
+          files="/hdr/040_hdrmaps_com_free_1K.exr"
           background={false}
           environmentIntensity={.5}
           resolution={256}
@@ -124,7 +124,7 @@ export default function Scene() {
       {/* <ShadowSystem size={25} samples={17} focus={0} /> */}
 
       {/* Vitrine spotlights */}
-      <pointLight position={[0, 7, -1.5]} intensity={18} distance={12} decay={.7} color="#faf9cb" /> 
+      <pointLight position={[0, 7, -1.5]} intensity={18} distance={12} decay={.7} color="#ffffff" /> 
       {/* <pointLight position={[6.5, 1.2, 0.05]} intensity={30} distance={10} decay={0.3} color="#ffffff" />  */}
 
       {/* Load models from config */}
@@ -139,7 +139,7 @@ export default function Scene() {
       {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
 
       {/* Reflective Floor (Phase 9) */}
-      <ReflectiveFloor size={20} mixStrength={.9} blur={0} roughness={62} />
+      <ReflectiveFloor opacity={1} size={20} mixStrength={.9} blur={0} roughness={62} />
 
       {/* Post-Processing (Phase 10) */}
       <PostProcessing />

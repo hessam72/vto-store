@@ -8,6 +8,7 @@ import * as THREE from 'three'
 export function usePhysics() {
   const { scene } = useThree()
   const worldOctree = useRef(new Octree())
+  const octreeReady = useRef(false)
   const playerCollider = useRef(
     new Capsule(
       new THREE.Vector3(0, 0.55, 0),  // Bottom
@@ -16,7 +17,7 @@ export function usePhysics() {
     )
   )
   const playerVelocity = useRef(new THREE.Vector3())
-  const playerOnFloor = useRef(false)
+  const playerOnFloor = useRef(true)
 
   // Build octree after mount (models should be in scene by now)
   useEffect(() => {
@@ -39,6 +40,7 @@ export function usePhysics() {
         console.warn('No wireframe collision model found! Physics may not work.')
       } else {
         console.log('Octree built successfully from wireframe')
+        octreeReady.current = true
       }
     }, 100)
 
@@ -47,6 +49,8 @@ export function usePhysics() {
 
   // Collision detection every frame
   useFrame((state, delta) => {
+    if (!octreeReady.current) return
+
     const result = worldOctree.current.capsuleIntersect(playerCollider.current)
     playerOnFloor.current = false
 
@@ -74,5 +78,6 @@ export function usePhysics() {
     playerCollider,
     playerVelocity,
     playerOnFloor,
+    octreeReady,
   }
 }
