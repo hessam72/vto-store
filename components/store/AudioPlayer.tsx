@@ -4,15 +4,24 @@ import { HiVolumeUp, HiVolumeOff } from 'react-icons/hi'
 
 export function AudioPlayer() {
   const [isMuted, setIsMuted] = useState(false)
+  const [isReady, setIsReady] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = 0.25
-      audioRef.current.play().catch(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    audio.volume = 0.35
+
+    const handleCanPlay = () => {
+      setIsReady(true)
+      audio.play().catch(() => {
         // Auto-play blocked, will play on user interaction
       })
     }
+
+    audio.addEventListener('canplaythrough', handleCanPlay)
+    return () => audio.removeEventListener('canplaythrough', handleCanPlay)
   }, [])
 
   const toggleMute = () => {
@@ -24,7 +33,7 @@ export function AudioPlayer() {
 
   return (
     <>
-      <audio ref={audioRef} loop>
+      <audio ref={audioRef} loop preload="auto">
         <source src="/audio/background.mp3" type="audio/mpeg" />
       </audio>
 
