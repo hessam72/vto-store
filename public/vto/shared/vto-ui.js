@@ -8,6 +8,57 @@ class VTOUIManager {
     this.capturedImage = null;
     this.isCollapsed = false;
     this.trackingQuality = 'none'; // none, poor, good
+    this.category = this.detectCategory();
+    this.mockDetails = this.getMockDetails();
+  }
+
+  /**
+   * Detect category from URL path
+   */
+  detectCategory() {
+    const path = window.location.pathname;
+    if (path.includes('/earrings')) return 'earrings';
+    if (path.includes('/necklace')) return 'necklace';
+    if (path.includes('/rings')) return 'rings';
+    if (path.includes('/watch')) return 'watch';
+    return 'unknown';
+  }
+
+  /**
+   * Get mock product details based on category
+   */
+  getMockDetails() {
+    const details = {
+      earrings: {
+        icon: 'fa-gem',
+        material: 'طلای 18 عیار',
+        features: ['ضد حساسیت', 'دست‌ساز', 'قفل ایمن'],
+        care: 'از تماس با عطر و مواد شیمیایی پرهیز کنید',
+        warranty: 'گارانتی اصالت و سلامت فیزیکی'
+      },
+      necklace: {
+        icon: 'fa-link',
+        material: 'طلای 18 عیار با نگین‌های طبیعی',
+        features: ['طراحی منحصر به فرد', 'زنجیر تنظیم‌پذیر', 'دست‌ساز'],
+        care: 'در جعبه مخصوص نگهداری شود',
+        warranty: 'گارانتی مادام‌العمر'
+      },
+      rings: {
+        icon: 'fa-ring',
+        material: 'طلای 18 عیار با الماس طبیعی',
+        features: ['سایز قابل تنظیم', 'نگین اصل', 'طراحی کلاسیک'],
+        care: 'حین کارهای سنگین از دست خارج کنید',
+        warranty: 'گارانتی نگین و بدنه'
+      },
+      watch: {
+        icon: 'fa-clock',
+        material: 'استیل ضد زنگ با بند چرم اصل',
+        features: ['ضد آب', 'موتور ژاپنی', 'صفحه ضد خش'],
+        care: 'از ضربه و رطوبت بالا پرهیز کنید',
+        warranty: 'گارانتی 2 ساله موتور'
+      }
+    };
+    return details[this.category] || details.earrings;
   }
 
   /**
@@ -29,11 +80,16 @@ class VTOUIManager {
     const card = document.createElement('div');
     card.className = 'vto-product-card';
     card.innerHTML = `
+      <div class="vto-card-gradient"></div>
+      <div class="vto-category-badge">
+        <i class="fa-solid ${this.mockDetails.icon}"></i>
+      </div>
       <button class="vto-collapse-btn" aria-label="کوچک کردن"><i class="fa-solid fa-minus"></i></button>
+      <button class="vto-info-btn" aria-label="جزئیات بیشتر"><i class="fa-solid fa-info-circle"></i></button>
       <div class="vto-product-details">
         <h3 class="vto-product-name">${this.productData.name}</h3>
         ${this.productData.price ? `<p class="vto-product-price">${this.formatPrice(this.productData.price)}</p>` : ''}
-        ${this.productData.weight ? `<p class="vto-product-weight">وزن: ${this.productData.weight} گرم</p>` : ''}
+        ${this.productData.weight ? `<p class="vto-product-weight"><i class="fa-solid fa-weight-hanging"></i> ${this.productData.weight} گرم</p>` : ''}
       </div>
     `;
 
@@ -41,11 +97,19 @@ class VTOUIManager {
 
     // Collapse toggle
     const collapseBtn = card.querySelector('.vto-collapse-btn');
-    collapseBtn.addEventListener('click', () => {
+    collapseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.isCollapsed = !this.isCollapsed;
       card.classList.toggle('collapsed', this.isCollapsed);
       collapseBtn.innerHTML = this.isCollapsed ? '<i class="fa-solid fa-plus"></i>' : '<i class="fa-solid fa-minus"></i>';
       collapseBtn.setAttribute('aria-label', this.isCollapsed ? 'بزرگ کردن' : 'کوچک کردن');
+    });
+
+    // Info button to show details
+    const infoBtn = card.querySelector('.vto-info-btn');
+    infoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showProductDetailsModal();
     });
 
     // Click to expand when collapsed
@@ -195,6 +259,80 @@ class VTOUIManager {
         modal.remove();
       }
     });
+  }
+
+  /**
+   * Show product details modal
+   */
+  showProductDetailsModal() {
+    const modal = document.createElement('div');
+    modal.className = 'vto-details-modal';
+    modal.innerHTML = `
+      <div class="vto-details-content">
+        <button class="vto-close-modal" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
+
+        <div class="vto-details-header">
+          <div class="vto-details-icon">
+            <i class="fa-solid ${this.mockDetails.icon}"></i>
+          </div>
+          <h2 class="vto-details-title">${this.productData.name}</h2>
+          ${this.productData.price ? `<p class="vto-details-price">${this.formatPrice(this.productData.price)}</p>` : ''}
+        </div>
+
+        <div class="vto-details-section">
+          <h3 class="vto-section-title">
+            <i class="fa-solid fa-layer-group"></i>
+            جنس و مواد
+          </h3>
+          <p class="vto-section-content">${this.mockDetails.material}</p>
+        </div>
+
+        <div class="vto-details-section">
+          <h3 class="vto-section-title">
+            <i class="fa-solid fa-star"></i>
+            ویژگی‌ها
+          </h3>
+          <ul class="vto-features-list">
+            ${this.mockDetails.features.map(feature => `
+              <li><i class="fa-solid fa-check-circle"></i> ${feature}</li>
+            `).join('')}
+          </ul>
+        </div>
+
+        <div class="vto-details-section">
+          <h3 class="vto-section-title">
+            <i class="fa-solid fa-shield-halved"></i>
+            نگهداری
+          </h3>
+          <p class="vto-section-content">${this.mockDetails.care}</p>
+        </div>
+
+        <div class="vto-details-section">
+          <h3 class="vto-section-title">
+            <i class="fa-solid fa-certificate"></i>
+            گارانتی
+          </h3>
+          <p class="vto-section-content">${this.mockDetails.warranty}</p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Event listeners
+    modal.querySelector('.vto-close-modal').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+
+    // Animate in
+    setTimeout(() => modal.classList.add('visible'), 10);
   }
 
   /**
