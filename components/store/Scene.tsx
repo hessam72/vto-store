@@ -123,7 +123,7 @@ export default function Scene() {
       {/* <ShadowSystem size={25} samples={17} focus={0} /> */}
 
       {/* Vitrine spotlights */}
-      <pointLight position={[0, 7, -1.5]} intensity={18} distance={12} decay={.6} color="#ffffff" /> 
+      <pointLight position={[0, 7, -1.5]} intensity={18} distance={12} decay={.7} color="#faf9cb" /> 
       {/* <pointLight position={[6.5, 1.2, 0.05]} intensity={30} distance={10} decay={0.3} color="#ffffff" />  */}
 
       {/* Load models from config */}
