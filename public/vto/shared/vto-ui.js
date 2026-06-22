@@ -109,9 +109,6 @@ class VTOUIManager {
     // Layer 2: Draw 3D model overlay
     ctx.drawImage(modelCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
 
-    // Layer 3: Add watermark/branding
-    this.addBrandingToCanvas(ctx, tempCanvas.width, tempCanvas.height);
-
     // Convert to image
     this.capturedImage = tempCanvas.toDataURL('image/png');
 
@@ -166,7 +163,7 @@ class VTOUIManager {
             <i class="fa-solid fa-share-nodes"></i> اشتراک‌گذاری
           </button>
           <button class="vto-share-btn" data-action="back">
-            <i class="fa-solid fa-arrow-right"></i> بازگشت به فروشگاه
+            <i class="fa-solid fa-arrow-right"></i> بازگشت 
           </button>
         </div>
       </div>
@@ -188,7 +185,8 @@ class VTOUIManager {
     });
 
     modal.querySelector('[data-action="back"]').addEventListener('click', () => {
-      window.history.back();
+      // window.history.back();
+        modal.remove();
     });
 
     // Close on background click

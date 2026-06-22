@@ -111,6 +111,8 @@
   justify-content: center;
   font-size: 32px;
   color: white;
+  background: transparent;
+    backdrop-filter: blur(10px);
 }
 
 .vto-capture-btn:hover {
@@ -163,6 +165,8 @@
   max-width: 400px;
   border-radius: 12px;
   margin-bottom: 20px;
+       transform: scaleX(-1);
+
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
@@ -208,8 +212,8 @@
 
 .vto-close-modal {
   position: absolute;
-  top: 15px;
-  left: 15px;
+  top: 0;
+  left: 0;
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 50%;
@@ -378,6 +382,7 @@
     width: 100%;
     height: auto;
     object-fit: contain;
+     max-height: 60vh;
   }
 
   .vto-share-buttons {
@@ -399,6 +404,7 @@
     width: 44px;
     height: 44px;
     font-size: 28px;
+    z-index: 99;
   }
 }
 
