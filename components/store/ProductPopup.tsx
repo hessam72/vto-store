@@ -31,7 +31,7 @@ export default function ProductPopup({ product, onClose }: ProductPopupProps) {
       onClick={onClose}
     >
       <div
-        className="relative w-[90%] max-w-md bg-slate-900 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in duration-200 border border-amber-600/30"
+        className="relative w-[90%] max-w-md bg-black rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in duration-200 border border-amber-600/30"
         onClick={(e) => e.stopPropagation()}
         dir="rtl"
       >

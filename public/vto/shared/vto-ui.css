@@ -1,0 +1,370 @@
+/* VTO UI Shared Styles - Glassmorphic Design System */
+
+/* Import Persian Font */
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap');
+
+:root {
+  --vto-primary: #d4af37;
+  --vto-primary-rgb: 212, 175, 55;
+  --vto-glass-bg: rgba(0, 0, 0, 0.4);
+  --vto-glass-border: rgba(255, 255, 255, 0.1);
+  --vto-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --vto-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Product Context Card */
+.vto-product-card {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 280px;
+  padding: 16px 20px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--vto-glass-bg);
+  border: 1px solid var(--vto-glass-border);
+  border-radius: 16px;
+  box-shadow: var(--vto-shadow);
+  z-index: 100;
+  direction: rtl;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  animation: slideInRight 0.5s ease-out;
+  transition: var(--vto-transition);
+}
+
+.vto-product-card.collapsed {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.vto-product-card.collapsed .vto-product-details {
+  display: none;
+}
+
+.vto-product-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.vto-product-price {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--vto-primary);
+  margin: 0 0 4px 0;
+}
+
+.vto-product-weight {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.vto-collapse-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--vto-transition);
+  color: white;
+  font-size: 18px;
+}
+
+.vto-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Capture Button */
+.vto-capture-btn {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, var(--vto-primary), rgba(var(--vto-primary-rgb), 0.8));
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 4px 24px rgba(var(--vto-primary-rgb), 0.5);
+  cursor: pointer;
+  z-index: 100;
+  transition: var(--vto-transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+}
+
+.vto-capture-btn:hover {
+  transform: translateX(-50%) scale(1.1);
+  box-shadow: 0 6px 32px rgba(var(--vto-primary-rgb), 0.7);
+}
+
+.vto-capture-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.vto-capture-btn.capturing {
+  animation: captureFlash 0.5s ease-out;
+}
+
+/* Share Modal */
+.vto-share-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.vto-share-content {
+  background: var(--vto-glass-bg);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--vto-glass-border);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  direction: rtl;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.vto-share-preview {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.vto-share-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.vto-share-btn {
+  padding: 12px 24px;
+  background: var(--vto-glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--vto-glass-border);
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  cursor: pointer;
+  transition: var(--vto-transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vto-share-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.vto-share-btn.primary {
+  background: linear-gradient(135deg, var(--vto-primary), rgba(var(--vto-primary-rgb), 0.8));
+  border: none;
+  box-shadow: 0 4px 16px rgba(var(--vto-primary-rgb), 0.4);
+}
+
+.vto-share-btn.primary:hover {
+  box-shadow: 0 6px 24px rgba(var(--vto-primary-rgb), 0.6);
+}
+
+.vto-close-modal {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  color: white;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--vto-transition);
+}
+
+.vto-close-modal:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+/* Enhanced Loading Screen */
+.vto-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  direction: rtl;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.vto-loading-overlay.fade-out {
+  animation: fadeOut 0.5s ease-out forwards;
+}
+
+.vto-loading-spinner {
+  width: 80px;
+  height: 80px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--vto-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+.vto-loading-text {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.vto-loading-tip {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  max-width: 300px;
+  text-align: center;
+}
+
+/* Tracking Feedback */
+.vto-tracking-feedback {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 24px;
+  background: var(--vto-glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 2px solid var(--vto-glass-border);
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  z-index: 90;
+  direction: rtl;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.vto-tracking-feedback.visible {
+  opacity: 1;
+}
+
+.vto-tracking-feedback.good {
+  border-color: #4ade80;
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+}
+
+.vto-tracking-feedback.poor {
+  border-color: #f87171;
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.3);
+}
+
+/* Animations */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes captureFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; background: white; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vto-product-card {
+    width: calc(100% - 40px);
+    right: 20px;
+    top: 70px;
+  }
+
+  .vto-capture-btn {
+    width: 60px;
+    height: 60px;
+    bottom: 30px;
+  }
+
+  .vto-share-content {
+    padding: 20px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --vto-glass-bg: rgba(0, 0, 0, 0.5);
+  }
+}

@@ -267,12 +267,19 @@ function add_softOccluder(){
 
 
 function hide_loading(){
-  // remove loading:
-  const domLoading = document.getElementById('loading');
-  domLoading.style.opacity = 0;
-  setTimeout(function(){
-    domLoading.parentNode.removeChild(domLoading);
-  }, 800);
+  // Use VTO UI manager if available
+  if (window.vtoUI && window.vtoUI.hideLoading) {
+    window.vtoUI.hideLoading();
+  } else {
+    // Fallback to original behavior
+    const domLoading = document.getElementById('loading');
+    if (domLoading) {
+      domLoading.style.opacity = 0;
+      setTimeout(function(){
+        domLoading.parentNode.removeChild(domLoading);
+      }, 800);
+    }
+  }
 }
 
 
