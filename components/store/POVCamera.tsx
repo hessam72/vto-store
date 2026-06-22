@@ -3,7 +3,12 @@ import { useThree, useFrame } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
-export function usePOVCamera() {
+interface POVCameraProps {
+  gyroEnabled?: boolean
+}
+
+export function usePOVCamera(props?: POVCameraProps) {
+  const { gyroEnabled = false } = props || {}
   const { camera, gl } = useThree()
   const targetYaw = useRef(0)
   const targetPitch = useRef(0)
@@ -11,6 +16,7 @@ export function usePOVCamera() {
   const currentPitch = useRef(0)
   const isDragging = useRef(false)
   const previousMouse = useRef({ x: 0, y: 0 })
+  const initialOrientation = useRef<{ alpha: number; beta: number; gamma: number } | null>(null)
 
   useEffect(() => {
     const canvas = gl.domElement
@@ -56,6 +62,52 @@ export function usePOVCamera() {
       canvas.removeEventListener('pointercancel', onPointerUp)
     }
   }, [gl])
+
+  // Gyroscope controls
+  useEffect(() => {
+    if (!gyroEnabled) {
+      initialOrientation.current = null
+      return
+    }
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      if (event.alpha === null || event.beta === null || event.gamma === null) return
+
+      // Set initial orientation on first read
+      if (!initialOrientation.current) {
+        initialOrientation.current = {
+          alpha: event.alpha,
+          beta: event.beta,
+          gamma: event.gamma
+        }
+      }
+
+      // Calculate relative rotation from initial position
+      const deltaAlpha = event.alpha - initialOrientation.current.alpha
+      const deltaBeta = event.beta - initialOrientation.current.beta
+      const deltaGamma = event.gamma - initialOrientation.current.gamma
+
+      // Map device orientation to camera rotation
+      // Beta: device tilt forward/back → camera pitch (up/down)
+      // Gamma: device tilt left/right → camera yaw (left/right)
+      // Alpha: compass heading → additional yaw control
+
+      const pitchSensitivity = 0.015
+      const yawSensitivity = 0.02
+
+      targetPitch.current = -deltaBeta * pitchSensitivity
+      targetYaw.current = deltaGamma * yawSensitivity + deltaAlpha * yawSensitivity * 0.3
+
+      // Clamp pitch to prevent flipping
+      targetPitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetPitch.current))
+    }
+
+    window.addEventListener('deviceorientation', handleOrientation)
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation)
+    }
+  }, [gyroEnabled])
 
   useFrame((_, delta) => {
     // Smooth damping factor (higher = snappier, lower = smoother)

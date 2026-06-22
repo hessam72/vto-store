@@ -19,6 +19,7 @@ import { LoadingScreen } from './LoadingScreen'
 import { ModelsLoadingIndicator } from './ModelsLoadingIndicator'
 import { Stats } from '@react-three/drei'
 import { AudioPlayer } from './AudioPlayer'
+import { GyroToggle } from './GyroToggle'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -31,10 +32,16 @@ function ErrorScreen({ message }: { message: string }) {
   )
 }
 
-function PhysicsManager({ onSetJoystickInput }: { onSetJoystickInput: (callback: (x: number, y: number) => void) => void }) {
+function PhysicsManager({
+  onSetJoystickInput,
+  gyroEnabled
+}: {
+  onSetJoystickInput: (callback: (x: number, y: number) => void) => void
+  gyroEnabled: boolean
+}) {
   const physics = usePhysics()
   const { setJoystickInput } = usePlayerController(physics)
-  usePOVCamera()
+  usePOVCamera({ gyroEnabled })
 
   useEffect(() => {
     onSetJoystickInput(() => (x: number, y: number) => setJoystickInput(x, y))
@@ -49,6 +56,7 @@ export default function Scene() {
   const [showClickHint, setShowClickHint] = useState(true)
   const [modelsLoaded, setModelsLoaded] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null)
+  const [gyroEnabled, setGyroEnabled] = useState(false)
 
   const handleModelsLoaded = useCallback(() => {
    
@@ -133,7 +141,7 @@ export default function Scene() {
       </Suspense>
 
       {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
-      {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} />}
+      {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} gyroEnabled={gyroEnabled} />}
 
       {/* Product click interaction */}
       {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
@@ -165,6 +173,9 @@ export default function Scene() {
 
       {/* Background audio */}
       <AudioPlayer />
+
+      {/* Gyroscope controls */}
+      {modelsLoaded && <GyroToggle onGyroChange={setGyroEnabled} />}
     </>
   )
 }
