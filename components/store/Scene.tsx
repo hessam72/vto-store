@@ -17,6 +17,7 @@ import ProductInteraction, { type ProductData } from './ProductInteraction'
 import ProductPopup from './ProductPopup'
 import { LoadingScreen } from './LoadingScreen'
 import { ModelsLoadingIndicator } from './ModelsLoadingIndicator'
+import { Stats } from '@react-three/drei'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -67,8 +68,8 @@ export default function Scene() {
     <>
       <Canvas
         style={{ touchAction: 'none' }}
-        shadows
-        dpr={[1, 2]}
+        // shadows
+        dpr={[1, 1.3]}
         gl={{
           antialias: true,
           toneMapping: THREE.ACESFilmicToneMapping,
@@ -76,7 +77,8 @@ export default function Scene() {
         }}
         camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
       >
-        
+         {/* FPS Stats */}
+      <Stats />
       {/* Dark background */}
       {/* <color attach="background" args={['#1a1a1a']} /> */}
 

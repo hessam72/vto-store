@@ -21,17 +21,17 @@ export function ReflectiveFloor({
     >
       <planeGeometry args={[size, size]} />
       <MeshReflectorMaterial
-        resolution={2048}
-        mixBlur={1}
+        resolution={1080}
+        mixBlur={0}
         mixStrength={mixStrength * 34}
-        // blur={[blur * 600, blur * 120]}
-        mirror={1}
-        depthScale={1.1}
-        minDepthThreshold={.4}
-        maxDepthThreshold={1.4}
+        // blur={10}
+        mirror={.8}
+        depthScale={.4}
+        minDepthThreshold={.35}
+        maxDepthThreshold={1.5}
         roughness={1}
-        metalness={.6}
-        color="#323438"
+        metalness={.7}
+        color="#3f3d39"
       />
     </mesh>
   )

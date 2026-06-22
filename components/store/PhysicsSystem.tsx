@@ -11,7 +11,7 @@ export function usePhysics() {
   const playerCollider = useRef(
     new Capsule(
       new THREE.Vector3(0, 0.55, 0),  // Bottom
-      new THREE.Vector3(0, 1.75, 0),  // Top (player eye height ~1.8m)
+      new THREE.Vector3(0, 1.75, 9),  // Top (player eye height ~1.8m)
       0.35                             // Radius
     )
   )
