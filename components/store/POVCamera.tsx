@@ -95,7 +95,7 @@ export function usePOVCamera(props?: POVCameraProps) {
       const pitchSensitivity = 0.015
       const yawSensitivity = 0.02
 
-      targetPitch.current = -deltaBeta * pitchSensitivity
+      targetPitch.current = deltaBeta * pitchSensitivity
       targetYaw.current = deltaGamma * yawSensitivity + deltaAlpha * yawSensitivity * 0.3
 
       // Clamp pitch to prevent flipping
