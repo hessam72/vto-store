@@ -99,11 +99,11 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
       <style jsx>{`
         div :global(.back) {
           background: rgba(20, 20, 20, 0.4) !important;
-          border: 2px solid rgba(255, 255, 255, 0.15) !important;
+          border: 2px solid rgba(238, 194, 0, 0.67) !important;
         }
         div :global(.front) {
-          background: rgba(255, 255, 255, 0.8) !important;
-          border: 2px solid rgba(255, 255, 255, 0.95) !important;
+          background: rgba(255, 221, 0, 0.62) !important;
+          border: 2px solid rgba(255, 255, 255, 0) !important;
         }
       `}</style>
     </div>

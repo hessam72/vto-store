@@ -35,7 +35,7 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
     // Safety: teleport if fallen through floor
     if (state.camera.position.y < -5) {
       playerCollider.current.start.set(0, 0.55, 0)
-      playerCollider.current.end.set(0, 1.75, 0)
+      playerCollider.current.end.set(0, 1.75, 7)
       state.camera.position.copy(playerCollider.current.end)
       playerVelocity.current.set(0, 0, 0)
     }

@@ -79,7 +79,7 @@ export default function Scene() {
         camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
       >
          {/* FPS Stats */}
-      <Stats />
+      {/* <Stats /> */}
       {/* Dark background */}
       {/* <color attach="background" args={['#1a1a1a']} /> */}
 
@@ -139,7 +139,7 @@ export default function Scene() {
       {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
 
       {/* Reflective Floor (Phase 9) */}
-      <ReflectiveFloor size={120} mixStrength={.9} blur={0} roughness={62} />
+      <ReflectiveFloor size={20} mixStrength={.9} blur={0} roughness={62} />
 
       {/* Post-Processing (Phase 10) */}
       <PostProcessing />
