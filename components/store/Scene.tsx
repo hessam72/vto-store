@@ -85,7 +85,7 @@ export default function Scene() {
         <Environment
           files="/hdr/Jew HDRI 1.exr"
           background={false}
-          environmentIntensity={0}
+          environmentIntensity={.5}
           resolution={256}
           // blur={1}
         />
