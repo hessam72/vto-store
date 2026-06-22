@@ -17,7 +17,9 @@ public/models
 /.next/
 /out/
 public/store-models
-
+public/hdr/Jew HDRI 2.exr
+public/hdr/Jew HDRI 3.exr
+public/hdr/Jew HDRI 1.exr
 # production
 /build
 

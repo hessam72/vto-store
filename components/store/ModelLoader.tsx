@@ -105,17 +105,28 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
             }
           }
 
+          // Ceiling double-sided rendering for reflections
+          if (obj.name.toLowerCase().includes('ceiling') || obj.position.y > 3) {
+            if (obj.material) {
+              const materials = Array.isArray(obj.material) ? obj.material : [obj.material]
+              materials.forEach((mat) => {
+                mat.side = THREE.DoubleSide
+                mat.needsUpdate = true
+              })
+            }
+          }
+
           // String light emissive glow
           if (obj.name.toLowerCase().includes('light') && obj.material) {
             console.log(`Applying emissive glow to ${obj.name}`)
             if (Array.isArray(obj.material)) {
               obj.material.forEach((mat) => {
-                mat.emissive = new THREE.Color('#ff0000')
+                mat.emissive = new THREE.Color('#ffd500')
                 mat.emissiveIntensity = 6.0
                 mat.needsUpdate = true
               })
             } else {
-              obj.material.emissive = new THREE.Color('#ff5100')
+              obj.material.emissive = new THREE.Color('#ffd500')
               obj.material.emissiveIntensity = 20
               obj.material.needsUpdate = true
             }

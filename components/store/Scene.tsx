@@ -83,7 +83,7 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="/hdr/040_hdrmaps_com_free_1K.exr"
+          files="/hdr/Jew HDRI 1.exr"
           background={false}
           environmentIntensity={0}
           resolution={256}
@@ -115,14 +115,14 @@ export default function Scene() {
 
 
       {/* Fill light */}
-      {/* <directionalLight position={[0, 2, -5]} intensity={0.5} color="#cdd6ff" /> */}
+      {/* <directionalLight position={[0, 2, -5]} intensity={9} color="#000000" /> */}
 
       {/* PCSS Soft Shadows */}
       {/* <ShadowSystem size={25} samples={17} focus={0} /> */}
 
       {/* Vitrine spotlights */}
-      {/* <pointLight position={[0, 2.5, -1.5]} intensity={10} distance={1} decay={2} color="#ffffff" />
-      <pointLight position={[6.5, 2.5, 0.05]} intensity={10} distance={6} decay={2} color="#ffffff" /> */}
+      <pointLight position={[0, 7, -1.5]} intensity={18} distance={12} decay={.6} color="#ffffff" /> 
+      {/* <pointLight position={[6.5, 1.2, 0.05]} intensity={30} distance={10} decay={0.3} color="#ffffff" />  */}
 
       {/* Load models from config */}
       <Suspense fallback={null}>
@@ -136,7 +136,7 @@ export default function Scene() {
       {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
 
       {/* Reflective Floor (Phase 9) */}
-      {/* <ReflectiveFloor size={120} mixStrength={.9} blur={0} roughness={62} /> */}
+      <ReflectiveFloor size={120} mixStrength={.9} blur={0} roughness={62} />
 
       {/* Post-Processing (Phase 10) */}
       <PostProcessing />

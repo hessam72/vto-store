@@ -16,22 +16,22 @@ export function ReflectiveFloor({
   return (
     <mesh
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, 1, 0]}
+      position={[0, .42, 0]}
       receiveShadow
     >
       <planeGeometry args={[size, size]} />
       <MeshReflectorMaterial
-        resolution={1024}
+        resolution={2048}
         mixBlur={1}
-        mixStrength={mixStrength * 14}
-        blur={[blur * 600, blur * 120]}
-        mirror={0}
+        mixStrength={mixStrength * 34}
+        // blur={[blur * 600, blur * 120]}
+        mirror={1}
         depthScale={1.1}
-        minDepthThreshold={0.4}
+        minDepthThreshold={.4}
         maxDepthThreshold={1.4}
-        roughness={roughness}
+        roughness={1}
         metalness={.6}
-        color="#0e0f12"
+        color="#323438"
       />
     </mesh>
   )
