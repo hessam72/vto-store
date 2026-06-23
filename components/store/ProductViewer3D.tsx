@@ -101,10 +101,17 @@ export default function ProductViewer3D({ glbPath }: ProductViewer3DProps) {
         gl={{ antialias: true, alpha: true }}
       >
         <Suspense fallback={<LoadingFallback />}>
-          <Environment preset="studio" />
+        <Environment
+          files="/hdr/040_hdrmaps_com_free_1K.exr"
+          background={false}
+          environmentIntensity={.5}
+          resolution={256}
+          // blur={1}
+        />
+
           <ambientLight intensity={1.5} />
-          <directionalLight position={[5, 5, 5]} intensity={2} />
-          <directionalLight position={[-5, -5, -5]} intensity={0.5} />
+          {/* <directionalLight position={[5, 5, 5]} intensity={2} /> */}
+          {/* <directionalLight position={[-5, -5, -5]} intensity={0.5} /> */}
           <ProductModel glbPath={glbPath} />
           <OrbitControls
             enablePan={true}

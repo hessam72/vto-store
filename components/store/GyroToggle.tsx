@@ -60,10 +60,10 @@ export function GyroToggle({ onGyroChange }: GyroToggleProps) {
   return (
     <button
       onClick={toggleGyro}
-      style={{opacity:'0.04'}}
+      // style={{opacity:'0.04'}}
       className={`fixed top-4 right-4 z-50 text-white p-3 rounded-full transition-colors ${
         isGyroEnabled
-          ? 'bg-blue-500/70 hover:bg-blue-600/80'
+          ? 'bg-yellow-500/70 hover:bg-yellow-600/80'
           : 'bg-black/50 hover:bg-black/70'
       }`}
       aria-label={isGyroEnabled ? 'Disable gyroscope controls' : 'Enable gyroscope controls'}
