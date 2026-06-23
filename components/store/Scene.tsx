@@ -94,7 +94,7 @@ export default function Scene() {
       {/* HDRI lighting */}
       <Suspense fallback={null}>
         <Environment
-          files="/hdr/040_hdrmaps_com_free_1K.exr"
+          files="/hdr/main_hdr.exr"
           background={false}
           environmentIntensity={.5}
           resolution={256}

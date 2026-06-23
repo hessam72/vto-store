@@ -102,7 +102,7 @@ export default function ProductViewer3D({ glbPath }: ProductViewer3DProps) {
       >
         <Suspense fallback={<LoadingFallback />}>
         <Environment
-          files="/hdr/040_hdrmaps_com_free_1K.exr"
+          files="/hdr/main_hdr.exr"
           background={false}
           environmentIntensity={.5}
           resolution={256}
