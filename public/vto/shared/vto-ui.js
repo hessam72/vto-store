@@ -397,6 +397,7 @@ class VTOUIManager {
    */
   hideLoading() {
     const loading = document.getElementById('vto-loading') ||
+                     document.getElementById('loading') ||
                      document.getElementById('loading-modal') ||
                      document.querySelector('.loading');
 

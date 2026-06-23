@@ -500,7 +500,8 @@
   font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.vto-loading-overlay.fade-out {
+.vto-loading-overlay.fade-out,
+.fade-out {
   animation: fadeOut 0.5s ease-out forwards;
 }
 
