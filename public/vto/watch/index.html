@@ -5,7 +5,7 @@
     <meta http-equiv="content-language" content="en-EN" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    <title>WEBARROCKSHAND WATCH VTO DEMO</title>
+    <title> WATCH VTO </title>
     
     <!-- INCLUDE WEBARROCKSHAND SCRIPT -->
     <script src="./dist/WebARRocksHand.js"></script>
@@ -80,7 +80,7 @@
       }
 
       #loading {
-        background: #1c3e83;
+        background: #342b00;
         color: white;
         opacity: 1;
         z-index: 10;
@@ -158,14 +158,15 @@
     <!-- loading modal: -->
     <div id='loading' class='modal'>
       <div>
-        LOADING...
+       لطفا منتظر بمانید...<br/>
+       در حال بارگذاری مدل دست و ساعت هستیم.
       </div>
     </div>
 
     <!-- instructions: -->
     <div id='instructions' class='modal'>
       <div>
-        Place your hand like that:<br/>
+       لطفا دست خود را به این شکل قرار دهید:<br/>
         <img src='assets/VTOWristGuideline2LR.webp' class="instructionsImg" /><br/>
         <button class='instructionsOK' onclick="hide_instructions()">OK</button>
       </div>
@@ -179,7 +180,7 @@
       <canvas id='handTrackerCanvas'></canvas>
     </div>
 
-    <button onclick='change_camera()' id='changeCamera'>Change camera</button>
+    <button onclick='change_camera()' id='changeCamera'>تغییر دوربین</button>
   </body>
 </html>
  

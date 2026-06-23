@@ -35,6 +35,8 @@
   transition: var(--vto-transition);
   position: relative;
   overflow: hidden;
+  margin-left:auto;
+  display: none;
 }
 
 .vto-card-gradient {
@@ -128,8 +130,7 @@
 
 .vto-collapse-btn {
   position: absolute;
-  top: 16px;
-  left: 16px;
+ 
   background: rgba(255, 255, 255, 0.15);
   border: none;
   border-radius: 50%;
@@ -143,6 +144,10 @@
   color: white;
   font-size: 16px;
   z-index: 2;
+      margin: auto;
+    left: 0;
+    right: 0;
+    top: 20%;
 }
 
 .vto-collapse-btn:hover {
@@ -312,10 +317,10 @@
   transition: var(--vto-transition);
 }
 
-.vto-close-modal:hover {
+/* .vto-close-modal:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(90deg);
-}
+} */
 
 /* Product Details Modal */
 .vto-details-modal {
@@ -599,8 +604,12 @@
 @media (max-width: 768px) {
   .vto-product-card {
     width: calc(100% - 40px);
-    right: 20px;
+   
     top: 70px;
+    max-width: 80vw;
+        right: 0;
+        left: 0rem;
+        margin: auto;
   }
 
   .vto-capture-btn {
