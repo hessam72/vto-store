@@ -10,6 +10,7 @@ export interface ProductData {
   price: string
   weight: string
   name_fa: string
+  glbPath: string
 }
 
 interface ProductInteractionProps {

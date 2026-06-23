@@ -16,7 +16,7 @@ export function usePOVCamera(props?: POVCameraProps) {
   const currentPitch = useRef(0)
   const isDragging = useRef(false)
   const previousMouse = useRef({ x: 0, y: 0 })
-  const initialOrientation = useRef<{ alpha: number; beta: number; gamma: number } | null>(null)
+  const previousOrientation = useRef<{ alpha: number; beta: number; gamma: number } | null>(null)
 
   useEffect(() => {
     const canvas = gl.domElement
@@ -66,26 +66,38 @@ export function usePOVCamera(props?: POVCameraProps) {
   // Gyroscope controls
   useEffect(() => {
     if (!gyroEnabled) {
-      initialOrientation.current = null
+      previousOrientation.current = null
       return
     }
 
     const handleOrientation = (event: DeviceOrientationEvent) => {
       if (event.alpha === null || event.beta === null || event.gamma === null) return
 
-      // Set initial orientation on first read
-      if (!initialOrientation.current) {
-        initialOrientation.current = {
+      // Initialize on first read
+      if (!previousOrientation.current) {
+        previousOrientation.current = {
           alpha: event.alpha,
           beta: event.beta,
           gamma: event.gamma
         }
+        return // Skip first frame (no delta to calculate)
       }
 
-      // Calculate relative rotation from initial position
-      const deltaAlpha = event.alpha - initialOrientation.current.alpha
-      const deltaBeta = event.beta - initialOrientation.current.beta
-      const deltaGamma = event.gamma - initialOrientation.current.gamma
+      // Calculate frame-to-frame delta
+      let deltaAlpha = event.alpha - previousOrientation.current.alpha
+      const deltaBeta = event.beta - previousOrientation.current.beta
+      const deltaGamma = event.gamma - previousOrientation.current.gamma
+
+      // Fix alpha wraparound (compass 0°-360°)
+      if (deltaAlpha > 180) deltaAlpha -= 360
+      if (deltaAlpha < -180) deltaAlpha += 360
+
+      // Update previous reference
+      previousOrientation.current = {
+        alpha: event.alpha,
+        beta: event.beta,
+        gamma: event.gamma
+      }
 
       // Map device orientation to camera rotation
       // Beta: device tilt forward/back → camera pitch (up/down)
@@ -95,11 +107,13 @@ export function usePOVCamera(props?: POVCameraProps) {
       const pitchSensitivity = 0.015
       const yawSensitivity = 0.02
 
-      targetPitch.current = deltaBeta * pitchSensitivity
-      targetYaw.current = deltaGamma * yawSensitivity + deltaAlpha * yawSensitivity * 0.3
+      // Accumulate incremental rotation
+      targetPitch.current += deltaBeta * pitchSensitivity
+      targetYaw.current += deltaGamma * yawSensitivity + deltaAlpha * yawSensitivity * 0.3
 
-      // Clamp pitch to prevent flipping
-      targetPitch.current = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetPitch.current))
+      // Relaxed pitch clamp for 360° comfort (±160° = ±2.79 radians)
+      const maxPitch = (160 * Math.PI) / 180
+      targetPitch.current = Math.max(-maxPitch, Math.min(maxPitch, targetPitch.current))
     }
 
     window.addEventListener('deviceorientation', handleOrientation)

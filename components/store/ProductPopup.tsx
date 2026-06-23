@@ -1,7 +1,19 @@
 'use client'
 
 import { useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import type { ProductData } from './ProductInteraction'
+
+const ProductViewer3D = dynamic(() => import('./ProductViewer3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] flex items-center justify-center bg-gradient-to-br from-slate-900 to-black rounded-xl">
+      <div className="animate-pulse text-amber-400/50 text-sm font-[family-name:var(--font-vazir)]">
+        در حال بارگذاری...
+      </div>
+    </div>
+  )
+})
 
 interface ProductPopupProps {
   product: ProductData | null
@@ -31,14 +43,14 @@ export default function ProductPopup({ product, onClose }: ProductPopupProps) {
       onClick={onClose}
     >
       <div
-        className="relative w-[90%] max-w-md bg-black rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in duration-200 border border-amber-600/30"
+        className="relative w-[90%] max-w-2xl max-h-[90vh] bg-black rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-amber-600/30"
         onClick={(e) => e.stopPropagation()}
         dir="rtl"
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 text-amber-500/60 hover:text-amber-400 transition-colors"
+          className="absolute top-4 left-4 z-10 text-amber-500/60 hover:text-amber-400 transition-colors bg-black/50 rounded-full p-2 backdrop-blur-sm"
           aria-label="بستن"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,36 +58,30 @@ export default function ProductPopup({ product, onClose }: ProductPopupProps) {
           </svg>
         </button>
 
-        {/* Content */}
-        <div className="space-y-4 font-[family-name:var(--font-vazir)]">
-          <h2 className="text-2xl font-bold text-amber-300 mb-6">{product.name_fa}</h2>
+        {/* 3D Viewer */}
+        <div className="h-[400px] w-full">
+          <ProductViewer3D glbPath={product.glbPath} />
+        </div>
 
-          <div className="space-y-3">
-            <div className="flex justify-between items-center border-b border-amber-600/20 pb-2">
-              <span className="text-amber-200/70">قیمت:</span>
-              <span className="text-xl font-semibold text-amber-300">{product.price} تومان</span>
+        {/* Product Info */}
+        <div className="p-6 space-y-4 font-[family-name:var(--font-vazir)] bg-gradient-to-b from-black to-slate-950">
+          <h2 className="text-2xl font-bold text-amber-300">{product.name_fa}</h2>
+
+          <div className="flex gap-6 items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-amber-200/70 text-sm">قیمت:</span>
+              <span className="text-lg font-semibold text-amber-300">{product.price} تومان</span>
             </div>
-
-            <div className="flex justify-between items-center border-b border-amber-600/20 pb-2">
-              <span className="text-amber-200/70">وزن:</span>
-              <span className="text-lg text-amber-100">{product.weight} گرم</span>
-            </div>
-
-            <div className="flex justify-between items-center pb-2">
-              <span className="text-amber-200/70">دسته‌بندی:</span>
-              <span className="text-lg text-amber-100">
-                {product.category === 'earrings' ? 'گوشواره' :
-                 product.category === 'necklace' ? 'گردنبند' :
-                 product.category === 'rings' ? 'انگشتر' :
-                 product.category === 'watch' ? 'ساعت' : product.category}
-              </span>
+            <div className="flex items-center gap-2">
+              <span className="text-amber-200/70 text-sm">وزن:</span>
+              <span className="text-amber-100">{product.weight} گرم</span>
             </div>
           </div>
 
           {/* VTO Button */}
           <a
             href={vtoUrl}
-            className="block w-full mt-6 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-slate-900 font-bold py-3 px-6 rounded-xl text-center transition-all duration-200 shadow-lg hover:shadow-amber-600/40 transform hover:scale-[1.02]"
+            className="block w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-slate-900 font-bold py-3 px-6 rounded-xl text-center transition-all duration-200 shadow-lg hover:shadow-amber-600/40 transform hover:scale-[1.02]"
           >
             پرو مجازی
           </a>
