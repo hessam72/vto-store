@@ -32,7 +32,7 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
 
   const updateMovement = (delta: number) => {
     // console.log('Updating movement with delta:', delta)
-    const speed = 15 // units/second
+    const speed = 19 // units/second
     const keys = keysPressed.current
 
     // Get camera direction (ignore Y component for movement)
