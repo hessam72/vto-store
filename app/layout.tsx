@@ -39,6 +39,9 @@ export default function RootLayout({
       lang="en"
       className={`${vazir.variable} h-full antialiased`}
     >
+      <head>
+        <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js" async />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

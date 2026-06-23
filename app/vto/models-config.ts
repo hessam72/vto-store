@@ -1,35 +1,70 @@
+type ModelPaths = {
+  glb: string;
+  usdz: string;
+};
+
+type ModelsMap = {
+  [key: string]: ModelPaths;
+};
+
 export const MODELS_CONFIG = {
   earrings: {
-    default: '/models/earrings/default.glb',
+    default: {
+      glb: '/models/usdz/ring.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
   },
   necklace: {
-    'black-panther': '/models/necklace/black-panther.glb',
-    'native-american': '/models/necklace/native-american.glb',
+    'black-panther': {
+      glb: '/models/usdz/ring.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
+    'native-american': {
+      glb: '/models/usdz/ring.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
   },
   rings: {
-    default: '/models/rings/default.glb',
+    default: {
+      glb: '/models/usdz/ring.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
   },
   watch: {
-    default: '/models/watch/default.glb',
+    default: {
+      glb: '/models/watch/default.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
   },
-} as const;
+} as const satisfies Record<string, ModelsMap>;
 
 export type Category = keyof typeof MODELS_CONFIG;
 export type ModelName<T extends Category> = keyof typeof MODELS_CONFIG[T];
 
 export function getModelPath(category: Category, modelName?: string): string | null {
-  const categoryModels = MODELS_CONFIG[category];
+  const categoryModels = MODELS_CONFIG[category] as ModelsMap;
   if (!categoryModels) return null;
 
-  // If no model specified, use 'default' if available, otherwise first model
   if (!modelName) {
-    return categoryModels['default' as keyof typeof categoryModels]
-      || Object.values(categoryModels)[0] as string;
+    const defaultModel = categoryModels['default'] || Object.values(categoryModels)[0];
+    return defaultModel?.glb || null;
   }
 
-  // Validate model name
-  const modelPath = categoryModels[modelName as keyof typeof categoryModels];
-  return modelPath ? String(modelPath) : null;
+  const model = categoryModels[modelName];
+  return model?.glb || null;
+}
+
+export function getARModelPaths(category: Category, modelName?: string): ModelPaths | null {
+  const categoryModels = MODELS_CONFIG[category] as ModelsMap;
+  if (!categoryModels) return null;
+
+  if (!modelName) {
+    const defaultModel = categoryModels['default'] || Object.values(categoryModels)[0];
+    return defaultModel ? { glb: defaultModel.glb, usdz: defaultModel.usdz } : null;
+  }
+
+  const model = categoryModels[modelName];
+  return model ? { glb: model.glb, usdz: model.usdz } : null;
 }
 
 export function getAvailableModels(category: Category): string[] {
