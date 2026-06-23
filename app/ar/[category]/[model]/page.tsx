@@ -59,15 +59,15 @@ export default function ARPage() {
   if (error) {
     return (
       <div className="w-full h-screen bg-black flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
+        <div className="text-center max-w-md px-4 font-[family-name:var(--font-vazir)]" dir="rtl">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-white text-2xl font-bold mb-4">Error</h1>
+          <h1 className="text-white text-2xl font-bold mb-4">خطا</h1>
           <p className="text-gray-400 mb-6">{error}</p>
           <button
             onClick={handleBack}
             className="px-6 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 transition-colors"
           >
-            Go Back
+            بازگشت
           </button>
         </div>
       </div>
@@ -77,9 +77,9 @@ export default function ARPage() {
   if (!modelPaths) {
     return (
       <div className="w-full h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-center">
+        <div className="text-white text-center font-[family-name:var(--font-vazir)]" dir="rtl">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading product...</p>
+          <p>در حال بارگذاری محصول...</p>
         </div>
       </div>
     )
@@ -92,7 +92,8 @@ export default function ARPage() {
       {/* Back button */}
       <button
         onClick={handleBack}
-        className="absolute top-6 left-6 z-50 px-4 py-2 bg-white/90 hover:bg-white active:bg-gray-100 text-black rounded-lg shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 font-semibold"
+        className="absolute top-6 right-6 z-50 px-4 py-2 bg-white/90 hover:bg-white active:bg-gray-100 text-black rounded-lg shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 font-semibold font-[family-name:var(--font-vazir)]"
+        dir="rtl"
       >
         <svg
           className="w-5 h-5"
@@ -107,7 +108,7 @@ export default function ARPage() {
             d="M10 19l-7-7m0 0l7-7m-7 7h18"
           />
         </svg>
-        Back
+        بازگشت
       </button>
 
       {/* AR Viewer */}
