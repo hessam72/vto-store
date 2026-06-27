@@ -220,6 +220,9 @@ export default function HeroSection() {
   const logoY = useTransform(scrollYProgress, [0, 0.2], ["50vh", "0vh"]);
   const logoScale = useTransform(scrollYProgress, [0, 0.2], [1.5, 1]);
 
+  // Scroll hint: fades out early (0 → 0.15)
+  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
+
   // Hero content: staggered reveal, stays visible
   const labelOpacity = useTransform(scrollYProgress, [0, 0.2, 0.3, 1], [0, 0, 1, 1]);
   const titleOpacity = useTransform(scrollYProgress, [0, 0.35, 0.45, 1], [0, 0, 1, 1]);
@@ -234,6 +237,7 @@ export default function HeroSection() {
   const model2Opacity = useTransform(scrollYProgress, [0.25, 0.4, 0.5], [0, 1, 1]);
   const model3Opacity = useTransform(scrollYProgress, [0.5, 0.65, 0.75], [0, 1, 1]);
   const model4Opacity = useTransform(scrollYProgress, [0.75, 0.9, 1], [0, 1, 1]);
+  const model5Opacity = useTransform(scrollYProgress, [0.9, 1], [0, 1]);
 
 
   /* ── Render ────────────────────────────────────────────── */
@@ -275,6 +279,89 @@ export default function HeroSection() {
           }}
         >
           <ShahrOmidLogo />
+
+          {/* Scroll hint text + gesture below logo */}
+          <motion.div
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-8 flex flex-col items-center gap-3"
+            style={{ opacity: scrollHintOpacity }}
+          >
+            <p
+              className="font-persian text-[0.7rem] tracking-[0.15em] whitespace-nowrap"
+              style={{
+                color: "rgba(255,215,0,0.7)",
+                textShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
+              }}
+            >
+              برای کشف ویترین اسکرول کنید
+            </p>
+
+            {/* Animated scroll gesture */}
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="flex flex-col items-center gap-2"
+            >
+              {/* Mouse icon */}
+              <svg
+                width="24"
+                height="36"
+                viewBox="0 0 24 36"
+                fill="none"
+                className="opacity-70"
+              >
+                <rect
+                  x="2"
+                  y="2"
+                  width="20"
+                  height="32"
+                  rx="10"
+                  stroke="#ffd700"
+                  strokeWidth="2"
+                  fill="none"
+                />
+                <motion.rect
+                  x="10"
+                  y="8"
+                  width="4"
+                  height="8"
+                  rx="2"
+                  fill="#ffd700"
+                  animate={{ y: [8, 14, 8] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                />
+              </svg>
+
+              {/* Down arrow */}
+              <motion.svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <path
+                  d="M8 2L8 14M8 14L3 9M8 14L13 9"
+                  stroke="#ffd700"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </motion.svg>
+            </motion.div>
+          </motion.div>
         </motion.div>
 
         {/* ════════════════════════════════════════════════
@@ -329,8 +416,15 @@ export default function HeroSection() {
               />
               <JewelryModel
                 url="/home_models/jewel-4.glb"
-                position={[0, 0, 0]}
+                position={[0, -.6, 0]}
                 scrollOpacity={model4Opacity}
+                scale={6.5}
+              />   
+              <JewelryModel
+                url="/home_models/jewel-5.glb"
+                position={[0, -.3, 0]}
+                scrollOpacity={model5Opacity}
+                scale={5}
               />
             </Suspense>
           </Canvas>
