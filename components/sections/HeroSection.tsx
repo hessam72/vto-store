@@ -394,7 +394,7 @@ export default function HeroSection() {
             />
             {/* RTL arrow */}
             <svg
-              className="relative w-5 h-5 flex-shrink-0 transition-transform duration-500 group-hover:-translate-x-2"
+              className=" relative w-5 h-5 flex-shrink-0 transition-transform duration-500 group-hover:-translate-x-2"
               viewBox="0 0 16 16"
               fill="none"
             >
@@ -406,7 +406,7 @@ export default function HeroSection() {
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="relative tracking-wider">ورود به موزه</span>
+            <span className="relative tracking-wider">ورود به گالری</span>
           </motion.button>
         </motion.div>
 

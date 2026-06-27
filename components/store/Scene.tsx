@@ -176,6 +176,25 @@ export default function Scene() {
 
       {/* Gyroscope controls */}
       {modelsLoaded && <GyroToggle onGyroChange={setGyroEnabled} />}
+
+      {/* Bottom-left logo */}
+      <div style={{ 
+    left:' -1rem',
+    maxWidth: '10rem',
+    height: 'auto',
+    bottom: '1rem',
+
+      }} className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-10 pointer-events-none">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/OC Jew-vertical.png"
+          alt="OC Jewelry"
+          className="h-16 md:h-20 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity duration-300"
+          style={{
+            filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))",
+          }}
+        />
+      </div>
     </>
   )
 }

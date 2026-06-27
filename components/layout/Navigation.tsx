@@ -17,11 +17,14 @@ function ShahrOmidLogo() {
       <img
         src="/images/shahr-omid-logo.png"
         alt="شهر امید"
+        style={{    width: '13rem',
+          height: 'auto',
+          marginTop: '1rem',
+         filter: "brightness(1.15) contrast(1.08) saturate(1.1)",
+        }}
         onError={() => setImgFailed(true)}
         className="h-12 md:h-16 w-auto object-contain"
-        style={{
-          filter: "brightness(1.15) contrast(1.08) saturate(1.1)",
-        }}
+     
       />
     );
   }
@@ -72,7 +75,7 @@ export default function Navigation() {
         transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="fixed top-0 left-0 right-0 z-50 bg-transparent"
       >
-        <div className="container-luxury flex items-center justify-end h-16 md:h-24">
+        <div className="container-luxury flex items-center justify-center h-16 md:h-24">
           {/* Logo — top left */}
           <motion.a
             href="#"
