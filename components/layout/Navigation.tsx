@@ -84,9 +84,12 @@ export default function Navigation() {
         transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
           scrolled
-            ? "backdrop-blur-xl border-b border-[rgba(212,175,55,0.12)] bg-[rgba(10,10,12,0.88)]"
+            ? "backdrop-blur-2xl border-b-[1.5px] border-[rgba(212,175,55,0.18)] bg-[rgba(8,8,10,0.92)]"
             : "bg-transparent"
         }`}
+        style={scrolled ? {
+          boxShadow: "0 4px 32px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 215, 0, 0.08)"
+        } : {}}
       >
         <div className="container-luxury flex items-center justify-between h-14 md:h-20">
           {/* Logo — RTL: appears on right */}
@@ -105,10 +108,20 @@ export default function Navigation() {
               <li key={item.label}>
                 <button
                   onClick={() => scrollTo(item.href)}
-                  className="relative font-persian text-[0.78rem] tracking-wide text-[var(--text-secondary)] hover:text-[var(--gold-primary)] transition-colors duration-400 group"
+                  className="relative font-persian text-[0.82rem] tracking-wide font-medium text-[var(--text-secondary)] hover:text-[#ffd700] transition-all duration-400 group"
+                  style={{
+                    textShadow: "0 0 0 transparent",
+                    transition: "all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.textShadow = "0 0 20px rgba(255, 215, 0, 0.5)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.textShadow = "0 0 0 transparent";
+                  }}
                 >
                   {item.label}
-                  <span className="absolute -bottom-1 right-0 w-0 h-px bg-[var(--gold-primary)] group-hover:w-full transition-all duration-500 ease-[var(--ease-luxury)]" />
+                  <span className="absolute -bottom-1 right-0 w-0 h-[2px] bg-gradient-to-l from-transparent via-[#ffd700] to-transparent group-hover:w-full transition-all duration-500 ease-[var(--ease-luxury)]" style={{ boxShadow: "0 0 8px rgba(255, 215, 0, 0.6)" }} />
                 </button>
               </li>
             ))}
@@ -117,21 +130,24 @@ export default function Navigation() {
           {/* CTA + hamburger — RTL: appears on left */}
           <div className="flex items-center gap-5 flex-row-reverse">
             <motion.button
-              className="hidden md:block font-persian text-[0.65rem] tracking-wide"
+              className="hidden md:block font-persian text-[0.7rem] tracking-wider font-semibold"
               whileHover={{
-                boxShadow:   "0 0 40px rgba(212,175,55,0.28), 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.2)",
-                borderColor: "rgba(212,175,55,0.72)",
+                boxShadow: "0 0 50px rgba(255,215,0,0.4), 0 4px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,235,120,0.25)",
+                borderColor: "rgba(255,215,0,0.85)",
+                y: -2,
               }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               style={{
-                padding:              "0.55rem 1.35rem",
-                border:               "1px solid rgba(212,175,55,0.4)",
-                background:           "rgba(8,6,2,0.55)",
-                backdropFilter:       "blur(18px)",
-                WebkitBackdropFilter: "blur(18px)",
-                boxShadow:            "0 0 18px rgba(212,175,55,0.1), inset 0 1px 0 rgba(212,175,55,0.08)",
-                color:                "rgba(255,255,255,0.88)",
+                padding: "0.65rem 1.6rem",
+                border: "1.5px solid rgba(212,175,55,0.5)",
+                borderRadius: "6px",
+                background: "linear-gradient(135deg, rgba(10,8,2,0.7) 0%, rgba(15,12,3,0.6) 100%)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                boxShadow: "0 0 24px rgba(212,175,55,0.15), inset 0 1px 0 rgba(255,235,120,0.12)",
+                color: "#ffd700",
+                textShadow: "0 0 10px rgba(255, 215, 0, 0.3)",
               }}
             >
               ورود به موزه
