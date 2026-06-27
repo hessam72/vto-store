@@ -216,8 +216,8 @@ export default function HeroSection() {
 
 
   /* ── Scroll-based animations ── */
-  // Logo: starts center, moves to top (0 → 0.2)
-  const logoY = useTransform(scrollYProgress, [0, 0.2], ["50vh", "0vh"]);
+  // Logo: starts 35vh (15% higher than center), moves to top (0 → 0.2)
+  const logoY = useTransform(scrollYProgress, [0, 0.2], ["35vh", "0vh"]);
   const logoScale = useTransform(scrollYProgress, [0, 0.2], [1.5, 1]);
 
   // Scroll hint: fades out early (0 → 0.15)
@@ -392,7 +392,7 @@ export default function HeroSection() {
               intensity={120}
               color="#fffacd"
             />
-            <pointLight position={[0, -2.1, -5]} intensity={80} color="#ffffff" />
+            <pointLight position={[0, -2.1, -5]} intensity={120} color="#ffffff" />
             <pointLight position={[0, 3, 3]} intensity={60} color="#ffd700" />
 
             <Environment preset="sunset" />
@@ -437,20 +437,20 @@ export default function HeroSection() {
         ════════════════════════════════════════════════ */}
         <div className="absolute inset-0 z-[2] pointer-events-none">
           {/* Right-side veil — text contrast */}
-          <div className="absolute inset-0" style={{
+          {/* <div className="absolute inset-0" style={{
             background:
               "linear-gradient(to left, rgba(5,4,2,0.92) 0%, rgba(5,4,2,0.72) 20%, rgba(5,4,2,0.18) 52%, transparent 100%)",
-          }} />
+          }} /> */}
           {/* Top + bottom vignette */}
           <div className="absolute inset-0" style={{
             background:
               "linear-gradient(to bottom, rgba(6,6,6,0.55) 0%, transparent 20%, transparent 68%, rgba(6,6,6,0.88) 100%)",
           }} />
           {/* Emerald left accent */}
-          <div className="absolute inset-0" style={{
+          {/* <div className="absolute inset-0" style={{
             background:
               "linear-gradient(to right, rgba(14,50,44,0.45) 0%, rgba(14,50,44,0.10) 38%, transparent 60%)",
-          }} />
+          }} /> */}
           {/* Mobile extra veil */}
           <div className="absolute inset-0 md:hidden" style={{ background: "rgba(5,4,2,0.22)" }} />
         </div>
