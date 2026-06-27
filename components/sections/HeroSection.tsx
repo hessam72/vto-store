@@ -250,17 +250,17 @@ export default function HeroSection() {
           <motion.div {...fadeUp(0.5)} className="flex items-center justify-center gap-3 mb-5 md:mb-7">
             <span
               className="block w-8 h-px flex-shrink-0"
-              style={{ background: "rgba(212,175,55,0.55)" }}
+              style={{ background: "rgba(212, 175, 55, 0.9)" }}
             />
             <p
               className="font-persian text-[#D4AF37] text-[0.58rem] md:text-[0.64rem] tracking-[0.32em]"
-              style={{ opacity: 0.70 }}
+              style={{ opacity: 1 }}
             >
-              خوش آمدید به
+              به ویترین مجازی شهر امید خوش آمدید
             </p>
             <span
               className="block w-8 h-px flex-shrink-0"
-              style={{ background: "rgba(212,175,55,0.55)" }}
+              style={{ background: "rgba(212, 175, 55, 0.8)" }}
             />
           </motion.div>
 
@@ -270,6 +270,16 @@ export default function HeroSection() {
             className="font-persian font-bold leading-[1.08] mb-4 md:mb-5"
             style={{ textAlign: "center" }}
           >
+            {/* <span
+              className="block mb-2"
+              style={{
+                fontSize: "clamp(1.8rem, 4vw, 3.2rem)",
+                color: "rgba(255,255,255,0.92)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              زیبایی را پیش از خرید تجربه کنید
+            </span> */}
             <span
               className="block"
               style={{
@@ -302,14 +312,12 @@ export default function HeroSection() {
             className="font-persian font-light leading-[2.1]"
             style={{
               fontSize:  "clamp(0.76rem, 1.3vw, 1.0rem)",
-              color:     "rgba(255,255,255,0.40)",
-              maxWidth:  "26ch",
+              color:     "rgba(255, 255, 255, 0.99)",
+              maxWidth:  "36ch",
               textAlign: "center",
             }}
           >
-            آنجا که طلا روایت می‌کند
-            <br />
-            و زیبایی در سکوت جاودان می‌شود.
+            نمایشگاه سه‌بعدی و امتحان مجازی جواهرات؛ هر قطعه را پیش از خرید، روی خود ببینید.
           </motion.p>
         </div>
 
