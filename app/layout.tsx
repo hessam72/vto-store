@@ -1,48 +1,48 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
-const vazir = localFont({
-  src: [
-    {
-      path: '/fonts/Vazirmatn-Regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '/fonts/Vazirmatn-Medium.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '/fonts/Vazirmatn-Bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: "--font-vazir",
-  display: 'swap',
-});
+import { LenisProvider } from "@/components/layout/LenisProvider";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 export const metadata: Metadata = {
-  title: "Virtual Try-On",
-  description: "Virtual try-on for jewelry using WebAR",
+  title: "AURUM — Where Timeless Gold Meets Digital Art",
+  description:
+    "Experience luxury jewelry through cinematic storytelling, immersive 3D environments, and augmented reality. Enter the Gold Museum.",
+  keywords: ["luxury jewelry", "gold", "3D experience", "digital museum", "AR jewelry"],
+  authors: [{ name: "AURUM" }],
+  openGraph: {
+    title: "AURUM — The Gold Museum",
+    description: "A cinematic digital museum for luxury jewelry.",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#060608",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${vazir.variable} h-full antialiased`}
-    >
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
-        <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js" async />
+        {/* Preconnect to Google Fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body>
+        <LenisProvider>
+          {/* Cinematic film grain overlay */}
+          <div className="grain-overlay" aria-hidden="true" />
+
+          {/* Custom luxury cursor */}
+          <CustomCursor />
+
+          {children}
+        </LenisProvider>
+      </body>
     </html>
   );
 }
