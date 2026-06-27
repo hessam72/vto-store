@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   motion,
@@ -15,20 +15,6 @@ import {
    second of video. 300vh ≈ comfortable for a 6-10s clip.
 ───────────────────────────────────────────────────────────── */
 const SCROLL_HEIGHT = "300vh";
-
-/* ─────────────────────────────────────────────────────────────
-   Animation presets
-───────────────────────────────────────────────────────────── */
-const fadeUp = (delay: number) => ({
-  initial:    { opacity: 0, y: 30 },
-  animate:    { opacity: 1, y: 0 },
-  transition: { duration: 1.1, delay, ease: [0.16, 1, 0.3, 1] as const },
-});
-const fadeIn = (delay: number) => ({
-  initial:    { opacity: 0 },
-  animate:    { opacity: 1 },
-  transition: { duration: 1.4, delay, ease: [0.25, 0.46, 0.45, 0.94] as const },
-});
 
 /* ─────────────────────────────────────────────────────────────
    Gold dust particles — deterministic (no Math.random → no SSR
@@ -52,6 +38,65 @@ const STATS = [
   { icon: "◈", title: "سالن‌های نمایش",     value: "۱۲+ گالری" },
   { icon: "◎", title: "امنیت و حریم خصوصی", value: "سطح بالا"  },
 ];
+
+/* ─────────────────────────────────────────────────────────────
+   Logo Component
+───────────────────────────────────────────────────────────── */
+function ShahrOmidLogo() {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  if (!imgFailed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/images/shahr-omid-logo.png"
+        alt="شهر امید"
+        style={{
+          width: '13rem',
+          height: 'auto',
+          marginTop: '1rem',
+          filter: "brightness(1.15) contrast(1.08) saturate(1.1)",
+        }}
+        onError={() => setImgFailed(true)}
+        className="h-12 md:h-16 w-auto object-contain"
+      />
+    );
+  }
+
+  // Text fallback
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-center gap-3">
+        <span className="font-persian font-bold text-[0.65rem] md:text-[0.72rem] tracking-[0.28em] uppercase" style={{
+          color: "#ffd700",
+          textShadow: "0 0 20px rgba(255, 215, 0, 0.5)",
+          opacity: 0.8,
+        }}>
+          MUSEUM
+        </span>
+        <svg viewBox="0 0 20 20" className="w-[22px] h-[22px] md:w-[26px] md:h-[26px]" fill="none">
+          <path
+            d="M10 2L3 8l7 10 7-10L10 2z"
+            stroke="#ffd700"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            style={{ filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.6))" }}
+          />
+          <path d="M3 8h14" stroke="#ffd700" strokeWidth="1.2" opacity="0.6" />
+        </svg>
+      </div>
+      <span className="font-persian font-bold text-[1.3rem] md:text-[1.6rem] tracking-[0.25em]" style={{
+        background: "linear-gradient(135deg, #c9a227 0%, #ffd700 35%, #fffacd 52%, #ffd700 65%, #b8860b 100%)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+        filter: "drop-shadow(0 0 15px rgba(255, 215, 0, 0.4))",
+      }}>
+        شهر امید
+      </span>
+    </div>
+  );
+}
 
 /* ═══════════════════════════════════════════════════════════
    HeroSection
@@ -97,6 +142,20 @@ export default function HeroSection() {
     damping: 25,
     mass: 0.5,
   });
+
+  /* ── Scroll-based animations ── */
+  // Logo: starts center, moves to top (0 → 0.2)
+  const logoY = useTransform(scrollYProgress, [0, 0.2], ["50vh", "0vh"]);
+  const logoScale = useTransform(scrollYProgress, [0, 0.2], [1.5, 1]);
+
+  // Hero content: staggered reveal, stays visible
+  const labelOpacity = useTransform(scrollYProgress, [0, 0.2, 0.3, 1], [0, 0, 1, 1]);
+  const titleOpacity = useTransform(scrollYProgress, [0, 0.35, 0.45, 1], [0, 0, 1, 1]);
+  const ornamentOpacity = useTransform(scrollYProgress, [0, 0.5, 0.6, 1], [0, 0, 1, 1]);
+  const subtitleOpacity = useTransform(scrollYProgress, [0, 0.65, 0.75, 1], [0, 0, 1, 1]);
+
+  // CTA button: fades in at end
+  const ctaOpacity = useTransform(scrollYProgress, [0, 0.8, 0.95, 1], [0, 0, 1, 1]);
 
   /* ── Canvas rendering with throttled video seeks ── */
   useEffect(() => {
@@ -178,6 +237,21 @@ export default function HeroSection() {
       >
 
         {/* ════════════════════════════════════════════════
+            LOGO — Scroll-controlled position (center → top)
+        ════════════════════════════════════════════════ */}
+        <motion.div
+          className="absolute left-1/2 z-[100] pointer-events-none"
+          style={{
+            y: logoY,
+            scale: logoScale,
+            x: "-50%",
+            transformOrigin: "center center",
+          }}
+        >
+          <ShahrOmidLogo />
+        </motion.div>
+
+        {/* ════════════════════════════════════════════════
             LAYER 0 — SCROLL-CONTROLLED VIDEO via CANVAS
             Video element hidden but kept in DOM for decoding.
             Canvas displays frames with smooth interpolation.
@@ -213,7 +287,7 @@ export default function HeroSection() {
             Identical to the previous version; ensure text
             remains readable over any video content.
         ════════════════════════════════════════════════ */}
-        <motion.div {...fadeIn(0)} className="absolute inset-0 z-[2] pointer-events-none">
+        <div className="absolute inset-0 z-[2] pointer-events-none">
           {/* Right-side veil — text contrast */}
           <div className="absolute inset-0" style={{
             background:
@@ -231,7 +305,7 @@ export default function HeroSection() {
           }} />
           {/* Mobile extra veil */}
           <div className="absolute inset-0 md:hidden" style={{ background: "rgba(5,4,2,0.22)" }} />
-        </motion.div>
+        </div>
 
         {/* ════════════════════════════════════════════════
             LAYER 2 — CINEMATIC LIGHT SWEEP
@@ -282,15 +356,14 @@ export default function HeroSection() {
         </div>
 
         {/* ════════════════════════════════════════════════
-            LAYER 5 — TEXT BLOCK (right side, RTL)
-            Unchanged from previous implementation.
+            LAYER 5 — TEXT BLOCK (scroll-controlled staggered reveal)
         ════════════════════════════════════════════════ */}
         <div className="hero-text">
 
           {/* Label — centered row with flanking lines */}
           <motion.div
-            {...fadeUp(0.5)}
             className="flex items-center justify-center gap-4 mb-6 md:mb-8"
+            style={{ opacity: labelOpacity }}
           >
             <span
               className="block w-10 md:w-12 h-[1.5px] flex-shrink-0"
@@ -320,9 +393,8 @@ export default function HeroSection() {
 
           {/* Heading — centered gold title */}
           <motion.h1
-            {...fadeUp(0.65)}
             className="font-persian font-bold leading-[1.15] mb-5 md:mb-6"
-            style={{ textAlign: "center" }}
+            style={{ textAlign: "center", opacity: titleOpacity }}
           >
             <span
               className="block"
@@ -343,10 +415,8 @@ export default function HeroSection() {
 
           {/* Gold accent ornament — centered */}
           <motion.div
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ duration: 1, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
             className="mb-6 md:mb-8 flex items-center gap-2 origin-center"
+            style={{ opacity: ornamentOpacity }}
           >
             <span className="w-1 h-1 rounded-full bg-[#D4AF37]" style={{ boxShadow: "0 0 8px rgba(212, 175, 55, 0.8)" }} />
             <div
@@ -371,7 +441,6 @@ export default function HeroSection() {
 
           {/* Subtitle — centered */}
           <motion.p
-            {...fadeUp(1.0)}
             className="font-persian font-light leading-[2.2]"
             style={{
               fontSize: "clamp(0.82rem, 1.4vw, 1.08rem)",
@@ -380,6 +449,7 @@ export default function HeroSection() {
               textAlign: "center",
               textShadow: "0 2px 16px rgba(0, 0, 0, 0.6)",
               letterSpacing: "0.02em",
+              opacity: subtitleOpacity,
             }}
           >
             نمایشگاه سه‌بعدی و امتحان مجازی جواهرات؛ هر قطعه را پیش از خرید، روی خود ببینید.
@@ -387,12 +457,12 @@ export default function HeroSection() {
         </div>
 
         {/* ════════════════════════════════════════════════
-            PILL CTA — pinned to bottom-center of the frame
-            Lifted above the stats bar (bottom: 88px)
+            PILL CTA — Bottom center, scroll-controlled reveal
+            Fades in at 80-95% scroll progress
         ════════════════════════════════════════════════ */}
         <motion.div
-          {...fadeUp(1.15)}
           className="hero-cta-anchor"
+          style={{ opacity: ctaOpacity }}
         >
           <motion.button
             onClick={() => router.push("/store")}
@@ -405,7 +475,7 @@ export default function HeroSection() {
             }}
             whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="relative overflow-hidden font-persian font-bold flex items-center justify-center gap-3 group"
+            className="relative overflow-hidden font-persian font-bold flex items-center justify-center gap-3 group pointer-events-auto"
             style={{
               padding: "1rem 3.2rem",
               border: "2px solid rgba(212,175,55,0.85)",

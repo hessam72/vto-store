@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 /* ─────────────────────────────────────────────────────────────
    Shahr Omid brand logo
@@ -65,19 +65,21 @@ function ShahrOmidLogo() {
 }
 
 export default function Navigation() {
+  const { scrollYProgress } = useScroll();
+
+  // Fade in when scroll > 0.15 (when logo reaches top)
+  const navOpacity = useTransform(scrollYProgress, [0, 0.15, 0.25], [0, 0, 1]);
 
   return (
     <>
       <motion.nav
         dir="rtl"
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="fixed top-0 left-0 right-0 z-50 bg-transparent"
+        style={{ opacity: navOpacity }}
       >
         <div className="container-luxury flex items-center justify-center h-16 md:h-24">
           {/* Logo — top left */}
-          <motion.a
+          {/* <motion.a
             href="#"
             className="relative flex items-center"
             whileHover={{
@@ -90,7 +92,7 @@ export default function Navigation() {
             }}
           >
             <ShahrOmidLogo />
-          </motion.a>
+          </motion.a> */}
 
           {/* Desktop nav — RTL: items flow right → left */}
           {/* <ul className="hidden md:flex items-center gap-10 flex-row-reverse">
