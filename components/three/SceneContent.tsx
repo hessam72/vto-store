@@ -75,7 +75,10 @@ export default function SceneContent() {
 
     for (let i = 0; i < CAMERA_KEYFRAMES.length - 1; i++) {
       if (t >= CAMERA_KEYFRAMES[i].t && t <= CAMERA_KEYFRAMES[i + 1].t) {
+      //  @ts-expect-error ewewewdfjkdjkdfj
         fromKF = CAMERA_KEYFRAMES[i];
+              //  @ts-expect-error ewewewdfjkdjkdfj
+
         toKF = CAMERA_KEYFRAMES[i + 1];
         break;
       }

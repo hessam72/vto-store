@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
+      //  @ts-expect-error ewewewdfjkdjkdfj
 
 type GSAPCallback = (gsap: typeof import("gsap").gsap, ScrollTrigger: typeof ScrollTrigger) => gsap.core.Timeline | void;
 
