@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useState } from "react";
+import { motion } from "framer-motion";
 
 /* ─────────────────────────────────────────────────────────────
    Shahr Omid brand logo
@@ -20,60 +18,50 @@ function ShahrOmidLogo() {
         src="/images/shahr-omid-logo.png"
         alt="شهر امید"
         onError={() => setImgFailed(true)}
-        className="h-8 md:h-10 w-auto object-contain"
-        style={{ filter: "brightness(1.08) contrast(1.02)" }}
+        className="h-12 md:h-16 w-auto object-contain"
+        style={{
+          filter: "brightness(1.15) contrast(1.08) saturate(1.1)",
+        }}
       />
     );
   }
 
   // Text fallback — shown until the logo file is placed
   return (
-    <div className="flex flex-col items-end gap-0.5">
-      <div className="flex items-center gap-2">
-        <span className="font-persian font-bold text-[0.58rem] tracking-[0.22em] text-[var(--gold-primary)] opacity-65">
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-center gap-3">
+        <span className="font-persian font-bold text-[0.65rem] md:text-[0.72rem] tracking-[0.28em] uppercase" style={{
+          color: "#ffd700",
+          textShadow: "0 0 20px rgba(255, 215, 0, 0.5)",
+          opacity: 0.8,
+        }}>
           MUSEUM
         </span>
-        <svg viewBox="0 0 20 20" className="w-[18px] h-[18px] text-[var(--gold-primary)]" fill="none">
+        <svg viewBox="0 0 20 20" className="w-[22px] h-[22px] md:w-[26px] md:h-[26px]" fill="none">
           <path
             d="M10 2L3 8l7 10 7-10L10 2z"
-            stroke="currentColor"
-            strokeWidth="1.2"
+            stroke="#ffd700"
+            strokeWidth="1.5"
             strokeLinejoin="round"
+            style={{ filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.6))" }}
           />
-          <path d="M3 8h14" stroke="currentColor" strokeWidth="1" opacity="0.45" />
+          <path d="M3 8h14" stroke="#ffd700" strokeWidth="1.2" opacity="0.6" />
         </svg>
       </div>
-      <span className="font-persian font-bold text-[0.98rem] tracking-[0.22em] text-shimmer">
+      <span className="font-persian font-bold text-[1.3rem] md:text-[1.6rem] tracking-[0.25em]" style={{
+        background: "linear-gradient(135deg, #c9a227 0%, #ffd700 35%, #fffacd 52%, #ffd700 65%, #b8860b 100%)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+        filter: "drop-shadow(0 0 15px rgba(255, 215, 0, 0.4))",
+      }}>
         شهر امید
       </span>
     </div>
   );
 }
 
-const NAV_ITEMS = [
-  { label: "مجموعه‌ها",   href: "#collections" },
-  { label: "نمایشگاه‌ها", href: "#exhibitions" },
-  { label: "موزه",        href: "#museum" },
-  { label: "درباره ما",   href: "#about" },
-];
-
 export default function Navigation() {
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    ScrollTrigger.create({
-      start: "top -80",
-      onToggle: (self) => setScrolled(self.isActive),
-    });
-  }, []);
-
-  const scrollTo = (href: string) => {
-    const el = document.querySelector(href);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-    setMenuOpen(false);
-  };
 
   return (
     <>
@@ -82,28 +70,27 @@ export default function Navigation() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
-          scrolled
-            ? "backdrop-blur-2xl border-b-[1.5px] border-[rgba(212,175,55,0.18)] bg-[rgba(8,8,10,0.92)]"
-            : "bg-transparent"
-        }`}
-        style={scrolled ? {
-          boxShadow: "0 4px 32px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 215, 0, 0.08)"
-        } : {}}
+        className="fixed top-0 left-0 right-0 z-50 bg-transparent"
       >
-        <div className="container-luxury flex items-center justify-between h-14 md:h-20">
-          {/* Logo — RTL: appears on right */}
+        <div className="container-luxury flex items-center justify-end h-16 md:h-24">
+          {/* Logo — top left */}
           <motion.a
             href="#"
             className="relative flex items-center"
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.3 }}
+            whileHover={{
+              scale: 1.08,
+              filter: "drop-shadow(0 0 30px rgba(255, 215, 0, 0.5))"
+            }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              filter: "drop-shadow(0 0 20px rgba(255, 215, 0, 0.2))"
+            }}
           >
             <ShahrOmidLogo />
           </motion.a>
 
           {/* Desktop nav — RTL: items flow right → left */}
-          <ul className="hidden md:flex items-center gap-10 flex-row-reverse">
+          {/* <ul className="hidden md:flex items-center gap-10 flex-row-reverse">
             {NAV_ITEMS.map((item) => (
               <li key={item.label}>
                 <button
@@ -125,10 +112,10 @@ export default function Navigation() {
                 </button>
               </li>
             ))}
-          </ul>
+          </ul> */}
 
           {/* CTA + hamburger — RTL: appears on left */}
-          <div className="flex items-center gap-5 flex-row-reverse">
+          {/* <div className="flex items-center gap-5 flex-row-reverse">
             <motion.button
               className="hidden md:block font-persian text-[0.7rem] tracking-wider font-semibold"
               whileHover={{
@@ -153,7 +140,6 @@ export default function Navigation() {
               ورود به موزه
             </motion.button>
 
-            {/* Mobile hamburger */}
             <button
               className="flex md:hidden flex-col gap-1.5 p-2"
               onClick={() => setMenuOpen((v) => !v)}
@@ -173,12 +159,12 @@ export default function Navigation() {
                 />
               ))}
             </button>
-          </div>
+          </div> */}
         </div>
       </motion.nav>
 
       {/* Mobile menu */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {menuOpen && (
           <motion.div
             dir="rtl"
@@ -225,7 +211,7 @@ export default function Navigation() {
             </ul>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </>
   );
 }

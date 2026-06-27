@@ -354,7 +354,7 @@ export default function HeroSection() {
           className="hero-cta-anchor"
         >
           <motion.button
-            onClick={() => router.push("/museum")}
+            onClick={() => router.push("/store")}
             whileHover={{
               boxShadow:
                 "0 0 100px rgba(255,215,0,0.6), 0 0 50px rgba(212,175,55,0.4), 0 12px 48px rgba(0,0,0,0.75), inset 0 2px 0 rgba(255,250,205,0.5), inset 0 -2px 0 rgba(184,134,11,0.6)",
