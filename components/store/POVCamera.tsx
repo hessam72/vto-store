@@ -86,8 +86,8 @@ export function usePOVCamera(props?: POVCameraProps) {
 
       // Calculate frame-to-frame delta
       let deltaAlpha = event.alpha - previousOrientation.current.alpha
-      const deltaBeta = event.beta - previousOrientation.current.beta
-      const deltaGamma = event.gamma - previousOrientation.current.gamma
+      const deltaBeta = Math.max(-10, Math.min(10, event.beta - previousOrientation.current.beta))
+      const deltaGamma = Math.max(-10, Math.min(10, event.gamma - previousOrientation.current.gamma))
 
       // Fix alpha wraparound (compass 0°-360°)
       if (deltaAlpha > 180) deltaAlpha -= 360
