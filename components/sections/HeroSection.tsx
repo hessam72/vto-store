@@ -90,20 +90,25 @@ export default function HeroSection() {
     offset: ["start start", "end end"],
   });
 
-  /* ── RAF loop: map scroll progress → video.currentTime ─── */
+  /* ── RAF loop: smoothly interpolate video.currentTime ─── */
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     let rafId: number;
+    let currentTime = 0;
 
     const sync = () => {
-      // readyState ≥ 2 (HAVE_CURRENT_DATA) means the browser can seek
       if (video.readyState >= 2 && video.duration) {
-        const target = scrollYProgress.get() * video.duration;
-        // Skip micro-updates smaller than one frame (~16 ms at 60fps)
-        if (Math.abs(video.currentTime - target) > 0.016) {
-          video.currentTime = target;
+        const targetTime = scrollYProgress.get() * video.duration;
+
+        // Smooth interpolation (lerp) - adjust 0.15 for smoothness vs responsiveness
+        // Lower = smoother but slower response, Higher = faster but less smooth
+        currentTime += (targetTime - currentTime) * 0.15;
+
+        // Only update if difference is meaningful (reduces seek operations)
+        if (Math.abs(video.currentTime - currentTime) > 0.033) {
+          video.currentTime = currentTime;
         }
       }
       rafId = requestAnimationFrame(sync);
