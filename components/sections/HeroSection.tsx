@@ -267,6 +267,19 @@ export default function HeroSection() {
       >
 
         {/* ════════════════════════════════════════════════
+            BACKGROUND IMAGE — Museum backdrop under 3D models
+        ════════════════════════════════════════════════ */}
+        <div className="absolute inset-0 z-[0]">
+          <div
+            className="w-full h-full bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: "url('/images/museum-bg.webp')",
+              opacity: 0.3,
+            }}
+          />
+        </div>
+
+        {/* ════════════════════════════════════════════════
             LOGO — Scroll-controlled position (center → top)
         ════════════════════════════════════════════════ */}
         <motion.div
@@ -718,30 +731,7 @@ export default function HeroSection() {
         {/* ════════════════════════════════════════════════
             SCROLL INDICATOR — desktop only
         ════════════════════════════════════════════════ */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2.1, duration: 1.2 }}
-          className="absolute bottom-[76px] left-8 hidden md:flex items-center gap-3 pointer-events-none z-[21]"
-        >
-          <div
-            className="relative w-px h-10"
-            style={{ background: "rgba(212,175,55,0.16)" }}
-          >
-            <motion.div
-              className="absolute top-0 left-0 w-full"
-              style={{ background: "#D4AF37" }}
-              animate={{ height: ["0%", "100%"] }}
-              transition={{ duration: 1.9, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </div>
-          <p
-            className="font-persian text-[0.5rem] tracking-[0.22em] rotate-90 origin-left whitespace-nowrap"
-            style={{ color: "rgba(212,175,55,0.36)" }}
-          >
-            برای کشف بیشتر اسکرول کنید
-          </p>
-        </motion.div>
+      
 
         {/* ════════════════════════════════════════════════
             STATS / FEATURE BAR
