@@ -66,7 +66,7 @@ export default function ProductPopup({ product, onClose }: ProductPopupProps) {
         </div>
 
         {/* Product Info */}
-        <div className="p-6 space-y-4 font-[family-name:var(--font-vazir)] bg-gradient-to-b from-black to-slate-950">
+        <div style={{padding:'1rem'}} className="p-6 space-y-4 font-[family-name:var(--font-vazir)] bg-gradient-to-b from-black to-slate-950">
           <h2 className="text-2xl font-bold text-amber-300">{product.name_fa}</h2>
 
           <div className="flex gap-6 items-center">
@@ -85,6 +85,8 @@ export default function ProductPopup({ product, onClose }: ProductPopupProps) {
             {/* VTO Button */}
             <a
               href={vtoUrl}
+              style={{    padding: '.6rem',
+    marginTop: '.5rem'}}
               className="block w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-slate-900 font-bold py-3 px-6 rounded-xl text-center transition-all duration-200 shadow-lg hover:shadow-amber-600/40 transform hover:scale-[1.02]"
             >
               پرو مجازی

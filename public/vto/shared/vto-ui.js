@@ -129,7 +129,7 @@ class VTOUIManager {
   createCaptureButton() {
     const btn = document.createElement('button');
     btn.className = 'vto-capture-btn';
-    btn.innerHTML = '<i class="fa-solid fa-camera"></i>';
+    btn.innerHTML = '<i class="fa-solid fa-camera" style="color: gold;"></i>';
     btn.setAttribute('aria-label', 'عکس برداری');
 
     btn.addEventListener('click', () => {
