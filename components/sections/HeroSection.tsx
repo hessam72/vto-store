@@ -108,9 +108,10 @@ interface JewelryModelProps {
   url: string;
   position: [number, number, number];
   scrollOpacity: MotionValue<number>;
+  scale?: number;
 }
 
-function JewelryModel({ url, position, scrollOpacity }: JewelryModelProps) {
+function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { scene } = useGLTF(url);
   const [clonedScene, setClonedScene] = useState<THREE.Group | null>(null);
@@ -168,7 +169,7 @@ function JewelryModel({ url, position, scrollOpacity }: JewelryModelProps) {
 
   return (
     <group ref={groupRef} position={position}>
-      {clonedScene && <primitive object={clonedScene} scale={5} />}
+      {clonedScene && <primitive object={clonedScene} scale={scale} />}
     </group>
   );
 }
@@ -189,8 +190,8 @@ function CameraController() {
   useFrame((_, delta) => {
     timeRef.current += delta;
     const angle = timeRef.current * 0.08;
-    camera.position.x = Math.sin(angle) * 3;
-    camera.position.z = Math.cos(angle) * 3 + 5;
+    camera.position.x = Math.sin(angle) * 1.2;
+    camera.position.z = Math.cos(angle) * 1.2 + 5;
     camera.lookAt(0, 0, 0);
   });
 
@@ -288,12 +289,12 @@ export default function HeroSection() {
             <CameraController />
 
             {/* Gold-themed lighting */}
-            <ambientLight intensity={25} color="#ffd700" />
+            <ambientLight intensity={45} color="#ffffff" />
             <SpotLight
               position={[5, 5, 5]}
               angle={0.3}
               penumbra={0.5}
-              intensity={50}
+              intensity={120}
               color="#ffd700"
               castShadow
             />
@@ -301,10 +302,11 @@ export default function HeroSection() {
               position={[-5, 3, 5]}
               angle={0.4}
               penumbra={0.5}
-              intensity={55}
+              intensity={120}
               color="#fffacd"
             />
-            <pointLight position={[0, -2.1, -5]} intensity={38} color="#ffffff" />
+            <pointLight position={[0, -2.1, -5]} intensity={80} color="#ffffff" />
+            <pointLight position={[0, 3, 3]} intensity={60} color="#ffd700" />
 
             <Environment preset="sunset" />
 
