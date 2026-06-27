@@ -35,6 +35,7 @@ export function usePOVCamera(props?: POVCameraProps) {
     }
 
     const onPointerMove = (e: PointerEvent) => {
+      if (gyroEnabled) return
       if (!isDragging.current) return
 
       const deltaX = e.clientX - previousMouse.current.x
@@ -61,7 +62,7 @@ export function usePOVCamera(props?: POVCameraProps) {
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointercancel', onPointerUp)
     }
-  }, [gl])
+  }, [gl, gyroEnabled])
 
   // Gyroscope controls
   useEffect(() => {
@@ -110,10 +111,6 @@ export function usePOVCamera(props?: POVCameraProps) {
       // Accumulate incremental rotation
       targetPitch.current += deltaBeta * pitchSensitivity
       targetYaw.current += deltaGamma * yawSensitivity + deltaAlpha * yawSensitivity * 0.3
-
-      // Relaxed pitch clamp for 360° comfort (±160° = ±2.79 radians)
-      const maxPitch = (160 * Math.PI) / 180
-      targetPitch.current = Math.max(-maxPitch, Math.min(maxPitch, targetPitch.current))
     }
 
     window.addEventListener('deviceorientation', handleOrientation)
