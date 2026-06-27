@@ -190,8 +190,8 @@ function CameraController() {
   useFrame((_, delta) => {
     timeRef.current += delta;
     const angle = timeRef.current * 0.08;
-    camera.position.x = Math.sin(angle) * 1.2;
-    camera.position.z = Math.cos(angle) * 1.2 + 5;
+    camera.position.x = Math.sin(angle) * 0.2;
+    camera.position.z = Math.cos(angle) * 0.2 + 5;
     camera.lookAt(0, 0, 0);
   });
 
