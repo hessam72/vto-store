@@ -1,14 +1,17 @@
 "use client";
 
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   motion,
-  useMotionValue,
   useTransform,
-  useSpring,
   useScroll,
+  MotionValue,
 } from "framer-motion";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useGLTF, Environment, SpotLight } from "@react-three/drei";
+import * as THREE from "three";
+import { Suspense } from "react";
 
 /* ─────────────────────────────────────────────────────────────
    Scroll section height — increase for more scroll room per
@@ -98,6 +101,102 @@ function ShahrOmidLogo() {
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   JewelryModel Component — Single 3D model with auto-rotate
+───────────────────────────────────────────────────────────── */
+interface JewelryModelProps {
+  url: string;
+  position: [number, number, number];
+  scrollOpacity: MotionValue<number>;
+}
+
+function JewelryModel({ url, position, scrollOpacity }: JewelryModelProps) {
+  const groupRef = useRef<THREE.Group>(null);
+  const { scene } = useGLTF(url);
+  const [clonedScene, setClonedScene] = useState<THREE.Group | null>(null);
+  const materialsRef = useRef<THREE.Material[]>([]);
+
+  // Clone scene once and prepare materials
+  useEffect(() => {
+    const cloned = scene.clone();
+    const materials: THREE.Material[] = [];
+
+    cloned.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat) => {
+            mat.transparent = true;
+            mat.opacity = 0;
+            materials.push(mat);
+          });
+        } else {
+          mesh.material.transparent = true;
+          mesh.material.opacity = 0;
+          materials.push(mesh.material);
+        }
+      }
+    });
+
+    materialsRef.current = materials;
+    setClonedScene(cloned);
+  }, [scene]);
+
+  // Subscribe to scroll opacity changes and update materials
+  useEffect(() => {
+    // Set initial scroll opacity value
+    const currentOpacity = scrollOpacity.get();
+    materialsRef.current.forEach((mat) => {
+      mat.opacity = currentOpacity;
+    });
+
+    // Listen for scroll changes
+    const unsubscribe = scrollOpacity.on("change", (v) => {
+      materialsRef.current.forEach((mat) => {
+        mat.opacity = v;
+      });
+    });
+    return unsubscribe;
+  }, [scrollOpacity]);
+
+  // Auto-rotate
+  useFrame((_, delta) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += delta * 0.31;
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={position}>
+      {clonedScene && <primitive object={clonedScene} scale={5} />}
+    </group>
+  );
+}
+
+// Preload models
+useGLTF.preload("/home_models/jewel-1.glb");
+useGLTF.preload("/home_models/jewel-2.glb");
+useGLTF.preload("/home_models/jewel-3.glb");
+useGLTF.preload("/home_models/jewel-4.glb");
+
+/* ─────────────────────────────────────────────────────────────
+   Camera Controller — Subtle orbit during scroll
+───────────────────────────────────────────────────────────── */
+function CameraController() {
+  const { camera } = useThree();
+  const timeRef = useRef(0);
+
+  useFrame((_, delta) => {
+    timeRef.current += delta;
+    const angle = timeRef.current * 0.08;
+    camera.position.x = Math.sin(angle) * 3;
+    camera.position.z = Math.cos(angle) * 3 + 5;
+    camera.lookAt(0, 0, 0);
+  });
+
+  return null;
+}
+
 /* ═══════════════════════════════════════════════════════════
    HeroSection
 ═══════════════════════════════════════════════════════════ */
@@ -107,28 +206,6 @@ export default function HeroSection() {
   /* ── Refs ──────────────────────────────────────────────── */
   const scrollContainerRef = useRef<HTMLDivElement>(null); // 300vh tall
   const stickyFrameRef     = useRef<HTMLDivElement>(null); // sticky 100svh
-  const videoRef           = useRef<HTMLVideoElement>(null);
-  const canvasRef          = useRef<HTMLCanvasElement>(null);
-
-  /* ── Mouse parallax (applied to video layer for subtle depth) */
-  const rawX = useMotionValue(0);
-  const rawY = useMotionValue(0);
-  const mx   = useSpring(rawX, { stiffness: 52, damping: 22 });
-  const my   = useSpring(rawY, { stiffness: 52, damping: 22 });
-  const vidX = useTransform(mx, [-1, 1], [-10, 10]);
-  const vidY = useTransform(my, [-1, 1],  [-6,  6]);
-
-  const handleMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const r = stickyFrameRef.current?.getBoundingClientRect();
-    if (!r) return;
-    rawX.set(((e.clientX - r.left) / r.width)  * 2 - 1);
-    rawY.set(((e.clientY - r.top)  / r.height) * 2 - 1);
-  }, [rawX, rawY]);
-
-  const handleLeave = useCallback(() => {
-    rawX.set(0);
-    rawY.set(0);
-  }, [rawX, rawY]);
 
   /* ── Scroll progress (0 → 1 across the 300vh container) ── */
   const { scrollYProgress } = useScroll({
@@ -136,12 +213,6 @@ export default function HeroSection() {
     offset: ["start start", "end end"],
   });
 
-  /* ── Smooth spring for scroll progress ── */
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 80,
-    damping: 25,
-    mass: 0.5,
-  });
 
   /* ── Scroll-based animations ── */
   // Logo: starts center, moves to top (0 → 0.2)
@@ -157,56 +228,12 @@ export default function HeroSection() {
   // CTA button: fades in at end
   const ctaOpacity = useTransform(scrollYProgress, [0, 0.8, 0.95, 1], [0, 0, 1, 1]);
 
-  /* ── Canvas rendering with throttled video seeks ── */
-  useEffect(() => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+  // 3D Models: progressive accumulation
+  const model1Opacity = useTransform(scrollYProgress, [0, 0.15, 0.25], [0, 1, 1]);
+  const model2Opacity = useTransform(scrollYProgress, [0.25, 0.4, 0.5], [0, 1, 1]);
+  const model3Opacity = useTransform(scrollYProgress, [0.5, 0.65, 0.75], [0, 1, 1]);
+  const model4Opacity = useTransform(scrollYProgress, [0.75, 0.9, 1], [0, 1, 1]);
 
-    const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) return;
-
-    let rafId: number;
-
-    const drawFrame = () => {
-      if (video.readyState >= 2 && video.duration) {
-        const progress = smoothProgress.get();
-        const targetTime = progress * video.duration;
-
-        // Only seek video if we're far enough from target (reduces seek operations by ~70%)
-        const timeDiff = Math.abs(video.currentTime - targetTime);
-        if (timeDiff > 0.1) {
-          video.currentTime = targetTime;
-        }
-
-        // Always draw current video frame to canvas for smooth visuals
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-      rafId = requestAnimationFrame(drawFrame);
-    };
-
-    // Wait for video metadata to set canvas dimensions
-    const onMetadata = () => {
-      // Set canvas resolution based on viewport (lower on mobile for performance)
-      const isMobile = window.innerWidth < 768;
-      const scale = isMobile ? 0.7 : 1;
-      canvas.width = window.innerWidth * scale;
-      canvas.height = window.innerHeight * scale;
-
-      rafId = requestAnimationFrame(drawFrame);
-    };
-
-    if (video.readyState >= 1) {
-      onMetadata();
-    } else {
-      video.addEventListener("loadedmetadata", onMetadata);
-    }
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      video.removeEventListener("loadedmetadata", onMetadata);
-    };
-  }, [smoothProgress]);
 
   /* ── Render ────────────────────────────────────────────── */
   return (
@@ -230,8 +257,6 @@ export default function HeroSection() {
         ref={stickyFrameRef}
         dir="rtl"
         aria-label="صفحه اصلی شهر امید"
-        onMouseMove={handleMove}
-        onMouseLeave={handleLeave}
         className="sticky top-0 w-full overflow-hidden bg-[#060606]"
         style={{ height: "100svh", minHeight: "100vh" }}
       >
@@ -252,35 +277,62 @@ export default function HeroSection() {
         </motion.div>
 
         {/* ════════════════════════════════════════════════
-            LAYER 0 — SCROLL-CONTROLLED VIDEO via CANVAS
-            Video element hidden but kept in DOM for decoding.
-            Canvas displays frames with smooth interpolation.
-            Reduces seek operations by ~70% for mobile performance.
+            LAYER 0 — 3D JEWELRY MODELS (Progressive Scroll Reveal)
         ════════════════════════════════════════════════ */}
-        {/* Hidden video - source for canvas */}
-        <video
-          ref={videoRef}
-          className="absolute invisible pointer-events-none"
-          src="/hero.mp4"
-          muted
-          playsInline
-          preload="auto"
-        />
+        <div className="absolute inset-0 z-[1]">
+          <Canvas
+            camera={{ position: [0, 0, 8], fov: 30 }}
+            dpr={[1, 1.5]}
+            gl={{ alpha: true, antialias: true }}
+          >
+            <CameraController />
 
-        {/* Visible canvas - renders video frames smoothly */}
-        <motion.div
-          className="absolute inset-0 z-[1]"
-          style={{
-            x:     vidX,   // subtle mouse parallax
-            y:     vidY,
-            scale: 1.06,   // slight over-scale hides parallax edges
-          }}
-        >
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        </motion.div>
+            {/* Gold-themed lighting */}
+            <ambientLight intensity={25} color="#ffd700" />
+            <SpotLight
+              position={[5, 5, 5]}
+              angle={0.3}
+              penumbra={0.5}
+              intensity={50}
+              color="#ffd700"
+              castShadow
+            />
+            <SpotLight
+              position={[-5, 3, 5]}
+              angle={0.4}
+              penumbra={0.5}
+              intensity={55}
+              color="#fffacd"
+            />
+            <pointLight position={[0, -2.1, -5]} intensity={38} color="#ffffff" />
+
+            <Environment preset="sunset" />
+
+            {/* Progressive jewelry models */}
+            <Suspense fallback={null}>
+              <JewelryModel
+                url="/home_models/jewel-1.glb"
+                position={[0, 0, 0]}
+                scrollOpacity={model1Opacity}
+              />
+              <JewelryModel
+                url="/home_models/jewel-2.glb"
+                position={[0, 0, 0]}
+                scrollOpacity={model2Opacity}
+              />
+              <JewelryModel
+                url="/home_models/jewel-3.glb"
+                position={[0, 0, 0]}
+                scrollOpacity={model3Opacity}
+              />
+              <JewelryModel
+                url="/home_models/jewel-4.glb"
+                position={[0, 0, 0]}
+                scrollOpacity={model4Opacity}
+              />
+            </Suspense>
+          </Canvas>
+        </div>
 
         {/* ════════════════════════════════════════════════
             LAYER 1 — DARK OVERLAYS
