@@ -122,6 +122,11 @@ function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelP
     const cloned = scene.clone();
     const materials: THREE.Material[] = [];
 
+    // Center the model at origin
+    const box = new THREE.Box3().setFromObject(cloned);
+    const center = box.getCenter(new THREE.Vector3());
+    cloned.position.sub(center);
+
     cloned.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
@@ -188,13 +193,15 @@ function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelP
 }
 
 // Preload models
-useGLTF.preload("/home_models/Jewel Landing Bar.glb");
 
 useGLTF.preload("/home_models/jewel-1.glb");
 useGLTF.preload("/home_models/jewel-2.glb");
 useGLTF.preload("/home_models/jewel-3.glb");
 useGLTF.preload("/home_models/jewel-4.glb");
 useGLTF.preload("/home_models/jewel-5.glb");
+useGLTF.preload("/home_models/jewel-6.glb");
+useGLTF.preload("/home_models/jewel-7.glb");
+useGLTF.preload("/home_models/jewel-8.glb");
 
 /* ─────────────────────────────────────────────────────────────
    Camera Controller — Subtle orbit during scroll
@@ -253,7 +260,8 @@ export default function HeroSection() {
   const model2Opacity = useTransform(scrollYProgress, [0.25, 0.4, 0.5], [0, 1, 1]);
   const model3Opacity = useTransform(scrollYProgress, [0.5, 0.65, 0.75], [0, 1, 1]);
   const model4Opacity = useTransform(scrollYProgress, [0.75, 0.9, 1], [0, 1, 1]);
-  const model5Opacity = useTransform(scrollYProgress, [0.9, 1], [0, 1]);
+  const model5Opacity = useTransform(scrollYProgress, [0.82, 1], [0, 1]);
+  const model6Opacity = useTransform(scrollYProgress, [0.91, 1], [0, 1]);
 
 
   /* ── Render ────────────────────────────────────────────── */
@@ -440,7 +448,7 @@ export default function HeroSection() {
             {/* Progressive jewelry models */}
             <Suspense fallback={null}>
                 <JewelryModel
-                url="/home_models/Jewel Landing Bar.glb"
+                url="/home_models/jewel-6.glb"
                 position={[0, -.2, 0]}
                 scrollOpacity={model1Opacity}
                 scale={5}
@@ -448,28 +456,38 @@ export default function HeroSection() {
               <JewelryModel
                 url="/home_models/jewel-1.glb"
                 position={[0, 0, 0]}
-                scrollOpacity={model5Opacity}
-              />
+                scrollOpacity={model2Opacity}
+              /> 
               <JewelryModel
-                url="/home_models/jewel-2.glb"
+                url="/home_models/jewel-7.glb"
+                position={[0, 0, 0]}
+                scrollOpacity={model2Opacity}
+              /> 
+              <JewelryModel
+                url="/home_models/jewel-8.glb"
                 position={[0, 0, 0]}
                 scrollOpacity={model2Opacity}
               />
               <JewelryModel
-                url="/home_models/jewel-3.glb"
+                url="/home_models/jewel-2.glb"
                 position={[0, 0, 0]}
                 scrollOpacity={model3Opacity}
               />
               <JewelryModel
+                url="/home_models/jewel-3.glb"
+                position={[0, 0, 0]}
+                scrollOpacity={model4Opacity}
+              />
+              <JewelryModel
                 url="/home_models/jewel-4.glb"
                 position={[0, -.6, 0]}
-                scrollOpacity={model4Opacity}
+                scrollOpacity={model5Opacity}
                 scale={6.5}
               />   
               <JewelryModel
                 url="/home_models/jewel-5.glb"
                 position={[0, -.3, 0]}
-                scrollOpacity={model5Opacity}
+                scrollOpacity={model6Opacity}
                 scale={5}
               />
               
