@@ -447,50 +447,49 @@ export default function HeroSection() {
 
             {/* Progressive jewelry models */}
             <Suspense fallback={null}>
-                <JewelryModel
-                url="/home_models/jewel-6.glb"
-                position={[0, -.2, 0]}
+              <JewelryModel
+                url="/home_models/jewel-3.glb"
+                position={[0, 0, 0]}
                 scrollOpacity={model1Opacity}
-                scale={5}
               />
               <JewelryModel
                 url="/home_models/jewel-1.glb"
-                position={[0, 0, 0]}
-                scrollOpacity={model2Opacity}
-              /> 
-              <JewelryModel
-                url="/home_models/jewel-7.glb"
-                position={[0, 0, 0]}
-                scrollOpacity={model2Opacity}
-              /> 
-              <JewelryModel
-                url="/home_models/jewel-8.glb"
-                position={[0, 0, 0]}
+                position={[-0.4, .9, 0]}
                 scrollOpacity={model2Opacity}
               />
               <JewelryModel
                 url="/home_models/jewel-2.glb"
-                position={[0, 0, 0]}
+                position={[0.3, .9, 0]}
                 scrollOpacity={model3Opacity}
               />
               <JewelryModel
-                url="/home_models/jewel-3.glb"
-                position={[0, 0, 0]}
-                scrollOpacity={model4Opacity}
-              />
-              <JewelryModel
                 url="/home_models/jewel-4.glb"
-                position={[0, -.6, 0]}
-                scrollOpacity={model5Opacity}
+                position={[0, -.8, 0]}
+                scrollOpacity={model4Opacity}
                 scale={6.5}
-              />   
+              />
               <JewelryModel
                 url="/home_models/jewel-5.glb"
-                position={[0, -.3, 0]}
-                scrollOpacity={model6Opacity}
+                position={[-0.6, -.3, 0]}
+                scrollOpacity={model5Opacity}
                 scale={5}
               />
-              
+              {/* <JewelryModel
+                url="/home_models/jewel-6.glb"
+                position={[0.1, -.3, 0]}
+                scrollOpacity={model6Opacity}
+                scale={5}
+              /> */}
+              <JewelryModel
+                url="/home_models/jewel-7.glb"
+                position={[-0.4, -0.7, 0.5]}
+                scrollOpacity={model5Opacity}
+              />
+              <JewelryModel
+                url="/home_models/jewel-8.glb"
+                position={[0.5, -0.7, 0.5]}
+                scrollOpacity={model6Opacity}
+              />
             </Suspense>
           </Canvas>
         </div>
