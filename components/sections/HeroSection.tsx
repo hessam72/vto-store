@@ -129,11 +129,24 @@ function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelP
           mesh.material.forEach((mat) => {
             mat.transparent = true;
             mat.opacity = 0;
+            // Enhance gold reflections
+            if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+              mat.metalness = 1;
+              mat.roughness = 0.15;
+              mat.envMapIntensity = 2.5;
+            }
             materials.push(mat);
           });
         } else {
           mesh.material.transparent = true;
           mesh.material.opacity = 0;
+          // Enhance gold reflections
+          const mat = mesh.material;
+          if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+            mat.metalness = 1;
+            mat.roughness = 0.15;
+            mat.envMapIntensity = 2.5;
+          }
           materials.push(mesh.material);
         }
       }
@@ -386,31 +399,42 @@ export default function HeroSection() {
           <Canvas
             camera={{ position: [0, 0, 8], fov: 30 }}
             dpr={[1, 1.5]}
-            gl={{ alpha: true, antialias: true }}
+            gl={{
+              alpha: true,
+              antialias: true,
+              toneMapping: THREE.ACESFilmicToneMapping,
+              toneMappingExposure: 0.8
+            }}
           >
             <CameraController />
 
-            {/* Gold-themed lighting */}
-            <ambientLight intensity={45} color="#ffffff" />
+            {/* HDRI environment for gold reflections */}
+            <Suspense fallback={null}>
+              <Environment
+                files="/hdr/main_hdr.exr"
+                background={false}
+                environmentIntensity={2.2}
+                resolution={512}
+              />
+            </Suspense>
+
+            {/* Reduced lighting - let HDR do the work */}
+            <ambientLight intensity={8} color="#ffffff" />
             <SpotLight
               position={[5, 5, 5]}
               angle={0.3}
               penumbra={0.5}
-              intensity={120}
+              intensity={40}
               color="#ffd700"
-              castShadow
             />
             <SpotLight
               position={[-5, 3, 5]}
               angle={0.4}
               penumbra={0.5}
-              intensity={120}
+              intensity={40}
               color="#fffacd"
             />
-            <pointLight position={[0, -2.1, -5]} intensity={120} color="#ffffff" />
-            <pointLight position={[0, 3, 3]} intensity={60} color="#ffd700" />
-
-            <Environment preset="sunset" />
+            <pointLight position={[0, 3, 3]} intensity={20} color="#ffd700" />
 
             {/* Progressive jewelry models */}
             <Suspense fallback={null}>
