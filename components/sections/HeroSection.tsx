@@ -179,6 +179,8 @@ useGLTF.preload("/home_models/jewel-1.glb");
 useGLTF.preload("/home_models/jewel-2.glb");
 useGLTF.preload("/home_models/jewel-3.glb");
 useGLTF.preload("/home_models/jewel-4.glb");
+useGLTF.preload("/home_models/jewel-5.glb");
+useGLTF.preload("/home_models/Jewel Landing Bar.glb");
 
 /* ─────────────────────────────────────────────────────────────
    Camera Controller — Subtle orbit during scroll
@@ -412,6 +414,12 @@ export default function HeroSection() {
 
             {/* Progressive jewelry models */}
             <Suspense fallback={null}>
+                <JewelryModel
+                url="/home_models/Jewel Landing Bar.glb"
+                position={[0, -.2, 0]}
+                scrollOpacity={model5Opacity}
+                scale={5}
+              />
               <JewelryModel
                 url="/home_models/jewel-1.glb"
                 position={[0, 0, 0]}
@@ -439,6 +447,7 @@ export default function HeroSection() {
                 scrollOpacity={model5Opacity}
                 scale={5}
               />
+              
             </Suspense>
           </Canvas>
         </div>
