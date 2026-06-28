@@ -320,7 +320,7 @@ export default function HeroSection() {
                 textShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
               }}
             >
-              برای کشف ویترین اسکرول کنید
+برای ورود به شهر جواهرات اسکرول کنید
             </p>
 
             {/* Animated scroll gesture */}
@@ -556,7 +556,7 @@ export default function HeroSection() {
 
           {/* Label — centered row with flanking lines */}
           <motion.div
-            className="flex items-center justify-center gap-4 mb-6 md:mb-8"
+            className="flex items-center justify-center gap-4 mb-6 md:mb-8 w-screen md:w-auto px-4"
             style={{ opacity: labelOpacity }}
           >
             <span
@@ -569,12 +569,14 @@ export default function HeroSection() {
             <p
               className="font-persian text-[0.62rem] md:text-[0.68rem] tracking-[0.35em] uppercase"
               style={{
+                       fontSize: "clamp(.8rem, 1.4vw, 1.3rem)",
+              fontWeight:'bold',
                 color: "#ffd700",
                 textShadow: "0 0 20px rgba(212, 175, 55, 0.6), 0 0 40px rgba(212, 175, 55, 0.3)",
                 opacity: 0.95,
               }}
             >
-              به ویترین مجازی شهر امید خوش آمدید
+             پاساژ دیجیتال شهر امید دروازه‌ای به آینده جواهرات
             </p>
             <span
               className="block w-10 md:w-12 h-[1.5px] flex-shrink-0"
@@ -598,7 +600,6 @@ export default function HeroSection() {
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-                letterSpacing: "0.12em",
                 filter: "drop-shadow(0 0 40px rgba(255, 215, 0, 0.4)) drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6))",
                 position: "relative",
               }}
@@ -637,16 +638,16 @@ export default function HeroSection() {
           <motion.p
             className="font-persian font-light leading-[2.2]"
             style={{
-              fontSize: "clamp(0.82rem, 1.4vw, 1.08rem)",
+              fontSize: "clamp(1rem, 1.4vw, 1.3rem)",
+              fontWeight:'bold',
               color: "rgba(245, 240, 232, 0.85)",
               maxWidth: "42ch",
               textAlign: "center",
               textShadow: "0 2px 16px rgba(0, 0, 0, 0.6)",
-              letterSpacing: "0.02em",
               opacity: subtitleOpacity,
             }}
           >
-            نمایشگاه سه‌بعدی و امتحان مجازی جواهرات؛ هر قطعه را پیش از خرید، روی خود ببینید.
+هر قطعه طلا قبل از خرید متعلق به توست
           </motion.p>
         </div>
 
@@ -681,7 +682,6 @@ export default function HeroSection() {
                 "0 0 60px rgba(212,175,55,0.3), 0 6px 32px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,235,120,0.25), inset 0 -2px 0 rgba(130,88,0,0.4)",
               color: "#ffd700",
               fontSize: "0.9rem",
-              letterSpacing: "0.1em",
               minWidth: "200px",
               textShadow: "0 0 20px rgba(255, 215, 0, 0.5)",
             }}
@@ -830,7 +830,6 @@ export default function HeroSection() {
                   style={{
                     fontSize: "clamp(0.54rem, 1.1vw, 0.68rem)",
                     color: "rgba(255,215,0,0.85)",
-                    letterSpacing: "0.06em",
                     textShadow: "0 0 10px rgba(255, 215, 0, 0.3)",
                   }}
                 >
