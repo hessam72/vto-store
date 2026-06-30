@@ -606,7 +606,7 @@ export default function HeroSection() {
           </motion.div>
 
           {/* Heading — centered gold title */}
-          <motion.h1
+          {/* <motion.h1
             className="font-persian font-bold leading-[1.15] mb-5 md:mb-6"
             style={{ textAlign: "center", opacity: titleOpacity }}
           >
@@ -624,7 +624,23 @@ export default function HeroSection() {
             >
               شهر امید
             </span>
-          </motion.h1>
+          </motion.h1> */}
+            <motion.div
+            className="flex justify-center mb-5 md:mb-6"
+            style={{ opacity: titleOpacity }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/Lumina-single.png"
+              alt="Lumina"
+              className="w-auto"
+              style={{
+                height: "auto",
+                filter: "drop-shadow(0 0 40px rgba(255, 215, 0, 0.4)) drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6))",
+              }}
+            />
+          </motion.div>
+
 
           {/* Gold accent ornament — centered */}
           <motion.div
