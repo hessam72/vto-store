@@ -31,8 +31,8 @@ export function CameraTransition({
     if (!startPos.current) {
       startPos.current = new THREE.Vector3(
         targetPosition[0],
-        targetPosition[1] + 15,
-        targetPosition[2] + 30
+        targetPosition[1] + 7,
+        targetPosition[2] + 40
       )
       camera.position.copy(startPos.current)
       // Look at target from above
@@ -45,13 +45,14 @@ export function CameraTransition({
 
     // Smooth easing (easeOutCubic)
     const eased = 1 - Math.pow(1 - progress, 3)
+    // Faster Y descent (easeOutQuad - steeper curve)
+    const easedY = 1 - Math.pow(1 - progress, 2)
 
-    // Lerp camera position
-    camera.position.lerpVectors(
-      startPos.current,
-      new THREE.Vector3(...targetPosition),
-      eased
-    )
+    // Lerp camera position with faster Y descent
+    const targetPos = new THREE.Vector3(...targetPosition)
+    camera.position.x = THREE.MathUtils.lerp(startPos.current.x, targetPos.x, eased)
+    camera.position.y = THREE.MathUtils.lerp(startPos.current.y, targetPos.y, easedY)
+    camera.position.z = THREE.MathUtils.lerp(startPos.current.z, targetPos.z, eased)
 
     // Animate rotation: start looking down at target, end looking forward
     const startLookAt = new THREE.Vector3(...targetPosition)

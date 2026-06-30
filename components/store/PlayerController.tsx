@@ -16,7 +16,7 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
 
     // Grace period: keep camera locked for first 200ms to prevent fall-through
     const elapsed = Date.now() - initTime.current
-    if (elapsed < 1000) {
+    if (elapsed < 800) {
       if (!isInitialized.current) {
         rigidBodyRef.current.setTranslation({ x: 0, y: 1.15, z: 5 }, true)
         rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)

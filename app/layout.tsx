@@ -4,13 +4,13 @@ import { LenisProvider } from "@/components/layout/LenisProvider";
 import CustomCursor from "@/components/ui/CustomCursor";
 
 export const metadata: Metadata = {
-  title: "ویترین مجازی شهر امید — نمایشگاه سه‌بعدی جواهرات",
+  title: "لومینا - پاساژ دیجیتال شهر امید",
   description:
     "نمایشگاه سه‌بعدی و امتحان مجازی جواهرات؛ هر قطعه را پیش از خرید، روی خود ببینید. زیبایی را پیش از خرید تجربه کنید.",
   keywords: ["جواهرات", "نمایشگاه سه‌بعدی", "امتحان مجازی", "ویترین مجازی", "گردنبند", "گوشواره", "انگشتر", "ساعت"],
   authors: [{ name: "ویترین مجازی شهر امید" }],
   openGraph: {
-    title: "ویترین مجازی شهر امید — نمایشگاه سه‌بعدی جواهرات",
+    title: "لومینا - پاساژ دیجیتال شهر امید",
     description: "نمایشگاه سه‌بعدی و امتحان مجازی جواهرات",
     type: "website",
   },
