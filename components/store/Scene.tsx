@@ -6,8 +6,9 @@ import { Suspense } from 'react'
 import { Physics } from '@react-three/rapier'
 import { useStoreConfig } from './hooks/useStoreConfig'
 import { ModelLoader } from './ModelLoader'
-import { usePhysics, PlayerRigidBody } from './PhysicsSystem'
+import { usePhysics } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
+import { RigidBody, CapsuleCollider } from '@react-three/rapier'
 import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
 import { ShadowSystem } from './ShadowSystem'
@@ -48,7 +49,20 @@ function PhysicsManager({
     onSetJoystickInput(() => (x: number, y: number) => setJoystickInput(x, y))
   }, [setJoystickInput, onSetJoystickInput])
 
-  return <PlayerRigidBody rigidBodyRef={physics.rigidBodyRef} />
+  return (
+    <RigidBody
+      ref={physics.rigidBodyRef}
+      type="dynamic"
+      position={[0, 1.6, 5]}
+      enabledRotations={[false, true, false]}
+      lockRotations
+      linearDamping={8}
+      angularDamping={10}
+      canSleep={false}
+    >
+      <CapsuleCollider args={[0.6, 0.35]} />
+    </RigidBody>
+  )
 }
 
 export default function Scene() {
@@ -142,7 +156,7 @@ export default function Scene() {
         <ModelLoader files={config.files} onModelsLoaded={handleModelsLoaded} />
       </Suspense>
 
-      {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
+      {/* Physics system - only after models loaded */}
       {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} gyroEnabled={gyroEnabled} />}
 
       {/* Product click interaction */}
