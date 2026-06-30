@@ -22,6 +22,9 @@ import { ModelsLoadingIndicator } from './ModelsLoadingIndicator'
 import { Stats } from '@react-three/drei'
 import { AudioPlayer } from './AudioPlayer'
 import { GyroToggle } from './GyroToggle'
+import { SceneTransition } from './SceneTransition'
+import { CameraTransition } from './CameraTransition'
+import { ParticleReveal } from './ParticleReveal'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -65,18 +68,31 @@ function PhysicsManager({
   )
 }
 
+type LoadingPhase = 'loading' | 'transitioning' | 'ready'
+
 export default function Scene() {
   const { config, loading, error } = useStoreConfig()
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
   const [showClickHint, setShowClickHint] = useState(true)
-  const [modelsLoaded, setModelsLoaded] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('loading')
+  const [loadedCount, setLoadedCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null)
   const [gyroEnabled, setGyroEnabled] = useState(false)
 
   const handleModelsLoaded = useCallback(() => {
-   
-    setModelsLoaded(true)
+    setLoadingPhase('transitioning')
   }, [])
+
+  const handleTransitionComplete = useCallback(() => {
+    setLoadingPhase('ready')
+  }, [])
+
+  useEffect(() => {
+    if (config) {
+      setTotalCount(config.files.length)
+    }
+  }, [config])
 
   useEffect(() => {
     const hideHint = () => setShowClickHint(false)
@@ -153,14 +169,25 @@ export default function Scene() {
 
       {/* Load models from config */}
       <Suspense fallback={null}>
-        <ModelLoader files={config.files} onModelsLoaded={handleModelsLoaded} />
+        <ModelLoader files={config.files} onModelsLoaded={handleModelsLoaded} onProgress={setLoadedCount} />
       </Suspense>
 
-      {/* Physics system - only after models loaded */}
-      {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} gyroEnabled={gyroEnabled} />}
+      {/* Scene transition effects */}
+      <SceneTransition
+        isTransitioning={loadingPhase === 'transitioning'}
+        onComplete={handleTransitionComplete}
+      />
+      <CameraTransition
+        isTransitioning={loadingPhase === 'transitioning'}
+        targetPosition={[0, 1.6, 5]}
+      />
+      <ParticleReveal isTransitioning={loadingPhase === 'transitioning'} />
+
+      {/* Physics system - only after transition ready */}
+      {loadingPhase === 'ready' && <PhysicsManager onSetJoystickInput={setJoystickCallback} gyroEnabled={gyroEnabled} />}
 
       {/* Product click interaction */}
-      {modelsLoaded && <ProductInteraction onProductClick={setSelectedProduct} />}
+      {loadingPhase === 'ready' && <ProductInteraction onProductClick={setSelectedProduct} />}
 
       {/* Reflective Floor (Phase 9) */}
       <ReflectiveFloor opacity={1} size={20} mixStrength={.9} blur={0} roughness={62} />
@@ -171,10 +198,16 @@ export default function Scene() {
       </Canvas>
 
       {/* Loading indicator while models load */}
-      {!modelsLoaded && <ModelsLoadingIndicator />}
+      {loadingPhase !== 'ready' && (
+        <ModelsLoadingIndicator
+          fadeOut={loadingPhase === 'transitioning'}
+          loadedCount={loadedCount}
+          totalCount={totalCount}
+        />
+      )}
 
-      {/* Virtual joystick for mobile - only after models loaded */}
-      {modelsLoaded && joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
+      {/* Virtual joystick for mobile - only after ready */}
+      {loadingPhase === 'ready' && joystickCallback && <VirtualJoystick onMove={joystickCallback} />}
 
       {/* Drag to look around hint */}
       {/* {modelsLoaded && showClickHint && (
@@ -192,7 +225,7 @@ export default function Scene() {
       <AudioPlayer />
 
       {/* Gyroscope controls */}
-      {modelsLoaded && <GyroToggle onGyroChange={setGyroEnabled} />}
+      {loadingPhase === 'ready' && <GyroToggle onGyroChange={setGyroEnabled} />}
 
       {/* Bottom-left logo */}
       <div style={{ 

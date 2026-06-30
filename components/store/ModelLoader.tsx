@@ -17,9 +17,10 @@ const configureDracoLoader = () => {
 type ModelLoaderProps = {
   files: ModelFile[]
   onModelsLoaded?: () => void
+  onProgress?: (loaded: number) => void
 }
 
-export function ModelLoader({ files, onModelsLoaded }: ModelLoaderProps) {
+export function ModelLoader({ files, onModelsLoaded, onProgress }: ModelLoaderProps) {
   const [loadedCount, setLoadedCount] = useState(0)
 
   // Sort by priority (0 = wireframe first)
@@ -28,8 +29,12 @@ export function ModelLoader({ files, onModelsLoaded }: ModelLoaderProps) {
   }, [files])
 
   const handleModelLoaded = useCallback(() => {
-    setLoadedCount(prev => prev + 1)
-  }, [])
+    setLoadedCount(prev => {
+      const newCount = prev + 1
+      onProgress?.(newCount)
+      return newCount
+    })
+  }, [onProgress])
 
   useEffect(() => {
     console.log(`Loaded ${loadedCount} of ${sortedFiles.length} models`)
