@@ -56,7 +56,7 @@ function PhysicsManager({
       position={[0, 1.6, 5]}
       enabledRotations={[false, true, false]}
       lockRotations
-      linearDamping={8}
+      linearDamping={2.5}
       angularDamping={10}
       canSleep={false}
     >
