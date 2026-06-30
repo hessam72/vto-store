@@ -14,15 +14,15 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
     const currentVel = rigidBodyRef.current.linvel()
     playerVelocity.current.set(currentVel.x, currentVel.y, currentVel.z)
 
-    // Update camera to follow rigid body
+    // Update camera to follow rigid body with 2x height offset
     const pos = rigidBodyRef.current.translation()
-    state.camera.position.set(pos.x, pos.y, pos.z)
+    state.camera.position.set(pos.x, pos.y + .9, pos.z)
 
     // Safety: teleport if fallen
     if (pos.y < -5) {
       rigidBodyRef.current.setTranslation({ x: 0, y: 1.6, z: 5 }, true)
       rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
-      state.camera.position.set(0, 1.6, 5)
+      state.camera.position.set(0, 1.6, 5) // Camera at 1.6 + 1.6 offset
     }
   })
 }
