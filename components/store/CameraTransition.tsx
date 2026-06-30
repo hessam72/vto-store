@@ -12,7 +12,7 @@ interface CameraTransitionProps {
 export function CameraTransition({
   isTransitioning,
   targetPosition,
-  duration = 4000
+  duration = 3400
 }: CameraTransitionProps) {
   const startPos = useRef<THREE.Vector3 | null>(null)
   const startTime = useRef<number>(0)
@@ -31,10 +31,12 @@ export function CameraTransition({
     if (!startPos.current) {
       startPos.current = new THREE.Vector3(
         targetPosition[0],
-        targetPosition[1] + 10,
-        targetPosition[2] + 12
+        targetPosition[1] + 15,
+        targetPosition[2] + 30
       )
       camera.position.copy(startPos.current)
+      // Look at target from above
+      camera.lookAt(targetPosition[0], targetPosition[1], targetPosition[2])
       return
     }
 
@@ -50,6 +52,12 @@ export function CameraTransition({
       new THREE.Vector3(...targetPosition),
       eased
     )
+
+    // Animate rotation: start looking down at target, end looking forward
+    const startLookAt = new THREE.Vector3(...targetPosition)
+    const endLookAt = new THREE.Vector3(targetPosition[0], targetPosition[1], targetPosition[2] - 5)
+    const currentLookAt = new THREE.Vector3().lerpVectors(startLookAt, endLookAt, eased)
+    camera.lookAt(currentLookAt)
 
     if (progress >= 1) {
       isDone.current = true
