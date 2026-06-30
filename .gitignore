@@ -43,3 +43,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 Archive 2.zip
+node_modules.zip
