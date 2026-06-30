@@ -11,10 +11,10 @@
  "necklace-gold": {
     "category": "necklace",
     "variant": "native-american",
-    "price": "3,900,000",
+    "price": "4,900,000",
     "weight": "12.0",
     "name_fa": "گردنبند طلا ",
-    "glbPath": "/models/necklace/occluder.glb"
+    "glbPath": "/models/necklace/native-american.glb"
   },
  "watch-sport": {
     "category": "watch",
