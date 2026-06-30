@@ -1,45 +1,28 @@
 'use client'
 import { useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
 import * as THREE from 'three'
 import type { usePhysics } from './PhysicsSystem'
 import { useJoystickControls } from './Joystick'
 
-const GRAVITY = 30 // units/second²
-
 export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
-  const damping = useRef(0)
-
   useFrame((state, delta) => {
-    if (!physics.octreeReady.current) return
+    const { rigidBodyRef, playerVelocity } = physics
 
-    const { playerVelocity, playerOnFloor, playerCollider } = physics
+    if (!rigidBodyRef.current) return
 
-    // Apply gravity when airborne
-    if (!playerOnFloor.current) {
-      playerVelocity.current.y -= GRAVITY * delta
-    }
+    // Get current velocity from Rapier
+    const currentVel = rigidBodyRef.current.linvel()
+    playerVelocity.current.set(currentVel.x, currentVel.y, currentVel.z)
 
-    // Apply damping (friction/air resistance)
-    damping.current = Math.exp(-4 * delta) - 1
-    playerVelocity.current.addScaledVector(
-      playerVelocity.current,
-      damping.current
-    )
+    // Update camera to follow rigid body
+    const pos = rigidBodyRef.current.translation()
+    state.camera.position.set(pos.x, pos.y, pos.z)
 
-    // Move capsule by velocity
-    const deltaPosition = playerVelocity.current.clone().multiplyScalar(delta)
-    playerCollider.current.translate(deltaPosition)
-
-    // Update camera position to follow capsule
-    state.camera.position.copy(playerCollider.current.end)
-
-    // Safety: teleport if fallen through floor
-    if (state.camera.position.y < -5) {
-      playerCollider.current.start.set(0, 0.55, 0)
-      playerCollider.current.end.set(0, 1.75, 9)
-      state.camera.position.copy(playerCollider.current.end)
-      playerVelocity.current.set(0, 0, 0)
+    // Safety: teleport if fallen
+    if (pos.y < -5) {
+      rigidBodyRef.current.setTranslation({ x: 0, y: 1.6, z: 5 }, true)
+      rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      state.camera.position.set(0, 1.6, 5)
     }
   })
 }
@@ -50,8 +33,21 @@ export function usePlayerController(physics: ReturnType<typeof usePhysics>) {
   usePlayerPhysics(physics)
 
   useFrame((state, delta) => {
+    const { rigidBodyRef, playerVelocity } = physics
+    if (!rigidBodyRef.current) return
+
     // Apply WASD/joystick input
     updateMovement(delta)
+
+    // Apply computed velocity to Rapier rigid body
+    rigidBodyRef.current.setLinvel(
+      {
+        x: playerVelocity.current.x,
+        y: rigidBodyRef.current.linvel().y, // Preserve gravity Y
+        z: playerVelocity.current.z
+      },
+      true
+    )
   })
 
   return { setJoystickInput }

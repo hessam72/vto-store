@@ -1,10 +1,10 @@
 'use client'
-import { useGLTF } from '@react-three/drei'
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useLoader } from '@react-three/fiber'
+import { RigidBody } from '@react-three/rapier'
 import type { ModelFile } from './hooks/useStoreConfig'
 
 // Configure DRACO loader globally
@@ -144,6 +144,14 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
 
     return clone
   }, [gltf.scene, isWireframe])
+
+  if (isWireframe) {
+    return (
+      <RigidBody type="fixed" colliders="trimesh">
+        <primitive object={clonedScene} />
+      </RigidBody>
+    )
+  }
 
   return <primitive object={clonedScene} />
 }

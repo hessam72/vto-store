@@ -3,9 +3,10 @@ import { Canvas } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { Suspense } from 'react'
+import { Physics } from '@react-three/rapier'
 import { useStoreConfig } from './hooks/useStoreConfig'
 import { ModelLoader } from './ModelLoader'
-import { usePhysics } from './PhysicsSystem'
+import { usePhysics, PlayerRigidBody } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
 import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
@@ -47,7 +48,7 @@ function PhysicsManager({
     onSetJoystickInput(() => (x: number, y: number) => setJoystickInput(x, y))
   }, [setJoystickInput, onSetJoystickInput])
 
-  return null
+  return <PlayerRigidBody rigidBodyRef={physics.rigidBodyRef} />
 }
 
 export default function Scene() {
@@ -86,6 +87,7 @@ export default function Scene() {
         }}
         camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
       >
+        <Physics gravity={[0, -30, 0]} timeStep="vary">
          {/* FPS Stats */}
       {/* <Stats /> */}
       {/* Dark background */}
@@ -151,6 +153,7 @@ export default function Scene() {
 
       {/* Post-Processing (Phase 10) */}
       <PostProcessing />
+      </Physics>
       </Canvas>
 
       {/* Loading indicator while models load */}

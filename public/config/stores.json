@@ -7,13 +7,13 @@
         {
           "priority": 0,
           "quality": "low",
-          "url": "/store-models/floor-plane.glb"
+          "url": "/store-models/scene (39).glb"
         },
 
         {
           "priority": 1,
           "quality": "high",
-          "url": "/store-models/test-products.glb"
+          "url": "/store-models/main.glb"
         }
         
       
