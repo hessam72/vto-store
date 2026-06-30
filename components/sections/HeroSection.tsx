@@ -122,6 +122,11 @@ function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelP
     const cloned = scene.clone();
     const materials: THREE.Material[] = [];
 
+    // Center the model at origin
+    const box = new THREE.Box3().setFromObject(cloned);
+    const center = box.getCenter(new THREE.Vector3());
+    cloned.position.sub(center);
+
     cloned.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
@@ -129,11 +134,24 @@ function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelP
           mesh.material.forEach((mat) => {
             mat.transparent = true;
             mat.opacity = 0;
+            // Enhance gold reflections
+            if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+              mat.metalness = 1;
+              mat.roughness = 0.15;
+              mat.envMapIntensity = 2.5;
+            }
             materials.push(mat);
           });
         } else {
           mesh.material.transparent = true;
           mesh.material.opacity = 0;
+          // Enhance gold reflections
+          const mat = mesh.material;
+          if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+            mat.metalness = 1;
+            mat.roughness = 0.15;
+            mat.envMapIntensity = 2.5;
+          }
           materials.push(mesh.material);
         }
       }
@@ -175,10 +193,15 @@ function JewelryModel({ url, position, scrollOpacity, scale = 5 }: JewelryModelP
 }
 
 // Preload models
+
 useGLTF.preload("/home_models/jewel-1.glb");
 useGLTF.preload("/home_models/jewel-2.glb");
 useGLTF.preload("/home_models/jewel-3.glb");
 useGLTF.preload("/home_models/jewel-4.glb");
+useGLTF.preload("/home_models/jewel-5.glb");
+useGLTF.preload("/home_models/jewel-6.glb");
+useGLTF.preload("/home_models/jewel-7.glb");
+useGLTF.preload("/home_models/jewel-8.glb");
 
 /* ─────────────────────────────────────────────────────────────
    Camera Controller — Subtle orbit during scroll
@@ -237,7 +260,8 @@ export default function HeroSection() {
   const model2Opacity = useTransform(scrollYProgress, [0.25, 0.4, 0.5], [0, 1, 1]);
   const model3Opacity = useTransform(scrollYProgress, [0.5, 0.65, 0.75], [0, 1, 1]);
   const model4Opacity = useTransform(scrollYProgress, [0.75, 0.9, 1], [0, 1, 1]);
-  const model5Opacity = useTransform(scrollYProgress, [0.9, 1], [0, 1]);
+  const model5Opacity = useTransform(scrollYProgress, [0.82, 1], [0, 1]);
+  const model6Opacity = useTransform(scrollYProgress, [0.91, 1], [0, 1]);
 
 
   /* ── Render ────────────────────────────────────────────── */
@@ -305,7 +329,7 @@ export default function HeroSection() {
                 textShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
               }}
             >
-              برای کشف ویترین اسکرول کنید
+برای ورود به شهر جواهرات اسکرول کنید
             </p>
 
             {/* Animated scroll gesture */}
@@ -384,60 +408,87 @@ export default function HeroSection() {
           <Canvas
             camera={{ position: [0, 0, 8], fov: 30 }}
             dpr={[1, 1.5]}
-            gl={{ alpha: true, antialias: true }}
+            gl={{
+              alpha: true,
+              antialias: true,
+              toneMapping: THREE.ACESFilmicToneMapping,
+              toneMappingExposure: 0.8
+            }}
           >
             <CameraController />
 
-            {/* Gold-themed lighting */}
-            <ambientLight intensity={45} color="#ffffff" />
+            {/* HDRI environment for gold reflections */}
+            <Suspense fallback={null}>
+              <Environment
+                files="/hdr/main_hdr.exr"
+                background={false}
+                environmentIntensity={2.2}
+                resolution={512}
+              />
+            </Suspense>
+
+            {/* Reduced lighting - let HDR do the work */}
+            <ambientLight intensity={8} color="#ffffff" />
             <SpotLight
               position={[5, 5, 5]}
               angle={0.3}
               penumbra={0.5}
-              intensity={120}
+              intensity={40}
               color="#ffd700"
-              castShadow
             />
             <SpotLight
               position={[-5, 3, 5]}
               angle={0.4}
               penumbra={0.5}
-              intensity={120}
+              intensity={40}
               color="#fffacd"
             />
-            <pointLight position={[0, -2.1, -5]} intensity={120} color="#ffffff" />
-            <pointLight position={[0, 3, 3]} intensity={60} color="#ffd700" />
-
-            <Environment preset="sunset" />
+            <pointLight position={[0, 3, 3]} intensity={20} color="#ffd700" />
 
             {/* Progressive jewelry models */}
             <Suspense fallback={null}>
               <JewelryModel
-                url="/home_models/jewel-1.glb"
+                url="/home_models/jewel-3.glb"
                 position={[0, 0, 0]}
                 scrollOpacity={model1Opacity}
               />
               <JewelryModel
-                url="/home_models/jewel-2.glb"
-                position={[0, 0, 0]}
+                url="/home_models/jewel-1.glb"
+                position={[-0.4, .9, 0]}
                 scrollOpacity={model2Opacity}
               />
               <JewelryModel
-                url="/home_models/jewel-3.glb"
-                position={[0, 0, 0]}
+                url="/home_models/jewel-2.glb"
+                position={[0.3, .9, 0]}
                 scrollOpacity={model3Opacity}
               />
               <JewelryModel
                 url="/home_models/jewel-4.glb"
-                position={[0, -.6, 0]}
+                position={[0, -.8, 0]}
                 scrollOpacity={model4Opacity}
                 scale={6.5}
-              />   
+              />
               <JewelryModel
                 url="/home_models/jewel-5.glb"
-                position={[0, -.3, 0]}
+                position={[-0.6, -.3, 0]}
                 scrollOpacity={model5Opacity}
                 scale={5}
+              />
+              {/* <JewelryModel
+                url="/home_models/jewel-6.glb"
+                position={[0.1, -.3, 0]}
+                scrollOpacity={model6Opacity}
+                scale={5}
+              /> */}
+              <JewelryModel
+                url="/home_models/jewel-7.glb"
+                position={[-0.4, -0.7, 0.5]}
+                scrollOpacity={model5Opacity}
+              />
+              <JewelryModel
+                url="/home_models/jewel-8.glb"
+                position={[0.5, -0.7, 0.5]}
+                scrollOpacity={model6Opacity}
               />
             </Suspense>
           </Canvas>
@@ -523,7 +574,7 @@ export default function HeroSection() {
 
           {/* Label — centered row with flanking lines */}
           <motion.div
-            className="flex items-center justify-center gap-4 mb-6 md:mb-8"
+            className="flex items-center justify-center gap-4 mb-6 md:mb-8 w-screen md:w-auto px-4"
             style={{ opacity: labelOpacity }}
           >
             <span
@@ -536,12 +587,14 @@ export default function HeroSection() {
             <p
               className="font-persian text-[0.62rem] md:text-[0.68rem] tracking-[0.35em] uppercase"
               style={{
+                       fontSize: "clamp(.8rem, 1.4vw, 1.3rem)",
+              fontWeight:'bold',
                 color: "#ffd700",
                 textShadow: "0 0 20px rgba(212, 175, 55, 0.6), 0 0 40px rgba(212, 175, 55, 0.3)",
                 opacity: 0.95,
               }}
             >
-              به ویترین مجازی شهر امید خوش آمدید
+             پاساژ دیجیتال شهر امید دروازه‌ای به آینده جواهرات
             </p>
             <span
               className="block w-10 md:w-12 h-[1.5px] flex-shrink-0"
@@ -565,7 +618,6 @@ export default function HeroSection() {
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-                letterSpacing: "0.12em",
                 filter: "drop-shadow(0 0 40px rgba(255, 215, 0, 0.4)) drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6))",
                 position: "relative",
               }}
@@ -604,16 +656,16 @@ export default function HeroSection() {
           <motion.p
             className="font-persian font-light leading-[2.2]"
             style={{
-              fontSize: "clamp(0.82rem, 1.4vw, 1.08rem)",
+              fontSize: "clamp(1rem, 1.4vw, 1.3rem)",
+              fontWeight:'bold',
               color: "rgba(245, 240, 232, 0.85)",
               maxWidth: "42ch",
               textAlign: "center",
               textShadow: "0 2px 16px rgba(0, 0, 0, 0.6)",
-              letterSpacing: "0.02em",
               opacity: subtitleOpacity,
             }}
           >
-            نمایشگاه سه‌بعدی و امتحان مجازی جواهرات؛ هر قطعه را پیش از خرید، روی خود ببینید.
+هر قطعه طلا قبل از خرید متعلق به توست
           </motion.p>
         </div>
 
@@ -648,7 +700,6 @@ export default function HeroSection() {
                 "0 0 60px rgba(212,175,55,0.3), 0 6px 32px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,235,120,0.25), inset 0 -2px 0 rgba(130,88,0,0.4)",
               color: "#ffd700",
               fontSize: "0.9rem",
-              letterSpacing: "0.1em",
               minWidth: "200px",
               textShadow: "0 0 20px rgba(255, 215, 0, 0.5)",
             }}
@@ -797,7 +848,6 @@ export default function HeroSection() {
                   style={{
                     fontSize: "clamp(0.54rem, 1.1vw, 0.68rem)",
                     color: "rgba(255,215,0,0.85)",
-                    letterSpacing: "0.06em",
                     textShadow: "0 0 10px rgba(255, 215, 0, 0.3)",
                   }}
                 >

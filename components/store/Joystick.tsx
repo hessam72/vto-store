@@ -32,7 +32,7 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
 
   const updateMovement = (delta: number) => {
     // console.log('Updating movement with delta:', delta)
-    const speed = 19 // units/second
+    const speed = 4 // units/second
     const keys = keysPressed.current
 
     // Get camera direction (ignore Y component for movement)
@@ -44,17 +44,23 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
     const right = new THREE.Vector3()
     right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize()
 
+    // Reset horizontal velocity each frame (Rapier damping handles deceleration)
+    if (playerVelocity.current) {
+      playerVelocity.current.x = 0
+      playerVelocity.current.z = 0
+    }
+
     // Apply WASD keyboard input
-    if (keys['w']) playerVelocity.current?.add(forward.multiplyScalar(speed * delta))
-    if (keys['s']) playerVelocity.current?.add(forward.multiplyScalar(-speed * delta))
-    if (keys['a']) playerVelocity.current?.add(right.multiplyScalar(-speed * delta))
-    if (keys['d']) playerVelocity.current?.add(right.multiplyScalar(speed * delta))
+    if (keys['w']) playerVelocity.current?.add(forward.multiplyScalar(speed))
+    if (keys['s']) playerVelocity.current?.add(forward.multiplyScalar(-speed))
+    if (keys['a']) playerVelocity.current?.add(right.multiplyScalar(-speed))
+    if (keys['d']) playerVelocity.current?.add(right.multiplyScalar(speed))
 
     // Apply virtual joystick input
     const { x, y } = joystickInput.current
     if (x !== 0 || y !== 0) {
-      playerVelocity.current?.add(right.multiplyScalar(x * speed * delta))
-      playerVelocity.current?.add(forward.multiplyScalar(y * speed * delta))
+      playerVelocity.current?.add(right.multiplyScalar(x * speed))
+      playerVelocity.current?.add(forward.multiplyScalar(y * speed))
     }
   }
 

@@ -1,10 +1,10 @@
 'use client'
-import { useGLTF } from '@react-three/drei'
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useLoader } from '@react-three/fiber'
+import { RigidBody } from '@react-three/rapier'
 import type { ModelFile } from './hooks/useStoreConfig'
 
 // Configure DRACO loader globally
@@ -85,10 +85,20 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
     clone.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
         if (isWireframe) {
-          // Wireframe model: invisible, used only for collision
-          obj.visible = false
+          // Wireframe model: keep visible for Rapier but fully transparent
+          obj.visible = true
           obj.castShadow = false
           obj.receiveShadow = false
+          obj.renderOrder = -1
+          // Make material fully transparent
+          if (obj.material) {
+            const materials = Array.isArray(obj.material) ? obj.material : [obj.material]
+            materials.forEach((mat) => {
+              mat.opacity = 0
+              mat.transparent = true
+              mat.depthWrite = false
+            })
+          }
         } else {
           // Visual models: visible with shadows
           obj.castShadow = true
@@ -144,6 +154,14 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
 
     return clone
   }, [gltf.scene, isWireframe])
+
+  if (isWireframe) {
+    return (
+      <RigidBody type="fixed" colliders="trimesh" friction={1}>
+        <primitive object={clonedScene} />
+      </RigidBody>
+    )
+  }
 
   return <primitive object={clonedScene} />
 }

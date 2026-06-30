@@ -16,11 +16,11 @@ export const MODELS_CONFIG = {
   },
   necklace: {
     'black-panther': {
-      glb: '/models/usdz/ring.glb',
+      glb: '/models/necklace/black-panther.glb',
       usdz: '/models/usdz/Ring.usdz',
     },
     'native-american': {
-      glb: '/models/usdz/ring.glb',
+      glb: '/models/necklace/native-american.glb',
       usdz: '/models/usdz/Ring.usdz',
     },
   },

@@ -3,10 +3,12 @@ import { Canvas } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { Suspense } from 'react'
+import { Physics } from '@react-three/rapier'
 import { useStoreConfig } from './hooks/useStoreConfig'
 import { ModelLoader } from './ModelLoader'
 import { usePhysics } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
+import { RigidBody, CapsuleCollider } from '@react-three/rapier'
 import { VirtualJoystick } from './Joystick'
 import { usePOVCamera } from './POVCamera'
 import { ShadowSystem } from './ShadowSystem'
@@ -47,7 +49,20 @@ function PhysicsManager({
     onSetJoystickInput(() => (x: number, y: number) => setJoystickInput(x, y))
   }, [setJoystickInput, onSetJoystickInput])
 
-  return null
+  return (
+    <RigidBody
+      ref={physics.rigidBodyRef}
+      type="dynamic"
+      position={[0, 1.6, 5]}
+      enabledRotations={[false, true, false]}
+      lockRotations
+      linearDamping={2.5}
+      angularDamping={10}
+      canSleep={false}
+    >
+      <CapsuleCollider args={[0.6, 0.35]} />
+    </RigidBody>
+  )
 }
 
 export default function Scene() {
@@ -86,6 +101,7 @@ export default function Scene() {
         }}
         camera={{ position: [0, 1.6, 5], fov: 60, near: 0.1, far: 200 }}
       >
+        <Physics gravity={[0, -30, 0]} timeStep="vary">
          {/* FPS Stats */}
       {/* <Stats /> */}
       {/* Dark background */}
@@ -140,7 +156,7 @@ export default function Scene() {
         <ModelLoader files={config.files} onModelsLoaded={handleModelsLoaded} />
       </Suspense>
 
-      {/* Physics system (Octree + Capsule + Gravity) - only after models loaded */}
+      {/* Physics system - only after models loaded */}
       {modelsLoaded && <PhysicsManager onSetJoystickInput={setJoystickCallback} gyroEnabled={gyroEnabled} />}
 
       {/* Product click interaction */}
@@ -151,6 +167,7 @@ export default function Scene() {
 
       {/* Post-Processing (Phase 10) */}
       <PostProcessing />
+      </Physics>
       </Canvas>
 
       {/* Loading indicator while models load */}
