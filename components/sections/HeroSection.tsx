@@ -329,7 +329,7 @@ export default function HeroSection() {
                 textShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
               }}
             >
-برای ورود به شهر جواهرات اسکرول کنید
+            برای ورود به شهر جواهرات اسکرول کنید
             </p>
 
             {/* Animated scroll gesture */}
@@ -464,13 +464,13 @@ export default function HeroSection() {
               />
               <JewelryModel
                 url="/home_models/jewel-4.glb"
-                position={[0, -.8, 0]}
+                position={[.4, -.1, 0]}
                 scrollOpacity={model4Opacity}
-                scale={6.5}
+                scale={5}
               />
               <JewelryModel
                 url="/home_models/jewel-5.glb"
-                position={[-0.6, -.3, 0]}
+                position={[-0.6, -.1, 0]}
                 scrollOpacity={model5Opacity}
                 scale={5}
               />
@@ -482,12 +482,12 @@ export default function HeroSection() {
               /> */}
               <JewelryModel
                 url="/home_models/jewel-7.glb"
-                position={[-0.4, -0.7, 0.5]}
+                position={[-0.15, -.7, 0.5]}
                 scrollOpacity={model5Opacity}
               />
               <JewelryModel
                 url="/home_models/jewel-8.glb"
-                position={[0.5, -0.7, 0.5]}
+                position={[0, -1, 0.5]}
                 scrollOpacity={model6Opacity}
               />
             </Suspense>
