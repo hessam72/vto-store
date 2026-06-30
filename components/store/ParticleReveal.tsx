@@ -11,7 +11,7 @@ interface ParticleRevealProps {
 
 export function ParticleReveal({
   isTransitioning,
-  duration = 1200,
+  duration = 4000,
   count = 1500
 }: ParticleRevealProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null)

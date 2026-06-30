@@ -12,7 +12,7 @@ interface CameraTransitionProps {
 export function CameraTransition({
   isTransitioning,
   targetPosition,
-  duration = 1200
+  duration = 4000
 }: CameraTransitionProps) {
   const startPos = useRef<THREE.Vector3 | null>(null)
   const startTime = useRef<number>(0)
@@ -31,8 +31,8 @@ export function CameraTransition({
     if (!startPos.current) {
       startPos.current = new THREE.Vector3(
         targetPosition[0],
-        targetPosition[1] + 3,
-        targetPosition[2] + 5
+        targetPosition[1] + 10,
+        targetPosition[2] + 12
       )
       camera.position.copy(startPos.current)
       return

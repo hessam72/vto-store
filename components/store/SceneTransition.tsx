@@ -11,7 +11,7 @@ interface SceneTransitionProps {
 export function SceneTransition({
   isTransitioning,
   onComplete,
-  duration = 1200
+  duration = 4000
 }: SceneTransitionProps) {
   const [progress, setProgress] = useState(0)
 
