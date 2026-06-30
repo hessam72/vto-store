@@ -3,18 +3,34 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { usePhysics } from './PhysicsSystem'
 import { useJoystickControls } from './Joystick'
+import { useRef } from 'react'
 
 export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
+  const initTime = useRef(Date.now())
+  const isInitialized = useRef(false)
+
   useFrame((state, delta) => {
     const { rigidBodyRef, playerVelocity } = physics
 
     if (!rigidBodyRef.current) return
 
+    // Grace period: keep camera locked for first 200ms to prevent fall-through
+    const elapsed = Date.now() - initTime.current
+    if (elapsed < 1000) {
+      if (!isInitialized.current) {
+        rigidBodyRef.current.setTranslation({ x: 0, y: 1.15, z: 5 }, true)
+        rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
+        state.camera.position.set(0, 2.5, 5)
+      }
+      return
+    }
+    isInitialized.current = true
+
     // Get current velocity from Rapier
     const currentVel = rigidBodyRef.current.linvel()
     playerVelocity.current.set(currentVel.x, currentVel.y, currentVel.z)
 
-    // Update camera to follow rigid body with 2x height offset
+    // Update camera to follow rigid body with offset
     const pos = rigidBodyRef.current.translation()
     state.camera.position.set(pos.x, pos.y + .9, pos.z)
 
@@ -22,7 +38,7 @@ export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
     if (pos.y < -5) {
       rigidBodyRef.current.setTranslation({ x: 0, y: 1.6, z: 5 }, true)
       rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
-      state.camera.position.set(0, 1.6, 5) // Camera at 1.6 + 1.6 offset
+      state.camera.position.set(0, 2.5, 5)
     }
   })
 }
