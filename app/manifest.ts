@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#060608',
     icons: [
       {
-        src: '/images/Lumina-full.png',
+        src: '/images/pwa-logo.jpeg',
         sizes: 'any',
         type: 'image/png',
       },
