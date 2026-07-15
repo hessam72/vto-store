@@ -1,10 +1,10 @@
 'use client'
-import { useGLTF } from '@react-three/drei'
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useLoader } from '@react-three/fiber'
+import { RigidBody } from '@react-three/rapier'
 import type { ModelFile } from './hooks/useStoreConfig'
 
 // Configure DRACO loader globally
@@ -17,9 +17,10 @@ const configureDracoLoader = () => {
 type ModelLoaderProps = {
   files: ModelFile[]
   onModelsLoaded?: () => void
+  onProgress?: (loaded: number) => void
 }
 
-export function ModelLoader({ files, onModelsLoaded }: ModelLoaderProps) {
+export function ModelLoader({ files, onModelsLoaded, onProgress }: ModelLoaderProps) {
   const [loadedCount, setLoadedCount] = useState(0)
 
   // Sort by priority (0 = wireframe first)
@@ -28,8 +29,12 @@ export function ModelLoader({ files, onModelsLoaded }: ModelLoaderProps) {
   }, [files])
 
   const handleModelLoaded = useCallback(() => {
-    setLoadedCount(prev => prev + 1)
-  }, [])
+    setLoadedCount(prev => {
+      const newCount = prev + 1
+      onProgress?.(newCount)
+      return newCount
+    })
+  }, [onProgress])
 
   useEffect(() => {
     console.log(`Loaded ${loadedCount} of ${sortedFiles.length} models`)
@@ -77,13 +82,28 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true)
 
+    // Tag wireframe for physics system
+    if (isWireframe) {
+      clone.userData.isWireframeCollision = true
+    }
+
     clone.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
         if (isWireframe) {
-          // Wireframe model: invisible, used only for collision
-          obj.visible = false
+          // Wireframe model: keep visible for Rapier but fully transparent
+          obj.visible = true
           obj.castShadow = false
           obj.receiveShadow = false
+          obj.renderOrder = -1
+          // Make material fully transparent
+          if (obj.material) {
+            const materials = Array.isArray(obj.material) ? obj.material : [obj.material]
+            materials.forEach((mat) => {
+              mat.opacity = 0
+              mat.transparent = true
+              mat.depthWrite = false
+            })
+          }
         } else {
           // Visual models: visible with shadows
           obj.castShadow = true
@@ -96,6 +116,33 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
               })
             } else {
               obj.material.envMapIntensity = 1
+              obj.material.needsUpdate = true
+            }
+          }
+
+          // Ceiling double-sided rendering for reflections
+          if (obj.name.toLowerCase().includes('ceiling') || obj.position.y > 3) {
+            if (obj.material) {
+              const materials = Array.isArray(obj.material) ? obj.material : [obj.material]
+              materials.forEach((mat) => {
+                mat.side = THREE.DoubleSide
+                mat.needsUpdate = true
+              })
+            }
+          }
+
+          // String light emissive glow
+          if (obj.name.toLowerCase().includes('light') && obj.material) {
+            console.log(`Applying emissive glow to ${obj.name}`)
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach((mat) => {
+                mat.emissive = new THREE.Color('#f6ffc4')
+                mat.emissiveIntensity = 2
+                mat.needsUpdate = true
+              })
+            } else {
+              obj.material.emissive = new THREE.Color('#f6ffc4')
+              obj.material.emissiveIntensity = 2
               obj.material.needsUpdate = true
             }
           }
@@ -112,6 +159,14 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
 
     return clone
   }, [gltf.scene, isWireframe])
+
+  if (isWireframe) {
+    return (
+      <RigidBody type="fixed" colliders="trimesh" friction={1}>
+        <primitive object={clonedScene} />
+      </RigidBody>
+    )
+  }
 
   return <primitive object={clonedScene} />
 }

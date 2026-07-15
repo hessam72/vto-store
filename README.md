@@ -1,5 +1,5 @@
 # Virtual Try-On WebAR
-
+<!-- pkill -f "next dev" -->
 Next.js app serving WebAR.rocks jewelry try-on demos.
 
 ## Features

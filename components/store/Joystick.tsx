@@ -32,7 +32,7 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
 
   const updateMovement = (delta: number) => {
     // console.log('Updating movement with delta:', delta)
-    const speed = 5 // units/second
+    const speed = 4 // units/second
     const keys = keysPressed.current
 
     // Get camera direction (ignore Y component for movement)
@@ -44,17 +44,23 @@ export function useJoystickControls(playerVelocity: React.RefObject<THREE.Vector
     const right = new THREE.Vector3()
     right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize()
 
+    // Reset horizontal velocity each frame (Rapier damping handles deceleration)
+    if (playerVelocity.current) {
+      playerVelocity.current.x = 0
+      playerVelocity.current.z = 0
+    }
+
     // Apply WASD keyboard input
-    if (keys['w']) playerVelocity.current?.add(forward.multiplyScalar(speed * delta))
-    if (keys['s']) playerVelocity.current?.add(forward.multiplyScalar(-speed * delta))
-    if (keys['a']) playerVelocity.current?.add(right.multiplyScalar(-speed * delta))
-    if (keys['d']) playerVelocity.current?.add(right.multiplyScalar(speed * delta))
+    if (keys['w']) playerVelocity.current?.add(forward.multiplyScalar(speed))
+    if (keys['s']) playerVelocity.current?.add(forward.multiplyScalar(-speed))
+    if (keys['a']) playerVelocity.current?.add(right.multiplyScalar(-speed))
+    if (keys['d']) playerVelocity.current?.add(right.multiplyScalar(speed))
 
     // Apply virtual joystick input
     const { x, y } = joystickInput.current
     if (x !== 0 || y !== 0) {
-      playerVelocity.current?.add(right.multiplyScalar(x * speed * delta))
-      playerVelocity.current?.add(forward.multiplyScalar(y * speed * delta))
+      playerVelocity.current?.add(right.multiplyScalar(x * speed))
+      playerVelocity.current?.add(forward.multiplyScalar(y * speed))
     }
   }
 
@@ -72,7 +78,7 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
       zone: zoneRef.current,
       mode: 'static',
       position: { left: '80px', bottom: '80px' },
-      color: 'cyan',
+      color: '#2a2a2a',
       size: 120,
     })
 
@@ -93,8 +99,19 @@ export function VirtualJoystick({ onMove }: { onMove: (x: number, y: number) => 
   return (
     <div
       ref={zoneRef}
-      className="fixed bottom-0 left-0 w-40 h-40 pointer-events-auto z-50"
+      className="fixed bottom-0 right-0 w-40 h-40 pointer-events-auto z-50"
       style={{ touchAction: 'none' }}
-    />
+    >
+      <style jsx>{`
+        div :global(.back) {
+          background: rgba(20, 20, 20, 0.4) !important;
+          border: 2px solid rgba(238, 194, 0, 0.67) !important;
+        }
+        div :global(.front) {
+          background: rgba(255, 221, 0, 0.62) !important;
+          border: 2px solid rgba(255, 255, 255, 0) !important;
+        }
+      `}</style>
+    </div>
   )
 }

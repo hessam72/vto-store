@@ -44,6 +44,10 @@
     <!-- INCLUDE DEMO SCRIPT -->
     <script src="./main.js"></script>
 
+    <!-- VTO UI ENHANCEMENTS -->
+    <link rel="stylesheet" href="../shared/vto-ui.css">
+    <script src="../shared/vto-ui.js"></script>
+
     <style type="text/css">
       body {
         background-color: #333;
@@ -67,9 +71,30 @@
         z-index: 1;
         /*background-color: rgba(255, 0, 0, 0.5);*/
       }
+      #backBtn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        background: #0000004f;
+        color: gold;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        transition: background 0.3s;
+      }
+      #backBtn:hover {
+        background: #00000080;
+      }
     </style>
   </head>
   <body>
+    <!-- Back button -->
+    <button id="backBtn" onclick="window.location.href='/store'">← فروشگاه</button>
+
     <!-- canvas where the earring will be displayed: -->
     <canvas width="600" height="600" id='threeCanvas'></canvas>
 

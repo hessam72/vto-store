@@ -17,7 +17,9 @@ public/models
 /.next/
 /out/
 public/store-models
-
+public/hdr/Jew HDRI 2.exr
+public/hdr/Jew HDRI 3.exr
+public/hdr/Jew HDRI 1.exr
 # production
 /build
 
@@ -40,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+Archive 2.zip
+node_modules.zip
+Archive.zip

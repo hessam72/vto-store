@@ -1,43 +1,44 @@
 'use client'
 import { useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
 import * as THREE from 'three'
 import type { usePhysics } from './PhysicsSystem'
 import { useJoystickControls } from './Joystick'
-
-const GRAVITY = 30 // units/second²
+import { useRef } from 'react'
 
 export function usePlayerPhysics(physics: ReturnType<typeof usePhysics>) {
-  const damping = useRef(0)
+  const initTime = useRef(Date.now())
+  const isInitialized = useRef(false)
 
   useFrame((state, delta) => {
-    const { playerVelocity, playerOnFloor, playerCollider } = physics
+    const { rigidBodyRef, playerVelocity } = physics
 
-    // Apply gravity when airborne
-    if (!playerOnFloor.current) {
-      playerVelocity.current.y -= GRAVITY * delta
+    if (!rigidBodyRef.current) return
+
+    // Grace period: keep camera locked for first 200ms to prevent fall-through
+    const elapsed = Date.now() - initTime.current
+    if (elapsed < 800) {
+      if (!isInitialized.current) {
+        rigidBodyRef.current.setTranslation({ x: 0, y: 1.15, z: 5 }, true)
+        rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
+        state.camera.position.set(0, 2.5, 5)
+      }
+      return
     }
+    isInitialized.current = true
 
-    // Apply damping (friction/air resistance)
-    damping.current = Math.exp(-4 * delta) - 1
-    playerVelocity.current.addScaledVector(
-      playerVelocity.current,
-      damping.current
-    )
+    // Get current velocity from Rapier
+    const currentVel = rigidBodyRef.current.linvel()
+    playerVelocity.current.set(currentVel.x, currentVel.y, currentVel.z)
 
-    // Move capsule by velocity
-    const deltaPosition = playerVelocity.current.clone().multiplyScalar(delta)
-    playerCollider.current.translate(deltaPosition)
+    // Update camera to follow rigid body with offset
+    const pos = rigidBodyRef.current.translation()
+    state.camera.position.set(pos.x, pos.y + .9, pos.z)
 
-    // Update camera position to follow capsule
-    state.camera.position.copy(playerCollider.current.end)
-
-    // Safety: teleport if fallen through floor
-    if (state.camera.position.y < -5) {
-      playerCollider.current.start.set(0, 0.35, 0)
-      playerCollider.current.end.set(0, 1.45, 0)
-      state.camera.position.copy(playerCollider.current.end)
-      playerVelocity.current.set(0, 0, 0)
+    // Safety: teleport if fallen
+    if (pos.y < -5) {
+      rigidBodyRef.current.setTranslation({ x: 0, y: 1.6, z: 5 }, true)
+      rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      state.camera.position.set(0, 2.5, 5)
     }
   })
 }
@@ -48,8 +49,21 @@ export function usePlayerController(physics: ReturnType<typeof usePhysics>) {
   usePlayerPhysics(physics)
 
   useFrame((state, delta) => {
+    const { rigidBodyRef, playerVelocity } = physics
+    if (!rigidBodyRef.current) return
+
     // Apply WASD/joystick input
     updateMovement(delta)
+
+    // Apply computed velocity to Rapier rigid body
+    rigidBodyRef.current.setLinvel(
+      {
+        x: playerVelocity.current.x,
+        y: rigidBodyRef.current.linvel().y, // Preserve gravity Y
+        z: playerVelocity.current.z
+      },
+      true
+    )
   })
 
   return { setJoystickInput }

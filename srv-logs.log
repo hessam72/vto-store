@@ -1,0 +1,34 @@
+root@srv7524411224:~# cat build.log
+cat: build.log: No such file or directory
+root@srv7524411224:~# wc -l build.log
+wc: build.log: No such file or directory
+root@srv7524411224:~# npx next build --debug
+⠴
+root@srv7524411224:~# cd /home/admin/domains/jewel.omidcity.com/public_html
+root@srv7524411224:/home/admin/domains/jewel.omidcity.com/public_html# cat build.log
+
+> vot-webar-nextjs@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.18
+
+   Creating an optimized production build ...
+root@srv7524411224:/home/admin/domains/jewel.omidcity.com/public_html# wc -l build.log
+7 build.log
+root@srv7524411224:/home/admin/domains/jewel.omidcity.com/public_html# npx next build --debug
+  ▲ Next.js 14.2.18
+
+   Creating an optimized production build ...
+root@srv7524411224:/home/admin/domains/jewel.omidcity.com/public_html# cat .next/trace 2>/dev/null || echo "No trace file"
+No trace file
+root@srv7524411224:/home/admin/domains/jewel.omidcity.com/public_html# cat package.json | grep -A5 '"scripts"'
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "pm2-stop": "pm2 kill",
+root@srv7524411224:/home/admin/domains/jewel.omidcity.com/public_html# node -v
+npm -v
+v24.11.1
+11.6.2
