@@ -31,6 +31,8 @@ export default function RootLayout({
         {/* Preconnect to Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Disable browser scroll restoration */}
+        <script dangerouslySetInnerHTML={{ __html: `history.scrollRestoration = "manual"` }} />
       </head>
       <body>
         <LenisProvider>

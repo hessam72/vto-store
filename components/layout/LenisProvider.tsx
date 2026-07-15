@@ -29,6 +29,9 @@ export function LenisProvider({ children }: { children: ReactNode }) {
 
     lenisRef.current = lenis;
 
+    // Reset scroll to top on mount
+    lenis.scrollTo(0, { immediate: true });
+
     // Sync Lenis scroll with GSAP ScrollTrigger
     lenis.on("scroll", ScrollTrigger.update);
 
