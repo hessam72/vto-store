@@ -1,0 +1,127 @@
+{
+    "store": {
+        "id": 1,
+        "shopkeeper_id": 1,
+        "gallery_id": 1,
+        "is_pending_update": false,
+        "status": "active",
+        "title": "new store",
+        "slug": "new-store",
+        "logo": "images\/stores\/logos\/b7QojFNweF.png",
+        "view_count": 0,
+        "description": null,
+        "created_at": "2026-07-14T09:38:24.000000Z",
+        "updated_at": "2026-07-14T09:38:24.000000Z",
+        "gallery": {
+            "id": 1,
+            "title": "first gallery",
+            "description": null,
+            "status": "active",
+            "created_at": "2026-07-14T08:23:50.000000Z",
+            "updated_at": "2026-07-14T08:23:50.000000Z",
+            "three_d_files": [
+                {
+                    "id": 4,
+                    "url": "three_d_files\/mxviLsnA2k.glb",
+                    "name": "\u0641\u0627\u06cc\u0644 \u0627\u0635\u0644\u06cc \u06af\u0627\u0644\u0631\u06cc",
+                    "created_at": "2026-07-15T08:15:28.000000Z",
+                    "updated_at": "2026-07-15T08:15:28.000000Z",
+                    "quality": "high",
+                    "priority": 1,
+                    "pivot": {
+                        "gallery_id": 1,
+                        "three_d_file_id": 4
+                    }
+                },
+                {
+                    "id": 5,
+                    "url": "three_d_files\/jdEyT1Ph1m.glb",
+                    "name": "\u0641\u0627\u06cc\u0644 \u0648\u0627\u06cc\u0631\u0641\u0631\u06cc\u0645",
+                    "created_at": "2026-07-15T08:16:09.000000Z",
+                    "updated_at": "2026-07-15T08:16:09.000000Z",
+                    "quality": "low",
+                    "priority": 0,
+                    "pivot": {
+                        "gallery_id": 1,
+                        "three_d_file_id": 5
+                    }
+                }
+            ],
+            "stages": [
+                {
+                    "id": 1,
+                    "code": "stage_1",
+                    "created_at": null,
+                    "updated_at": null,
+                    "pivot": {
+                        "gallery_id": 1,
+                        "stage_id": 1
+                    }
+                },
+                {
+                    "id": 2,
+                    "code": "stage_2",
+                    "created_at": null,
+                    "updated_at": null,
+                    "pivot": {
+                        "gallery_id": 1,
+                        "stage_id": 2
+                    }
+                },
+                {
+                    "id": 3,
+                    "code": "stage_3",
+                    "created_at": null,
+                    "updated_at": null,
+                    "pivot": {
+                        "gallery_id": 1,
+                        "stage_id": 3
+                    }
+                },
+                {
+                    "id": 4,
+                    "code": "stage_4",
+                    "created_at": null,
+                    "updated_at": null,
+                    "pivot": {
+                        "gallery_id": 1,
+                        "stage_id": 4
+                    }
+                }
+            ]
+        },
+        "products": [
+            {
+                "id": 1,
+                "status": "active",
+                "title": "first product",
+                "weight": 2,
+                "caliber": 24,
+                "construction_fee": 3,
+                "description": null,
+                "store_id": 1,
+                "three_d_file_id": 2,
+                "stage_id": 2,
+                "sales_count": 0,
+                "view_count": 0,
+                "created_at": "2026-07-14T09:39:13.000000Z",
+                "updated_at": "2026-07-14T09:39:13.000000Z",
+                "stage": {
+                    "id": 2,
+                    "code": "stage_2",
+                    "created_at": null,
+                    "updated_at": null
+                },
+                "three_d_file": {
+                    "id": 2,
+                    "url": "three_d_files\/iFtzWcWEcv.glb",
+                    "name": "compressed_1741519573260_mall-texture(1)",
+                    "created_at": "2026-07-14T09:39:13.000000Z",
+                    "updated_at": "2026-07-14T09:39:13.000000Z",
+                    "quality": null,
+                    "priority": null
+                }
+            }
+        ]
+    }
+}
