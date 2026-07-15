@@ -1,6 +1,8 @@
 export interface APIThreeDFile {
   id: number
   url: string
+  priority?: number
+  quality?: 'low' | 'high'
   created_at: string
   updated_at: string
   pivot?: {

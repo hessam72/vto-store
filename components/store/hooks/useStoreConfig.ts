@@ -19,10 +19,12 @@ function transformAPIToStoreConfig(response: GetStoreBySlugResponse): StoreConfi
   const { store } = response
 
   // Map gallery.threeDFiles to ModelFile[]
+  // Files without priority/quality = main files (auto-increment priority, default quality)
+  let autoPriority = 1
   const files: ModelFile[] = store.gallery.threeDFiles.map((file) => ({
     url: file.url,
-    priority: 1, // API doesn't provide priority, default to 1
-    quality: 'high' as const // API doesn't provide quality, default to high
+    priority: file.priority ?? autoPriority++,
+    quality: file.quality ?? 'high'
   }))
 
   return {
@@ -53,6 +55,9 @@ export function useStoreConfig() {
     const slug = searchParams.get('slug') || null
 
     // Build API URL - if no slug, backend returns default store
+  //   const apiUrl = slug
+  // ? `https://backend.example.com/api/stores?slug=${slug}`
+  // : 'https://backend.example.com/api/stores'
     const apiUrl = slug
       ? `/api/next-api/get-store-by-slug?slug=${slug}`
       : '/api/next-api/get-store-by-slug'
