@@ -24,7 +24,6 @@ export default function CustomCursor() {
     const enterHover = () => {
       isHovering.current = true;
       if (ringRef.current) {
-        ringRef.current.style.transform += " scale(2)";
         ringRef.current.style.borderColor = "var(--gold-bright)";
       }
     };

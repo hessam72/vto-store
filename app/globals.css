@@ -308,14 +308,14 @@ body {
   position: absolute;
   border-radius: 50%;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  animation: expandRing 3s ease-out infinite;
+  /* animation: expandRing 3s ease-out infinite; */
   pointer-events: none;
 }
-
+/* 
 @keyframes expandRing {
   0%   { transform: scale(0.8); opacity: 0.8; }
   100% { transform: scale(2.5); opacity: 0; }
-}
+} */
 
 /* ─────────────────────────────────────────────
    Museum Label (category tags)
@@ -363,9 +363,9 @@ canvas {
   cursor: none !important;
 }
 
-@media (pointer: coarse) {
+/* @media (pointer: coarse) {
   * { cursor: auto !important; }
-}
+} */
 
 /* ─────────────────────────────────────────────
    Utility classes
