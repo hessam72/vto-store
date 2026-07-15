@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { Physics } from '@react-three/rapier'
 import { useStoreConfig } from './hooks/useStoreConfig'
 import { ModelLoader } from './ModelLoader'
+import { ProductLoader } from './ProductLoader'
 import { usePhysics } from './PhysicsSystem'
 import { usePlayerController } from './PlayerController'
 import { RigidBody, CapsuleCollider } from '@react-three/rapier'
@@ -191,6 +192,13 @@ export default function Scene() {
           onStagesDetected={setStagePositions}
         />
       </Suspense>
+
+      {/* Load products and place on stages */}
+      {stagePositions.length > 0 && (
+        <Suspense fallback={null}>
+          <ProductLoader products={products} stagePositions={stagePositions} />
+        </Suspense>
+      )}
 
       {/* Scene transition effects */}
       <SceneTransition

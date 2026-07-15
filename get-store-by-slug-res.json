@@ -90,7 +90,7 @@
                 }
             ]
         },
-        "products": [
+       "products": [
             {
                 "id": 1,
                 "status": "active",
@@ -100,12 +100,12 @@
                 "construction_fee": 3,
                 "description": null,
                 "store_id": 1,
-                "three_d_file_id": 2,
+                "three_d_file_id": 6,
                 "stage_id": 2,
                 "sales_count": 0,
                 "view_count": 0,
                 "created_at": "2026-07-14T09:39:13.000000Z",
-                "updated_at": "2026-07-14T09:39:13.000000Z",
+                "updated_at": "2026-07-15T10:20:11.000000Z",
                 "stage": {
                     "id": 2,
                     "code": "stage_2",
@@ -113,15 +113,47 @@
                     "updated_at": null
                 },
                 "three_d_file": {
-                    "id": 2,
-                    "url": "three_d_files\/iFtzWcWEcv.glb",
-                    "name": "compressed_1741519573260_mall-texture(1)",
-                    "created_at": "2026-07-14T09:39:13.000000Z",
-                    "updated_at": "2026-07-14T09:39:13.000000Z",
+                    "id": 6,
+                    "url": "three_d_files/1vYmGPuJOD.glb",
+                    "name": "blue-product",
+                    "created_at": "2026-07-15T10:20:11.000000Z",
+                    "updated_at": "2026-07-15T10:20:11.000000Z",
+                    "quality": null,
+                    "priority": null
+                }
+            },
+            {
+                "id": 2,
+                "status": "active",
+                "title": "second product",
+                "weight": 2,
+                "caliber": 24,
+                "construction_fee": 3,
+                "description": null,
+                "store_id": 1,
+                "three_d_file_id": 7,
+                "stage_id": 3,
+                "sales_count": 0,
+                "view_count": 0,
+                "created_at": "2026-07-15T10:20:40.000000Z",
+                "updated_at": "2026-07-15T10:20:40.000000Z",
+                "stage": {
+                    "id": 3,
+                    "code": "stage_3",
+                    "created_at": null,
+                    "updated_at": null
+                },
+                "three_d_file": {
+                    "id": 7,
+                    "url": "three_d_files/SNrwP7GV7N.glb",
+                    "name": "red-product",
+                    "created_at": "2026-07-15T10:20:40.000000Z",
+                    "updated_at": "2026-07-15T10:20:40.000000Z",
                     "quality": null,
                     "priority": null
                 }
             }
         ]
+    
     }
 }
