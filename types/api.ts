@@ -1,8 +1,9 @@
 export interface APIThreeDFile {
   id: number
   url: string
-  priority?: number
-  quality?: 'low' | 'high'
+  name?: string
+  priority?: number | null
+  quality?: 'low' | 'high' | null
   created_at: string
   updated_at: string
   pivot?: {
@@ -14,8 +15,8 @@ export interface APIThreeDFile {
 export interface APIStage {
   id: number
   code: string
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
   pivot?: {
     gallery_id: number
     stage_id: number
@@ -25,11 +26,11 @@ export interface APIStage {
 export interface APIGallery {
   id: number
   title: string
-  description: string
+  description: string | null
   status: string
   created_at: string
   updated_at: string
-  threeDFiles: APIThreeDFile[]
+  three_d_files: APIThreeDFile[]
   stages: APIStage[]
 }
 
@@ -49,7 +50,7 @@ export interface APIProduct {
   weight: number
   caliber: number
   construction_fee: number
-  description: string
+  description: string | null
   store_id: number
   three_d_file_id: number
   stage_id: number
@@ -58,7 +59,7 @@ export interface APIProduct {
   created_at: string
   updated_at: string
   stage: APIStage
-  threeDFile: APIThreeDFile
+  three_d_file: APIThreeDFile
 }
 
 export interface APIStore {

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import type { GetStoreBySlugResponse, APIProduct } from '@/types/api'
 import type { ProductData } from '../ProductInteraction'
 
@@ -17,12 +17,13 @@ export type StoreConfig = {
 
 function transformAPIToStoreConfig(response: GetStoreBySlugResponse): StoreConfig {
   const { store } = response
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
-  // Map gallery.threeDFiles to ModelFile[]
+  // Map gallery.three_d_files to ModelFile[]
   // Files without priority/quality = main files (auto-increment priority, default quality)
   let autoPriority = 1
-  const files: ModelFile[] = store.gallery.threeDFiles.map((file) => ({
-    url: file.url,
+  const files: ModelFile[] = store.gallery.three_d_files.map((file) => ({
+    url: `${baseUrl}/${file.url}`,
     priority: file.priority ?? autoPriority++,
     quality: file.quality ?? 'high'
   }))
@@ -34,35 +35,42 @@ function transformAPIToStoreConfig(response: GetStoreBySlugResponse): StoreConfi
 }
 
 function transformAPIToProducts(apiProducts: APIProduct[]): ProductData[] {
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
+
   return apiProducts.map((product) => ({
     category: product.stage.code,
     variant: product.title,
     price: product.construction_fee.toString(),
     weight: product.weight.toString(),
     name_fa: product.title,
-    glbPath: product.threeDFile.url
+    glbPath: `${baseUrl}/${product.three_d_file.url}`
   }))
 }
 
 export function useStoreConfig() {
-  const searchParams = useSearchParams()
+  const params = useParams()
   const [config, setConfig] = useState<StoreConfig | null>(null)
   const [products, setProducts] = useState<ProductData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const slug = searchParams.get('slug') || null
+    // Get slug from URL path or use default from env
+    const slugFromPath = Array.isArray(params.slug) ? params.slug[0] : params.slug
+    const slug = slugFromPath || process.env.NEXT_PUBLIC_DEFAULT_STORE_SLUG || null
 
-    // Build API URL - if no slug, backend returns default store
-  //   const apiUrl = slug
-  // ? `https://backend.example.com/api/stores?slug=${slug}`
-  // : 'https://backend.example.com/api/stores'
-    const apiUrl = slug
-      ? `/api/next-api/get-store-by-slug?slug=${slug}`
-      : '/api/next-api/get-store-by-slug'
+    // Build API URL
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
+    const apiUrl = `${baseUrl}/api/next-api/get-store-by-slug`
 
-    fetch(apiUrl)
+    // POST request with slug in body
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ slug })
+    })
       .then((res) => {
         if (!res.ok) {
           throw new Error('Store not found')
@@ -81,7 +89,7 @@ export function useStoreConfig() {
         setError(err.message)
         setLoading(false)
       })
-  }, [searchParams])
+  }, [params])
 
   return { config, products, loading, error }
 }
