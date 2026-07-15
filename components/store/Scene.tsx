@@ -26,6 +26,8 @@ import { SceneTransition } from './SceneTransition'
 import { CameraTransition } from './CameraTransition'
 import { ParticleReveal } from './ParticleReveal'
 import type { StagePosition } from '@/types/api'
+import { useSearchParams } from 'next/navigation'
+import { StageLabels } from './StageLabels'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -73,6 +75,9 @@ type LoadingPhase = 'loading' | 'transitioning' | 'ready'
 
 export default function Scene() {
   const { config, products, loading, error } = useStoreConfig()
+  const searchParams = useSearchParams()
+  const viewStage = searchParams.get('view-stage') === '1'
+
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
   const [showClickHint, setShowClickHint] = useState(true)
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('loading')
@@ -202,6 +207,9 @@ export default function Scene() {
 
       {/* Product click interaction */}
       {loadingPhase === 'ready' && <ProductInteraction onProductClick={setSelectedProduct} products={products} />}
+
+      {/* Stage labels (debug mode) */}
+      {viewStage && stagePositions.length > 0 && <StageLabels stages={stagePositions} />}
 
       {/* Reflective Floor (Phase 9) */}
       <ReflectiveFloor opacity={1} size={20} mixStrength={.9} blur={0} roughness={62} />
