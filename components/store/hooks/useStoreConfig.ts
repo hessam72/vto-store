@@ -47,10 +47,15 @@ function transformAPIToProducts(apiProducts: APIProduct[]): ProductData[] {
   }))
 }
 
+function extractStages(response: GetStoreBySlugResponse): string[] {
+  return response.store.gallery.stages.map((stage) => stage.code)
+}
+
 export function useStoreConfig() {
   const params = useParams()
   const [config, setConfig] = useState<StoreConfig | null>(null)
   const [products, setProducts] = useState<ProductData[]>([])
+  const [stages, setStages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,9 +85,11 @@ export function useStoreConfig() {
       .then((data: GetStoreBySlugResponse) => {
         const storeConfig = transformAPIToStoreConfig(data)
         const productData = transformAPIToProducts(data.store.products)
+        const stageList = extractStages(data)
 
         setConfig(storeConfig)
         setProducts(productData)
+        setStages(stageList)
         setLoading(false)
       })
       .catch((err) => {
@@ -91,5 +98,5 @@ export function useStoreConfig() {
       })
   }, [params])
 
-  return { config, products, loading, error }
+  return { config, products, stages, loading, error }
 }

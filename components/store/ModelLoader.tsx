@@ -17,12 +17,13 @@ const configureDracoLoader = () => {
 
 type ModelLoaderProps = {
   files: ModelFile[]
+  allowedStages?: string[]
   onModelsLoaded?: () => void
   onProgress?: (loaded: number) => void
   onStagesDetected?: (stages: StagePosition[]) => void
 }
 
-export function ModelLoader({ files, onModelsLoaded, onProgress, onStagesDetected }: ModelLoaderProps) {
+export function ModelLoader({ files, allowedStages, onModelsLoaded, onProgress, onStagesDetected }: ModelLoaderProps) {
   const [loadedCount, setLoadedCount] = useState(0)
   const allStagesRef = useRef<StagePosition[]>([])
 
@@ -59,6 +60,7 @@ export function ModelLoader({ files, onModelsLoaded, onProgress, onStagesDetecte
           key={file.url}
           url={file.url}
           isWireframe={file.priority === 0}
+          allowedStages={allowedStages}
           onLoaded={handleModelLoaded}
           onStagesDetected={handleStagesFromModel}
         />
@@ -72,11 +74,12 @@ export function ModelLoader({ files, onModelsLoaded, onProgress, onStagesDetecte
 type ModelProps = {
   url: string
   isWireframe: boolean
+  allowedStages?: string[]
   onLoaded?: () => void
   onStagesDetected?: (stages: StagePosition[]) => void
 }
 
-function Model({ url, isWireframe, onLoaded, onStagesDetected }: ModelProps) {
+function Model({ url, isWireframe, allowedStages, onLoaded, onStagesDetected }: ModelProps) {
   // Use custom loader with DRACO support
   const gltf = useLoader(GLTFLoader, url, (loader) => {
     const dracoLoader = configureDracoLoader()
@@ -99,11 +102,11 @@ function Model({ url, isWireframe, onLoaded, onStagesDetected }: ModelProps) {
 
     // Detect stage positions (max 15, early exit)
     const stages: StagePosition[] = []
-    const STAGE_PATTERN = /^stage_\d+$/
+    const allowedSet = allowedStages ? new Set(allowedStages) : null
 
     clone.traverse((obj) => {
       // Stage detection with early exit
-      if (stages.length < 15 && STAGE_PATTERN.test(obj.name)) {
+      if (stages.length < 15 && allowedSet && allowedSet.has(obj.name)) {
         const worldPos = new THREE.Vector3()
         obj.getWorldPosition(worldPos)
 

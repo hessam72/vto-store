@@ -74,7 +74,7 @@ function PhysicsManager({
 type LoadingPhase = 'loading' | 'transitioning' | 'ready'
 
 export default function Scene() {
-  const { config, products, loading, error } = useStoreConfig()
+  const { config, products, stages, loading, error } = useStoreConfig()
   const searchParams = useSearchParams()
   const viewStage = searchParams.get('view-stage') === '1'
 
@@ -185,6 +185,7 @@ export default function Scene() {
       <Suspense fallback={null}>
         <ModelLoader
           files={config.files}
+          allowedStages={stages}
           onModelsLoaded={handleModelsLoaded}
           onProgress={setLoadedCount}
           onStagesDetected={setStagePositions}
