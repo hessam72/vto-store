@@ -1,11 +1,12 @@
 'use client'
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import * as THREE from 'three'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useLoader } from '@react-three/fiber'
 import { RigidBody } from '@react-three/rapier'
 import type { ModelFile } from './hooks/useStoreConfig'
+import type { StagePosition } from '@/types/api'
 
 // Configure DRACO loader globally
 const configureDracoLoader = () => {
@@ -18,10 +19,12 @@ type ModelLoaderProps = {
   files: ModelFile[]
   onModelsLoaded?: () => void
   onProgress?: (loaded: number) => void
+  onStagesDetected?: (stages: StagePosition[]) => void
 }
 
-export function ModelLoader({ files, onModelsLoaded, onProgress }: ModelLoaderProps) {
+export function ModelLoader({ files, onModelsLoaded, onProgress, onStagesDetected }: ModelLoaderProps) {
   const [loadedCount, setLoadedCount] = useState(0)
+  const allStagesRef = useRef<StagePosition[]>([])
 
   // Sort by priority (0 = wireframe first)
   const sortedFiles = useMemo(() => {
@@ -40,9 +43,14 @@ export function ModelLoader({ files, onModelsLoaded, onProgress }: ModelLoaderPr
     console.log(`Loaded ${loadedCount} of ${sortedFiles.length} models`)
     if (loadedCount >= sortedFiles.length && loadedCount > 0) {
       console.log('All models loaded:', loadedCount)
+      onStagesDetected?.(allStagesRef.current)
       onModelsLoaded?.()
     }
-  }, [loadedCount, sortedFiles.length, onModelsLoaded])
+  }, [loadedCount, sortedFiles.length, onModelsLoaded, onStagesDetected])
+
+  const handleStagesFromModel = useCallback((stages: StagePosition[]) => {
+    allStagesRef.current.push(...stages)
+  }, [])
 
   return (
     <>
@@ -52,6 +60,7 @@ export function ModelLoader({ files, onModelsLoaded, onProgress }: ModelLoaderPr
           url={file.url}
           isWireframe={file.priority === 0}
           onLoaded={handleModelLoaded}
+          onStagesDetected={handleStagesFromModel}
         />
       ))}
     </>
@@ -64,9 +73,10 @@ type ModelProps = {
   url: string
   isWireframe: boolean
   onLoaded?: () => void
+  onStagesDetected?: (stages: StagePosition[]) => void
 }
 
-function Model({ url, isWireframe, onLoaded }: ModelProps) {
+function Model({ url, isWireframe, onLoaded, onStagesDetected }: ModelProps) {
   // Use custom loader with DRACO support
   const gltf = useLoader(GLTFLoader, url, (loader) => {
     const dracoLoader = configureDracoLoader()
@@ -87,7 +97,40 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
       clone.userData.isWireframeCollision = true
     }
 
+    // Detect stage positions (max 15, early exit)
+    const stages: StagePosition[] = []
+    const STAGE_PATTERN = /^stage_\d+$/
+
     clone.traverse((obj) => {
+      // Stage detection with early exit
+      if (stages.length < 15 && STAGE_PATTERN.test(obj.name)) {
+        const worldPos = new THREE.Vector3()
+        obj.getWorldPosition(worldPos)
+
+        stages.push({
+          name: obj.name,
+          position: {
+            x: obj.position.x,
+            y: obj.position.y,
+            z: obj.position.z
+          },
+          worldPosition: {
+            x: worldPos.x,
+            y: worldPos.y,
+            z: worldPos.z
+          },
+          rotation: {
+            x: obj.rotation.x,
+            y: obj.rotation.y,
+            z: obj.rotation.z
+          },
+          scale: {
+            x: obj.scale.x,
+            y: obj.scale.y,
+            z: obj.scale.z
+          }
+        })
+      }
       if (obj instanceof THREE.Mesh) {
         if (isWireframe) {
           // Wireframe model: keep visible for Rapier but fully transparent
@@ -157,8 +200,13 @@ function Model({ url, isWireframe, onLoaded }: ModelProps) {
       clone.position.y = yOffset
     }
 
+    // Report detected stages
+    if (stages.length > 0 && onStagesDetected) {
+      onStagesDetected(stages)
+    }
+
     return clone
-  }, [gltf.scene, isWireframe])
+  }, [gltf.scene, isWireframe, onStagesDetected])
 
   if (isWireframe) {
     return (

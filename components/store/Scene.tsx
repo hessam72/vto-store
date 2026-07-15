@@ -25,6 +25,7 @@ import { GyroToggle } from './GyroToggle'
 import { SceneTransition } from './SceneTransition'
 import { CameraTransition } from './CameraTransition'
 import { ParticleReveal } from './ParticleReveal'
+import type { StagePosition } from '@/types/api'
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -79,6 +80,7 @@ export default function Scene() {
   const [totalCount, setTotalCount] = useState(0)
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null)
   const [gyroEnabled, setGyroEnabled] = useState(false)
+  const [stagePositions, setStagePositions] = useState<StagePosition[]>([])
 
   const handleModelsLoaded = useCallback(() => {
     setLoadingPhase('transitioning')
@@ -99,6 +101,13 @@ export default function Scene() {
     window.addEventListener('mousedown', hideHint, { once: true })
     return () => window.removeEventListener('mousedown', hideHint)
   }, [])
+
+  useEffect(() => {
+    if (loadingPhase === 'ready' && stagePositions.length > 0) {
+      console.log('✅ Stage positions detected:', stagePositions)
+      console.log(`📍 Found ${stagePositions.length} stages`)
+    }
+  }, [loadingPhase, stagePositions])
 
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
@@ -169,7 +178,12 @@ export default function Scene() {
 
       {/* Load models from config */}
       <Suspense fallback={null}>
-        <ModelLoader files={config.files} onModelsLoaded={handleModelsLoaded} onProgress={setLoadedCount} />
+        <ModelLoader
+          files={config.files}
+          onModelsLoaded={handleModelsLoaded}
+          onProgress={setLoadedCount}
+          onStagesDetected={setStagePositions}
+        />
       </Suspense>
 
       {/* Scene transition effects */}
