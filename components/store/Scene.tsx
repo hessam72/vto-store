@@ -71,7 +71,7 @@ function PhysicsManager({
 type LoadingPhase = 'loading' | 'transitioning' | 'ready'
 
 export default function Scene() {
-  const { config, loading, error } = useStoreConfig()
+  const { config, products, loading, error } = useStoreConfig()
   const [joystickCallback, setJoystickCallback] = useState<((x: number, y: number) => void) | null>(null)
   const [showClickHint, setShowClickHint] = useState(true)
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('loading')
@@ -187,7 +187,7 @@ export default function Scene() {
       {loadingPhase === 'ready' && <PhysicsManager onSetJoystickInput={setJoystickCallback} gyroEnabled={gyroEnabled} />}
 
       {/* Product click interaction */}
-      {loadingPhase === 'ready' && <ProductInteraction onProductClick={setSelectedProduct} />}
+      {loadingPhase === 'ready' && <ProductInteraction onProductClick={setSelectedProduct} products={products} />}
 
       {/* Reflective Floor (Phase 9) */}
       <ReflectiveFloor opacity={1} size={20} mixStrength={.9} blur={0} roughness={62} />

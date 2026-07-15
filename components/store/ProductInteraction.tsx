@@ -15,21 +15,19 @@ export interface ProductData {
 
 interface ProductInteractionProps {
   onProductClick: (product: ProductData | null) => void
+  products?: ProductData[]
 }
 
-export default function ProductInteraction({ onProductClick }: ProductInteractionProps) {
+export default function ProductInteraction({ onProductClick, products: productsList = [] }: ProductInteractionProps) {
   const { camera, scene, gl } = useThree()
   const raycaster = useRef(new Raycaster())
   const pointer = useRef(new Vector2())
-  const [products, setProducts] = useState<Record<string, ProductData>>({})
 
-  // Load products config
-  useEffect(() => {
-    fetch('/config/products.json')
-      .then(res => res.json())
-      .then(data => setProducts(data))
-      .catch(err => console.error('Failed to load products:', err))
-  }, [])
+  // Convert array to record for backward compatibility
+  const products = productsList.reduce<Record<string, ProductData>>((acc, product) => {
+    acc[product.variant.toLowerCase()] = product
+    return acc
+  }, {})
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
