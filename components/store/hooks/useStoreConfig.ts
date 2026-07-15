@@ -23,7 +23,7 @@ function transformAPIToStoreConfig(response: GetStoreBySlugResponse): StoreConfi
   // Files without priority/quality = main files (auto-increment priority, default quality)
   let autoPriority = 1
   const files: ModelFile[] = store.gallery.three_d_files.map((file) => ({
-    url: `${baseUrl}/${file.url}`,
+    url: `${baseUrl}/storage/${file.url}`,
     priority: file.priority ?? autoPriority++,
     quality: file.quality ?? 'high'
   }))
@@ -43,7 +43,7 @@ function transformAPIToProducts(apiProducts: APIProduct[]): ProductData[] {
     price: product.construction_fee.toString(),
     weight: product.weight.toString(),
     name_fa: product.title,
-    glbPath: `${baseUrl}/${product.three_d_file.url}`
+    glbPath: `${baseUrl}/storage/${product.three_d_file.url}`
   }))
 }
 
