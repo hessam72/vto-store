@@ -38,6 +38,7 @@ function transformAPIToProducts(apiProducts: APIProduct[]): ProductData[] {
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
   return apiProducts.map((product) => ({
+    id: product.id,
     category: product.stage.code,
     variant: product.title,
     price: product.construction_fee.toString(),

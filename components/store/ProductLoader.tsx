@@ -81,6 +81,7 @@ function ProductModel({ product, position }: ProductModelProps) {
       if (obj instanceof THREE.Mesh) {
         obj.castShadow = true
         obj.receiveShadow = true
+        obj.userData.productId = product.id
 
         if (obj.material) {
           const materials = Array.isArray(obj.material) ? obj.material : [obj.material]

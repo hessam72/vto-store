@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Raycaster, Vector2, Object3D } from 'three'
 
 export interface ProductData {
+  id: number
   category: string
   variant: string
   price: string
@@ -23,12 +24,6 @@ export default function ProductInteraction({ onProductClick, products: productsL
   const raycaster = useRef(new Raycaster())
   const pointer = useRef(new Vector2())
 
-  // Convert array to record for backward compatibility
-  const products = productsList.reduce<Record<string, ProductData>>((acc, product) => {
-    acc[product.variant.toLowerCase()] = product
-    return acc
-  }, {})
-
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
       // Normalize pointer coordinates
@@ -45,20 +40,14 @@ export default function ProductInteraction({ onProductClick, products: productsL
         // Get clicked object
         let targetObject: Object3D | null = intersects[0].object
 
-        // Search up the hierarchy for a product name
+        // Search up the hierarchy for userData.productId
         let foundProduct: ProductData | null = null
         while (targetObject && !foundProduct) {
-          const objectName = targetObject.name.toLowerCase()
-
-          // Check if this object matches any product
-          for (const [productKey, productData] of Object.entries(products)) {
-            if (objectName.includes(productKey.toLowerCase()) ||
-                objectName.includes(productData.category)) {
-              foundProduct = productData
-              break
-            }
+          if (targetObject.userData?.productId) {
+            // Find product by ID
+            foundProduct = productsList.find(p => p.id === targetObject.userData.productId) || null
+            break
           }
-
           targetObject = targetObject.parent
         }
 
@@ -70,7 +59,7 @@ export default function ProductInteraction({ onProductClick, products: productsL
 
     gl.domElement.addEventListener('click', handleClick)
     return () => gl.domElement.removeEventListener('click', handleClick)
-  }, [camera, scene, gl, products, onProductClick])
+  }, [camera, scene, gl, productsList, onProductClick])
 
   return null
 }
