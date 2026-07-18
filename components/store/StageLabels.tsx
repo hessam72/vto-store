@@ -33,6 +33,7 @@ export function StageLabels({ stages }: StageLabelsProps) {
               anchorY="middle"
               outlineWidth={0.03}
               outlineColor="#8B4513"
+              // @ts-expect-error dskjjdksdksjdksjkdk
               metalness={0.9}
               roughness={0.2}
               emissive="#FFA500"

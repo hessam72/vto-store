@@ -45,7 +45,7 @@ export default function ProductInteraction({ onProductClick, products: productsL
         while (targetObject && !foundProduct) {
           if (targetObject.userData?.productId) {
             // Find product by ID
-            foundProduct = productsList.find(p => p.id === targetObject.userData.productId) || null
+            foundProduct = productsList.find(p => p.id === targetObject?.userData?.productId) || null
             break
           }
           targetObject = targetObject.parent
