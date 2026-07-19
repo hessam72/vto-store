@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import type { GetStoreBySlugResponse, APIProduct } from '@/types/api'
 import type { ProductData } from '../ProductInteraction'
 
@@ -54,6 +54,7 @@ function extractStages(response: GetStoreBySlugResponse): string[] {
 
 export function useStoreConfig() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const [config, setConfig] = useState<StoreConfig | null>(null)
   const [products, setProducts] = useState<ProductData[]>([])
   const [stages, setStages] = useState<string[]>([])
@@ -65,9 +66,13 @@ export function useStoreConfig() {
     const slugFromPath = Array.isArray(params.slug) ? params.slug[0] : params.slug
     const slug = slugFromPath || process.env.NEXT_PUBLIC_DEFAULT_STORE_SLUG || null
 
+    // Check if gallery=1 query param exists
+    const isGalleryMode = searchParams.get('gallery') == '1'
+
     // Build API URL
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
-    const apiUrl = `${baseUrl}/api/next-api/get-store-by-slug`
+    const endpoint = isGalleryMode ? '/api/next-api/get-gallery-by-slug' : '/api/next-api/get-store-by-slug'
+    const apiUrl = `${baseUrl}${endpoint}`
 
     // POST request with slug in body
     fetch(apiUrl, {
@@ -79,7 +84,7 @@ export function useStoreConfig() {
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error('Store not found')
+          throw new Error(isGalleryMode ? 'Gallery not found' : 'Store not found')
         }
         return res.json()
       })
@@ -97,7 +102,7 @@ export function useStoreConfig() {
         setError(err.message)
         setLoading(false)
       })
-  }, [params])
+  }, [params, searchParams])
 
   return { config, products, stages, loading, error }
 }
