@@ -37,15 +37,17 @@ function transformAPIToStoreConfig(response: GetStoreBySlugResponse): StoreConfi
 function transformAPIToProducts(apiProducts: APIProduct[]): ProductData[] {
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
-  return apiProducts.map((product) => ({
-    id: product.id,
-    category: product.stage.code,
-    variant: product.title,
-    price: product.construction_fee.toString(),
-    weight: product.weight.toString(),
-    name_fa: product.title,
-    glbPath: `${baseUrl}/storage/${product.three_d_file.url}`
-  }))
+  return apiProducts
+    .filter((product) => product.stage?.code && product.three_d_file?.url)
+    .map((product) => ({
+      id: product.id,
+      category: product.stage.code,
+      variant: product.title,
+      price: product.construction_fee.toString(),
+      weight: product.weight.toString(),
+      name_fa: product.title,
+      glbPath: `${baseUrl}/storage/${product.three_d_file.url}`
+    }))
 }
 
 function extractStages(response: GetStoreBySlugResponse): string[] {
