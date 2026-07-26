@@ -12,8 +12,8 @@ const _settings = {
   // bloom (set to null to disable):
   bloom: {
     threshold: 0.5, //0.99,
-    strength: 8,
-    radius: 0.6
+    strength: 3,
+    radius: 0.3
   },
 
   // temporal anti aliasing. Number of samples. 0 -> disabled:
