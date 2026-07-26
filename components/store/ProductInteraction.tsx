@@ -33,8 +33,9 @@ export default function ProductInteraction({ onProductClick, products: productsL
       // Update raycaster
       raycaster.current.setFromCamera(pointer.current, camera)
 
-      // Find intersections
+      // Find intersections, exclude glass vitrins
       const intersects = raycaster.current.intersectObjects(scene.children, true)
+        .filter(intersect => !intersect.object.name.toLowerCase().includes('vitrin'))
 
       if (intersects.length > 0) {
         // Get clicked object
