@@ -73,8 +73,15 @@ function ProductModel({ product, position }: ProductModelProps) {
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true)
 
-    // Position at stage location
-    clone.position.set(position.x, position.y, position.z)
+    // Auto-center: center X/Z, align bottom to Y=0
+    const box = new THREE.Box3().setFromObject(clone)
+    const center = box.getCenter(new THREE.Vector3())
+
+    clone.position.set(
+      -center.x + position.x,
+      -box.min.y + position.y+.4,
+      -center.z + position.z
+    )
 
     // Apply transforms to meshes
     clone.traverse((obj) => {
