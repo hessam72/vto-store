@@ -1,5 +1,5 @@
 const _settings = {
-  threshold: 0.97, // detection sensitivity, between 0 and 1
+  threshold: 0.90, // detection sensitivity, between 0 and 1
   
   // pose computation and stabilization:
   
@@ -76,8 +76,8 @@ const _settings = {
   occluderFlattenCoeff: 0.6, // 1 -> occluder is a cylinder 0.5 -> flatten by 50%
 
   stabilizerOptions: {
-    minCutOff: 0.001,
-    beta: 4,
+    minCutOff: 0.01,
+    beta: 20,
     freqRange: [2, 144],
     forceFilterNNInputPxRange: [2.5, 6],//[1.5, 4],
   },
@@ -138,7 +138,7 @@ function main(){
     scanSettings: {
       //translationScalingFactors: [0.3,0.3,0.3],
       //translationScalingFactors: [0.2,0.2,0.3],
-      translationScalingFactors: [0.3,0.3,1],
+      translationScalingFactors: [0.4,0.4,0.5],
     },
     stabilizationSettings: {
       switchNNErrorThreshold: 0.7,
@@ -151,7 +151,7 @@ function main(){
     poseRotationDirectionSrc: [0,1,0],
     poseRotationDirectionDst: [0,0,1],
     poseLandmarksLabels: _settings.poseLandmarksLabels,
-    poseFilter: (_settings.isPoseFilter) ? PoseFlipFilter.instance({}) : null,
+    poseFilter: (_settings.isPoseFilter) ? PoseFlipFilter.instance({dPixRotTol: 12}) : null,
     NNsPaths: _settings.NNsPaths,
     threshold: _settings.threshold,
     callbackTrack: callbackTrack,
