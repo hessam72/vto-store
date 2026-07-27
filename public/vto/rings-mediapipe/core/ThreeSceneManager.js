@@ -29,6 +29,7 @@ export class ThreeSceneManager {
     // State
     this.isRingVisible = false;
     this.currentHandedness = null;
+    this.autoNormalizeScale = 1.0; // Auto-calculated based on model size
 
     // Smoothing filters for position
     this.positionFilters = {
@@ -139,23 +140,30 @@ export class ThreeSceneManager {
             });
           }
 
-          // Center geometry to eliminate pivot offset (prevents scale-induced misplacement)
+          // Center geometry and normalize to standard size
           if (actualMesh.geometry) {
             const box = new THREE.Box3().setFromObject(this.ringMesh);
             const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
             actualMesh.geometry.translate(-center.x, -center.y, -center.z);
+
+            // Normalize to standard ring size (0.02 units = 2cm diameter)
+            const maxDimension = Math.max(size.x, size.y, size.z);
+            const targetSize = 0.02;
+            this.autoNormalizeScale = targetSize / maxDimension;
+
             console.log(`    🎯 Centered geometry: offset (${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)})`);
+            console.log(`    📏 Model original size: (${size.x.toFixed(3)}, ${size.y.toFixed(3)}, ${size.z.toFixed(3)})`);
+            console.log(`    🔧 Auto-normalize scale: ${this.autoNormalizeScale.toFixed(6)} (${maxDimension.toFixed(3)} → ${targetSize})`);
           }
 
-          this.ringMesh.scale.set(
-            this.config.modelScale,
-            this.config.modelScale,
-            this.config.modelScale
-          );
+          // Apply auto-normalization + user modelScale
+          const finalScale = this.autoNormalizeScale * this.config.modelScale;
+          this.ringMesh.scale.set(finalScale, finalScale, finalScale);
           this.ringMesh.visible = false;
           this.scene.add(this.ringMesh);
 
-          console.log('    ✅ Ring model loaded and added to scene');
+          console.log(`    ✅ Ring loaded | Final scale: ${finalScale.toFixed(6)} (auto: ${this.autoNormalizeScale.toFixed(6)} × user: ${this.config.modelScale})`);
           resolve(this.ringMesh);
         },
         (progress) => {
@@ -221,38 +229,22 @@ export class ThreeSceneManager {
     // Get ring finger PIP (landmark 14 - where rings are worn)
     // Use NORMALIZED landmarks for position (camera-relative [0,1] coordinates)
     // World landmarks are hand-centric, not camera-centric!
+    const COORD_SCALE = 5.0; // Scale to push hand to realistic distance (~0.38 units from camera)
     const normalizedPIP = landmarks[RING_CONFIG.PLACEMENT_LANDMARK];
-    let position = CoordinateConverter.normalizedToThreeJS(normalizedPIP, 1.0);
+    let position = CoordinateConverter.normalizedToThreeJS(normalizedPIP, COORD_SCALE);
 
     // Apply position smoothing
     position.x = this.positionFilters.x.filter(position.x);
     position.y = this.positionFilters.y.filter(position.y);
     position.z = this.positionFilters.z.filter(position.z);
 
-    // Adaptive ring sizing based on finger width
-    const fingerWidth = CoordinateConverter.landmarkDistance(
-      worldLandmarks[9],  // Middle finger MCP
-      worldLandmarks[13]  // Ring finger MCP
-    );
-    // Map typical finger spacing (0.02-0.04m) to ring scale
-    const ringScale = THREE.MathUtils.mapLinear(
-      fingerWidth,
-      0.02, 0.04,  // Min/max finger spacing in meters
-      0.08, 0.15   // Min/max ring scale (geometry centered, proper range)
-    );
-
-    // Debug logging (remove after testing)
-    if (Math.random() < 0.02) { // Log 2% of frames
-      console.log(`[NORMALIZED] Pos: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)}) | Scale: ${ringScale.toFixed(3)} | FingerWidth: ${fingerWidth.toFixed(3)}m`);
-    }
-
     // Calculate rotation from normalized landmarks for camera-consistent orientation
     const normalizedMCP = landmarks[13]; // Ring finger base
     const normalizedDIP = landmarks[15]; // Ring finger top joint
 
-    const mcpPos = CoordinateConverter.normalizedToThreeJS(normalizedMCP, 1.0);
-    const pipPos = CoordinateConverter.normalizedToThreeJS(normalizedPIP, 1.0);
-    const dipPos = CoordinateConverter.normalizedToThreeJS(normalizedDIP, 1.0);
+    const mcpPos = CoordinateConverter.normalizedToThreeJS(normalizedMCP, COORD_SCALE);
+    const pipPos = CoordinateConverter.normalizedToThreeJS(normalizedPIP, COORD_SCALE);
+    const dipPos = CoordinateConverter.normalizedToThreeJS(normalizedDIP, COORD_SCALE);
 
     // Get two direction vectors for more stable orientation
     const dir1 = new THREE.Vector3().subVectors(pipPos, mcpPos).normalize();
@@ -260,7 +252,7 @@ export class ThreeSceneManager {
     const direction = new THREE.Vector3().addVectors(dir1, dir2).normalize();
 
     // Get wrist for perpendicular reference
-    const wristPos = CoordinateConverter.normalizedToThreeJS(landmarks[0], 1.0);
+    const wristPos = CoordinateConverter.normalizedToThreeJS(landmarks[0], COORD_SCALE);
     const toWrist = new THREE.Vector3().subVectors(wristPos, position).normalize();
 
     // Create orthogonal basis
@@ -277,7 +269,16 @@ export class ThreeSceneManager {
     if (this.ringMesh) {
       this.ringMesh.position.copy(position);
       this.ringMesh.quaternion.copy(quaternion);
-      this.ringMesh.scale.setScalar(ringScale * this.config.modelScale); // Adaptive sizing relative to base scale
+
+      // Apply auto-normalization + user modelScale
+      const finalScale = this.autoNormalizeScale * this.config.modelScale;
+
+      // Debug: Log actual scale being applied
+      if (Math.random() < 0.02) {
+        console.log(`[SCALE DEBUG] Final scale: ${finalScale.toFixed(6)} (auto: ${this.autoNormalizeScale.toFixed(6)} × user: ${this.config.modelScale})`);
+      }
+
+      this.ringMesh.scale.setScalar(finalScale);
       this.ringMesh.visible = true;
       this.isRingVisible = true;
     }

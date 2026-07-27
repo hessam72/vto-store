@@ -31,7 +31,7 @@ async function init() {
     console.log('🎨 Step 3: Creating Three.js scene...');
     appState.threeScene = new ThreeSceneManager(vtoCanvas, {
       modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
-      modelScale: 1,
+      modelScale: 10,
       occluderRadiusRange: [1.2, 1.5],
       occluderHeight: 30,
       debugOccluder: false
