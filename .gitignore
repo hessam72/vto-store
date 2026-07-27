@@ -22,7 +22,7 @@ public/hdr/Jew HDRI 3.exr
 public/hdr/Jew HDRI 1.exr
 # production
 /build
-
+/arch-docs/code-samples
 # misc
 .DS_Store
 *.pem

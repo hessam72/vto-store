@@ -39,3 +39,6 @@ Full source on GitHub: https://github.com/WebAR-rocks/WebAR.rocks.face
 Optional paid yearly plans for professional support and updates.
 
 It's part of the WebAR.rocks suite of computer vision libraries (they also have hand tracking, image tracking, etc.).
+
+
+i want to develope my virtual try-on logic to be more persist and realistic specialy for hands try-on (rings - watch etc...) first read document about it in vto-store/arch-docs , understand how webar works - checkout code samples vto-store/arch-docs/code-samples and get ready for my task 
