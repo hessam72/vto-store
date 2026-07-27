@@ -30,6 +30,16 @@ export class ThreeSceneManager {
     this.isRingVisible = false;
     this.currentHandedness = null;
 
+    // Smoothing filters for position
+    this.positionFilters = {
+      x: new LowPassFilter(0.5),
+      y: new LowPassFilter(0.5),
+      z: new LowPassFilter(0.5)
+    };
+
+    // Smoothing filter for rotation
+    this.rotationFilter = new LowPassFilter(0.3);
+
     this.init();
   }
 
@@ -43,11 +53,15 @@ export class ThreeSceneManager {
     this.scene = new THREE.Scene();
     console.log('  📌 Scene created');
 
-    // Camera
+    // Camera - Calibrated for AR overlay matching video perspective
     const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
-    this.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-    this.camera.position.z = 5;
-    console.log('  📌 Camera created');
+    const videoHeight = 720; // From MediaPipe config
+    const focalLength = videoHeight; // Approximate for standard webcam
+    const fov = 2 * Math.atan(videoHeight / (2 * focalLength)) * (180 / Math.PI);
+
+    this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.01, 100);
+    this.camera.position.set(0, 0, 0); // Camera at origin for AR
+    console.log(`  📌 Camera created (FOV: ${fov.toFixed(1)}°, calibrated for AR)`);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -114,6 +128,13 @@ export class ThreeSceneManager {
         (gltf) => {
           console.log('    📌 GLTF loaded, processing...');
           this.ringMesh = gltf.scene.children[0];
+
+          // Center geometry to eliminate pivot offset (prevents scale-induced misplacement)
+          const box = new THREE.Box3().setFromObject(this.ringMesh);
+          const center = box.getCenter(new THREE.Vector3());
+          this.ringMesh.geometry.translate(-center.x, -center.y, -center.z);
+          console.log(`    🎯 Centered geometry: offset (${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)})`);
+
           this.ringMesh.scale.set(
             this.config.modelScale,
             this.config.modelScale,
@@ -185,29 +206,58 @@ export class ThreeSceneManager {
 
     this.currentHandedness = handedness;
 
-    // Get ring finger MCP (landmark 13)
-    const ringMCP = worldLandmarks[RING_CONFIG.PLACEMENT_LANDMARK];
+    // Get ring finger PIP (landmark 14 - where rings are worn)
+    // Use NORMALIZED landmarks for position (camera-relative [0,1] coordinates)
+    // World landmarks are hand-centric, not camera-centric!
+    const normalizedPIP = landmarks[RING_CONFIG.PLACEMENT_LANDMARK];
+    let position = CoordinateConverter.normalizedToThreeJS(normalizedPIP, 1.0);
 
-    // Convert to Three.js coordinates (meters to cm)
-    const position = CoordinateConverter.worldToThreeJS(ringMCP, 100);
+    // Apply position smoothing
+    position.x = this.positionFilters.x.filter(position.x);
+    position.y = this.positionFilters.y.filter(position.y);
+    position.z = this.positionFilters.z.filter(position.z);
 
-    // Calculate rotation from finger orientation
-    const ringBase = worldLandmarks[RING_CONFIG.OCCLUDER_AXIS.base];
-    const ringTip = worldLandmarks[RING_CONFIG.OCCLUDER_AXIS.tip];
+    // Adaptive ring sizing based on finger width
+    const fingerWidth = CoordinateConverter.landmarkDistance(
+      worldLandmarks[9],  // Middle finger MCP
+      worldLandmarks[13]  // Ring finger MCP
+    );
+    // Map typical finger spacing (0.02-0.04m) to ring scale
+    const ringScale = THREE.MathUtils.mapLinear(
+      fingerWidth,
+      0.02, 0.04,  // Min/max finger spacing in meters
+      0.08, 0.15   // Min/max ring scale (geometry centered, proper range)
+    );
 
-    const basePos = CoordinateConverter.worldToThreeJS(ringBase, 100);
-    const tipPos = CoordinateConverter.worldToThreeJS(ringTip, 100);
+    // Debug logging (remove after testing)
+    if (Math.random() < 0.02) { // Log 2% of frames
+      console.log(`[NORMALIZED] Pos: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)}) | Scale: ${ringScale.toFixed(3)} | FingerWidth: ${fingerWidth.toFixed(3)}m`);
+    }
 
-    // Direction vector from base to tip
-    const direction = new THREE.Vector3().subVectors(tipPos, basePos).normalize();
+    // Calculate rotation from normalized landmarks for camera-consistent orientation
+    const normalizedMCP = landmarks[13]; // Ring finger base
+    const normalizedDIP = landmarks[15]; // Ring finger top joint
 
-    // Create rotation matrix
-    const up = new THREE.Vector3(0, 0, 1);
-    const right = new THREE.Vector3().crossVectors(up, direction).normalize();
-    const actualUp = new THREE.Vector3().crossVectors(direction, right);
+    const mcpPos = CoordinateConverter.normalizedToThreeJS(normalizedMCP, 1.0);
+    const pipPos = CoordinateConverter.normalizedToThreeJS(normalizedPIP, 1.0);
+    const dipPos = CoordinateConverter.normalizedToThreeJS(normalizedDIP, 1.0);
 
+    // Get two direction vectors for more stable orientation
+    const dir1 = new THREE.Vector3().subVectors(pipPos, mcpPos).normalize();
+    const dir2 = new THREE.Vector3().subVectors(dipPos, pipPos).normalize();
+    const direction = new THREE.Vector3().addVectors(dir1, dir2).normalize();
+
+    // Get wrist for perpendicular reference
+    const wristPos = CoordinateConverter.normalizedToThreeJS(landmarks[0], 1.0);
+    const toWrist = new THREE.Vector3().subVectors(wristPos, position).normalize();
+
+    // Create orthogonal basis
+    const right = new THREE.Vector3().crossVectors(direction, toWrist).normalize();
+    const up = new THREE.Vector3().crossVectors(right, direction).normalize();
+
+    // Build rotation matrix from basis vectors
     const rotationMatrix = new THREE.Matrix4();
-    rotationMatrix.makeBasis(right, direction, actualUp);
+    rotationMatrix.makeBasis(direction, up, right);
 
     const quaternion = new THREE.Quaternion().setFromRotationMatrix(rotationMatrix);
 
@@ -215,6 +265,7 @@ export class ThreeSceneManager {
     if (this.ringMesh) {
       this.ringMesh.position.copy(position);
       this.ringMesh.quaternion.copy(quaternion);
+      this.ringMesh.scale.setScalar(ringScale); // Adaptive sizing (now safe - geometry centered)
       this.ringMesh.visible = true;
       this.isRingVisible = true;
     }
@@ -238,6 +289,11 @@ export class ThreeSceneManager {
       this.occluderMesh.visible = false;
     }
     this.isRingVisible = false;
+
+    // Reset smoothing filters to prevent artifacts when hand reappears
+    this.positionFilters.x.reset();
+    this.positionFilters.y.reset();
+    this.positionFilters.z.reset();
   }
 
   /**
@@ -282,5 +338,29 @@ export class ThreeSceneManager {
     window.removeEventListener('resize', () => this.handleResize());
 
     console.log('Three.js scene destroyed');
+  }
+}
+
+/**
+ * Low-pass filter for smoothing position/rotation
+ */
+class LowPassFilter {
+  constructor(alpha = 0.3) {
+    this.alpha = alpha; // 0 = no smoothing, 1 = no filtering
+    this.prev = null;
+  }
+
+  filter(value) {
+    if (this.prev === null) {
+      this.prev = value;
+      return value;
+    }
+    const filtered = this.prev + this.alpha * (value - this.prev);
+    this.prev = filtered;
+    return filtered;
+  }
+
+  reset() {
+    this.prev = null;
   }
 }

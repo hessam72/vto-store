@@ -41,8 +41,8 @@ export const HAND_LANDMARKS = {
  * Ring finger landmark configuration
  */
 export const RING_CONFIG = {
-  // Primary placement point
-  PLACEMENT_LANDMARK: HAND_LANDMARKS.RING_FINGER_MCP,
+  // Primary placement point (PIP = middle joint where rings are worn)
+  PLACEMENT_LANDMARK: HAND_LANDMARKS.RING_FINGER_PIP,
 
   // Landmarks for orientation calculation (6-point set)
   POSE_LANDMARKS: [

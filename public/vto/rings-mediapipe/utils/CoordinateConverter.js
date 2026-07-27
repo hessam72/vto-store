@@ -23,12 +23,12 @@ export class CoordinateConverter {
 
   /**
    * Convert MediaPipe normalized coordinates to Three.js position
-   * Proven formula from Codrops tutorial
-   * @param {Object} landmark - {x, y, z} MediaPipe landmark
-   * @param {number} scale - Scale multiplier (default 4 for proper world space)
+   * Normalized coords are [0,1] camera-relative, unlike world coords (hand-relative)
+   * @param {Object} landmark - {x, y, z} MediaPipe normalized landmark
+   * @param {number} scale - Scene scale multiplier (default 1 for AR overlay)
    * @returns {THREE.Vector3}
    */
-  static normalizedToThreeJS(landmark, scale = 4) {
+  static normalizedToThreeJS(landmark, scale = 1) {
     return new THREE.Vector3(
       (-landmark.x + 0.5) * scale,  // Center and invert X
       (-landmark.y + 0.5) * scale,  // Center and invert Y
@@ -40,10 +40,10 @@ export class CoordinateConverter {
    * Convert MediaPipe world landmarks (in meters) to Three.js
    * World landmarks are already in 3D, centered at hand geometric center
    * @param {Object} worldLandmark - {x, y, z} in meters
-   * @param {number} scale - Convert meters to desired units (100 for cm)
+   * @param {number} scale - Convert meters to scene units (1-2 works for AR overlay)
    * @returns {THREE.Vector3}
    */
-  static worldToThreeJS(worldLandmark, scale = 100) {
+  static worldToThreeJS(worldLandmark, scale = 1.5) {
     return new THREE.Vector3(
       worldLandmark.x * scale,
       -worldLandmark.y * scale,  // Invert Y for Three.js
