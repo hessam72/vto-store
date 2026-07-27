@@ -31,7 +31,7 @@ async function init() {
     console.log('🎨 Step 3: Creating Three.js scene...');
     appState.threeScene = new ThreeSceneManager(vtoCanvas, {
       modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
-      modelScale: 0.45,
+      modelScale: 1,
       occluderRadiusRange: [1.2, 1.5],
       occluderHeight: 30,
       debugOccluder: false
@@ -56,7 +56,7 @@ async function init() {
       minHandPresenceConfidence: 0.7,
       minTrackingConfidence: 0.7,
       facingMode: 'user',
-      debugDrawLandmarks: false,  // Set to true to see landmarks on canvas
+      debugDrawLandmarks: true,  // Set to true to see landmarks on canvas
       onResults: handleTrackingResults
     });
     console.log('✅ Step 10: MediaPipe tracker instance created');

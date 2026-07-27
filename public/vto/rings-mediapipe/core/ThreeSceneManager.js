@@ -127,13 +127,25 @@ export class ThreeSceneManager {
         this.config.modelURL,
         (gltf) => {
           console.log('    📌 GLTF loaded, processing...');
-          this.ringMesh = gltf.scene.children[0];
+          this.ringMesh = gltf.scene.children[0] || gltf.scene;
+
+          // Find actual mesh if it's wrapped in a group
+          let actualMesh = this.ringMesh;
+          if (!actualMesh.geometry) {
+            actualMesh.traverse((child) => {
+              if (child.isMesh && !actualMesh.geometry) {
+                actualMesh = child;
+              }
+            });
+          }
 
           // Center geometry to eliminate pivot offset (prevents scale-induced misplacement)
-          const box = new THREE.Box3().setFromObject(this.ringMesh);
-          const center = box.getCenter(new THREE.Vector3());
-          this.ringMesh.geometry.translate(-center.x, -center.y, -center.z);
-          console.log(`    🎯 Centered geometry: offset (${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)})`);
+          if (actualMesh.geometry) {
+            const box = new THREE.Box3().setFromObject(this.ringMesh);
+            const center = box.getCenter(new THREE.Vector3());
+            actualMesh.geometry.translate(-center.x, -center.y, -center.z);
+            console.log(`    🎯 Centered geometry: offset (${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)})`);
+          }
 
           this.ringMesh.scale.set(
             this.config.modelScale,
@@ -265,7 +277,7 @@ export class ThreeSceneManager {
     if (this.ringMesh) {
       this.ringMesh.position.copy(position);
       this.ringMesh.quaternion.copy(quaternion);
-      this.ringMesh.scale.setScalar(ringScale); // Adaptive sizing (now safe - geometry centered)
+      this.ringMesh.scale.setScalar(ringScale * this.config.modelScale); // Adaptive sizing relative to base scale
       this.ringMesh.visible = true;
       this.isRingVisible = true;
     }
