@@ -246,6 +246,12 @@ export class ThreeSceneManager {
       return;
     }
 
+    // Verify handedness data exists (prevents crash when hand exits viewport)
+    if (!results.handedness || !results.handedness[0] || !results.handedness[0][0]) {
+      this.hideWatch();
+      return;
+    }
+
     // Get first hand
     const landmarks = results.landmarks[0];
     const handedness = results.handedness[0][0].categoryName;  // "Left" or "Right"
