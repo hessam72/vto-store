@@ -219,7 +219,7 @@
 
         // Action functions
         function sendMessage(action, data = {}) {
-            iframe.contentWindow.postMessage({ action, ...data }, '*');
+            iframe.contentWindow.postMessage({ action, sku: 'first-model' }, '*');
             log(`Sent: ${action}`, data);
         }
 
