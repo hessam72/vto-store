@@ -17,8 +17,8 @@ const _settings = {
     'ringBasePalm'
   ],
 
-  modelOffset: [0, 0, 0], // adjust ring position on hand
-  modelScale: 0.3, // scale factor for ring model
+  modelOffset: [0, -10, 0], // adjust ring position on hand
+  modelScale: 0.45, // scale factor for ring model
   NNsPaths: ['./neuralNets/NN_RING_13.json'],
   objectPointsPositionFactors: [1.0, 1.0, 1.0],
   isPoseFilter: true,
