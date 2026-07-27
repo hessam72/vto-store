@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MakeMeTryOn Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #0070f3;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0051cc;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+        .log-time {
+            color: #808080;
+        }
+        .log-event {
+            color: #4ec9b0;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            position: relative;
+            width: 90%;
+            height: 90%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MakeMeTryOn Widget Test</h1>
+
+        <div class="controls">
+            <h2 style="margin-bottom: 15px; font-size: 18px;">Controls</h2>
+            <div class="btn-group">
+                <button id="btnOpen">Open Widget</button>
+                <button id="btnClose">Close Widget</button>
+                <button id="btnLoadModel">Load Model</button>
+                <button id="btnPause">Pause Widget</button>
+                <button id="btnResume">Resume Widget</button>
+                <button id="btnClearLog">Clear Log</button>
+            </div>
+
+            <h3 style="margin: 15px 0 10px; font-size: 16px;">Event Log</h3>
+            <div class="log" id="eventLog">
+                <div class="log-entry">
+                    <span class="log-time">[Ready]</span> Widget test page initialized
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="widgetModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <iframe
+                id="widgetIframe"
+                src="https://widgets.makemetryon.com/viewer-jewelry?key=public_key_j89s6n7&hud=true"
+                allow="fullscreen; scripts; same-origin"
+                allowfullscreen
+            ></iframe>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('widgetModal');
+        const iframe = document.getElementById('widgetIframe');
+        const eventLog = document.getElementById('eventLog');
+
+        // Log helper
+        function log(event, data = null) {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+
+            let logText = `<span class="log-time">[${time}]</span> <span class="log-event">${event}</span>`;
+            if (data) {
+                logText += `: ${JSON.stringify(data)}`;
+            }
+
+            entry.innerHTML = logText;
+            eventLog.appendChild(entry);
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        // postMessage listener
+        window.addEventListener('message', (event) => {
+            // Validate source
+            if (event.source !== iframe.contentWindow) return;
+
+            const { type, data } = event.data;
+
+            log(`Received: ${type}`, data);
+
+            switch(type) {
+                case 'open':
+                    log('Widget opened');
+                    break;
+                case 'close':
+                    log('Widget closed');
+                    break;
+                case 'close_widget':
+                    log('Close widget requested');
+                    closeWidget();
+                    break;
+                case 'load_model':
+                    log('Model loaded', data);
+                    break;
+                case 'pause':
+                    log('Widget paused');
+                    break;
+                case 'resume':
+                    log('Widget resumed');
+                    break;
+            }
+        });
+
+        // Action functions
+        function sendMessage(action, data = {}) {
+            iframe.contentWindow.postMessage({ action, ...data }, '*');
+            log(`Sent: ${action}`, data);
+        }
+
+        function openWidget() {
+            modal.classList.add('active');
+            sendMessage('open_widget');
+        }
+
+        function closeWidget() {
+            modal.classList.remove('active');
+            sendMessage('close_widget');
+        }
+
+        function loadModel() {
+            sendMessage('load_model', {
+                model_id: 'sample_jewelry_001' // Replace with actual model ID
+            });
+        }
+
+        function pauseWidget() {
+            sendMessage('pause_widget');
+        }
+
+        function resumeWidget() {
+            sendMessage('resume_widget');
+        }
+
+        // Event listeners
+        document.getElementById('btnOpen').addEventListener('click', openWidget);
+        document.getElementById('btnClose').addEventListener('click', closeWidget);
+        document.getElementById('btnLoadModel').addEventListener('click', loadModel);
+        document.getElementById('btnPause').addEventListener('click', pauseWidget);
+        document.getElementById('btnResume').addEventListener('click', resumeWidget);
+        document.getElementById('modalClose').addEventListener('click', closeWidget);
+        document.getElementById('btnClearLog').addEventListener('click', () => {
+            eventLog.innerHTML = '<div class="log-entry"><span class="log-time">[Cleared]</span> Log cleared</div>';
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeWidget();
+            }
+        });
+
+        // Close modal on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeWidget();
+            }
+        });
+
+        log('Page ready - Click "Open Widget" to start');
+    </script>
+</body>
+</html>
