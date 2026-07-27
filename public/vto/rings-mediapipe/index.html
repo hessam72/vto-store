@@ -163,13 +163,21 @@
 
   <!-- Core modules - loaded after THREE.js is available -->
   <script type="module">
+    console.log('🔍 Checking for THREE.js...');
+
     // Wait for THREE to be defined
     function checkTHREE() {
       if (typeof THREE !== 'undefined') {
         // THREE is loaded, now load our modules
-        import('./main.js');
+        console.log('✅ THREE.js detected, loading main.js...');
+        import('./main.js').then(() => {
+          console.log('✅ main.js module loaded');
+        }).catch(err => {
+          console.error('❌ Failed to load main.js:', err);
+        });
       } else {
         // Wait and try again
+        console.log('⏳ Waiting for THREE.js...');
         setTimeout(checkTHREE, 50);
       }
     }

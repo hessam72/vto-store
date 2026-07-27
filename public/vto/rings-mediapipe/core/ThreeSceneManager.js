@@ -37,13 +37,17 @@ export class ThreeSceneManager {
    * Initialize Three.js scene
    */
   init() {
+    console.log('  🎨 ThreeSceneManager init() started');
+
     // Scene
     this.scene = new THREE.Scene();
+    console.log('  📌 Scene created');
 
     // Camera
     const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
     this.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
     this.camera.position.z = 5;
+    console.log('  📌 Camera created');
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -55,47 +59,60 @@ export class ThreeSceneManager {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputEncoding = THREE.sRGBEncoding;
+    console.log('  📌 Renderer created');
 
     // Lighting setup
+    console.log('  📌 Setting up lighting...');
     this.setupLighting();
 
     // Loading manager
     this.loadingManager = new THREE.LoadingManager();
     this.loadingManager.onLoad = () => {
-      console.log('All Three.js assets loaded');
+      console.log('  ✅ All Three.js assets loaded');
     };
+    console.log('  📌 Loading manager created');
 
     // Handle window resize
     window.addEventListener('resize', () => this.handleResize());
 
-    console.log('Three.js scene initialized');
+    console.log('  ✅ Three.js scene initialized');
   }
 
   /**
    * Setup HDR environment lighting
    */
   setupLighting() {
+    console.log('    💡 Setting up HDR lighting...');
     const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
     pmremGenerator.compileEquirectangularShader();
 
     new THREE.RGBELoader()
       .setDataType(THREE.HalfFloatType)
-      .load('/models/envmaps/hotel_room_1k.hdr', (texture) => {
-        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-        pmremGenerator.dispose();
-        this.scene.environment = envMap;
-        console.log('HDR environment map loaded');
-      });
+      .load('/models/envmaps/hotel_room_1k.hdr',
+        (texture) => {
+          const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+          pmremGenerator.dispose();
+          this.scene.environment = envMap;
+          console.log('    ✅ HDR environment map loaded');
+        },
+        undefined,
+        (error) => {
+          console.warn('    ⚠️ Failed to load HDR environment map:', error);
+          console.warn('    ⚠️ Continuing without HDR lighting');
+        }
+      );
   }
 
   /**
    * Load ring 3D model
    */
   async loadRingModel() {
+    console.log(`    📦 Loading ring model from: ${this.config.modelURL}`);
     return new Promise((resolve, reject) => {
       new THREE.GLTFLoader(this.loadingManager).load(
         this.config.modelURL,
         (gltf) => {
+          console.log('    📌 GLTF loaded, processing...');
           this.ringMesh = gltf.scene.children[0];
           this.ringMesh.scale.set(
             this.config.modelScale,
@@ -105,12 +122,16 @@ export class ThreeSceneManager {
           this.ringMesh.visible = false;
           this.scene.add(this.ringMesh);
 
-          console.log('Ring model loaded successfully');
+          console.log('    ✅ Ring model loaded and added to scene');
           resolve(this.ringMesh);
         },
-        undefined,
+        (progress) => {
+          const percent = (progress.loaded / progress.total * 100).toFixed(0);
+          console.log(`    📊 Loading ring model: ${percent}%`);
+        },
         (error) => {
-          console.error('Error loading ring model:', error);
+          console.error('    ❌ Error loading ring model:', error);
+          console.error('    ❌ Model URL was:', this.config.modelURL);
           reject(error);
         }
       );

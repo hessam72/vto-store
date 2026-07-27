@@ -35,19 +35,22 @@ export class MediaPipeTracker {
    * Initialize MediaPipe and camera
    */
   async init(videoElement, canvasElement) {
+    console.log('  📌 MediaPipe init() started');
     this.videoElement = videoElement;
     this.canvasElement = canvasElement;
     this.ctx = canvasElement.getContext('2d');
+    console.log('  📌 Canvas context created');
 
     try {
       // Initialize MediaPipe vision tasks
-      console.log('Loading MediaPipe vision tasks...');
+      console.log('  📌 Loading MediaPipe FilesetResolver...');
       const vision = await FilesetResolver.forVisionTasks(
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
       );
+      console.log('  ✅ MediaPipe FilesetResolver loaded');
 
       // Create hand landmarker
-      console.log('Creating Hand Landmarker...');
+      console.log('  📌 Creating Hand Landmarker (downloading model ~5MB)...');
       this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
@@ -60,10 +63,12 @@ export class MediaPipeTracker {
         minTrackingConfidence: this.config.minTrackingConfidence
       });
 
-      console.log('MediaPipe Hand Landmarker initialized successfully');
+      console.log('  ✅ MediaPipe Hand Landmarker created successfully');
 
       // Setup camera
+      console.log('  📌 Setting up camera...');
       await this.setupCamera();
+      console.log('  ✅ Camera setup complete');
 
       return true;
     } catch (error) {
@@ -77,6 +82,7 @@ export class MediaPipeTracker {
    */
   async setupCamera() {
     try {
+      console.log('    🎥 Requesting camera access...');
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: this.config.facingMode,
@@ -84,21 +90,26 @@ export class MediaPipeTracker {
           height: { ideal: this.config.videoHeight }
         }
       });
+      console.log('    ✅ Camera access granted');
 
       this.videoElement.srcObject = this.stream;
 
       // Wait for video metadata to load
+      console.log('    📌 Waiting for video metadata...');
       await new Promise((resolve) => {
         this.videoElement.onloadedmetadata = resolve;
       });
+      console.log('    ✅ Video metadata loaded');
 
+      console.log('    📌 Starting video playback...');
       await this.videoElement.play();
+      console.log('    ✅ Video playing');
 
       // Set canvas size to match video
       this.canvasElement.width = this.videoElement.videoWidth;
       this.canvasElement.height = this.videoElement.videoHeight;
 
-      console.log(`Camera initialized: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`);
+      console.log(`    ✅ Camera initialized: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`);
     } catch (error) {
       console.error('Error accessing camera:', error);
       throw error;

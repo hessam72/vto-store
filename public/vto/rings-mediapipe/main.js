@@ -18,15 +18,17 @@ const appState = {
  */
 async function init() {
   try {
-    console.log('Initializing Ring Try-On Application...');
+    console.log('🚀 Step 1: Initializing Ring Try-On Application...');
 
     // Get DOM elements
     const videoElement = document.getElementById('videoElement');
     const canvasElement = document.getElementById('canvasElement');
     const vtoCanvas = document.getElementById('VTOCanvas');
     const changeCameraBtn = document.getElementById('changeCamera');
+    console.log('✅ Step 2: DOM elements retrieved');
 
     // Initialize Three.js scene
+    console.log('🎨 Step 3: Creating Three.js scene...');
     appState.threeScene = new ThreeSceneManager(vtoCanvas, {
       modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
       modelScale: 0.45,
@@ -34,14 +36,20 @@ async function init() {
       occluderHeight: 30,
       debugOccluder: false
     });
+    console.log('✅ Step 4: Three.js scene created');
 
     // Load ring model
+    console.log('📦 Step 5: Loading ring model...');
     await appState.threeScene.loadRingModel();
+    console.log('✅ Step 6: Ring model loaded');
 
     // Add soft occluder
+    console.log('🔲 Step 7: Adding occluder...');
     appState.threeScene.addSoftOccluder();
+    console.log('✅ Step 8: Occluder added');
 
     // Initialize MediaPipe tracker
+    console.log('👋 Step 9: Initializing MediaPipe tracker...');
     appState.tracker = new MediaPipeTracker({
       numHands: 1,
       minHandDetectionConfidence: 0.7,
@@ -51,11 +59,16 @@ async function init() {
       debugDrawLandmarks: false,  // Set to true to see landmarks on canvas
       onResults: handleTrackingResults
     });
+    console.log('✅ Step 10: MediaPipe tracker instance created');
 
+    console.log('🎥 Step 11: Initializing camera and MediaPipe...');
     await appState.tracker.init(videoElement, canvasElement);
+    console.log('✅ Step 12: Camera and MediaPipe initialized');
 
     // Start tracking
+    console.log('▶️ Step 13: Starting hand tracking...');
     appState.tracker.start();
+    console.log('✅ Step 14: Tracking started');
 
     // Setup camera switch button
     changeCameraBtn.addEventListener('click', async () => {
@@ -67,15 +80,20 @@ async function init() {
     });
 
     // Start render loop
+    console.log('🔄 Step 15: Starting render loop...');
     startRenderLoop();
+    console.log('✅ Step 16: Render loop started');
 
     // Hide loading screen
+    console.log('🎉 Step 17: Hiding loading screen...');
     hideLoading();
 
-    console.log('Application initialized successfully!');
+    console.log('✅✅✅ APPLICATION READY! ✅✅✅');
   } catch (error) {
-    console.error('Initialization error:', error);
-    alert('خطا در بارگذاری برنامه. لطفاً صفحه را رفرش کنید.');
+    console.error('❌❌❌ INITIALIZATION ERROR ❌❌❌');
+    console.error('Error details:', error);
+    console.error('Error stack:', error.stack);
+    alert('خطا در بارگذاری برنامه. لطفاً صفحه را رفرش کنید.\n\nCheck console for details.');
   }
 }
 
@@ -145,4 +163,11 @@ window.addEventListener('beforeunload', () => {
 });
 
 // Start application when page loads
-window.addEventListener('load', init);
+// Since we're using dynamic imports, page may already be loaded
+if (document.readyState === 'loading') {
+  window.addEventListener('load', init);
+} else {
+  // Page already loaded, call init immediately
+  console.log('📄 Page already loaded, calling init()...');
+  init();
+}
