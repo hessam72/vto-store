@@ -219,7 +219,7 @@
 
         // Action functions
         function sendMessage(action, data = {}) {
-            iframe.contentWindow.postMessage({ action, sku: 'first-model' }, '*');
+            iframe.contentWindow.postMessage({ action, ...data }, '*');
             log(`Sent: ${action}`, data);
         }
 
@@ -235,7 +235,7 @@
 
         function loadModel() {
             sendMessage('load_model', {
-                model_id: 'sample_jewelry_001' // Replace with actual model ID
+                model_id: '6a6712abea23f3cd8894a59d' // Replace with actual model ID
             });
         }
 
