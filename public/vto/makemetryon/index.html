@@ -234,9 +234,21 @@
         }
 
         function loadModel() {
-            sendMessage('load_model', {
-                model_id: '6a3d89e2fb1a42940072904c' // Replace with actual model ID
-            });
+            // Ensure widget is open first
+            if (!modal.classList.contains('active')) {
+                modal.classList.add('active');
+                sendMessage('open_widget');
+                // Wait for widget to initialize before loading model
+                setTimeout(() => {
+                    sendMessage('load_model', {
+                        model_id: '6a3d89e2fb1a42940072904c'
+                    });
+                }, 1000);
+            } else {
+                sendMessage('load_model', {
+                    model_id: '6a3d89e2fb1a42940072904c'
+                });
+            }
         }
 
         function pauseWidget() {
