@@ -48,16 +48,20 @@ nearer or further.
 
 ```
 config.js                  metric configuration, no scale/depth knobs
-main.js                    wiring and render loop
-core/
-  MediaPipeTracker.js      camera + HandLandmarker, frame-gated inference
-  HandPoseSolver.js        the conversion above; no scene knowledge
-  RingPositioner.js        mm offsets in finger space, smoothing, hysteresis
-  ThreeRingScene.js        renderer, GLB fitting, depth-only finger occluder
-utils/
-  OneEuroFilter.js         speed-adaptive smoothing (scalar, Vector3, quaternion)
-debug/
-  DebugPanel.js            lil-gui panel + solved depth/finger-width readout
+main.js                    finger anatomy + debug schema; wiring is shared
+core/RingAnchor.js         anchor lerp 13→14, finger basis, finger width
+```
+
+Everything else is `../shared/vto-core/`, shared with the wrist app:
+
+```
+HandSolver.js          camera model, metric depth, back-projection, basis
+ProductPositioner.js   mm offsets, One Euro smoothing, hysteresis
+VTOScene.js            renderer, canvas sizing, GLB fitting, occluder
+MediaPipeTracker.js    camera + HandLandmarker, frame-gated inference
+OneEuroFilter.js       speed-adaptive smoothing (scalar, Vector3, quaternion)
+DebugPanel.js          lil-gui panel + solved readout
+bootstrap.js           app wiring and render loop
 ```
 
 ## Conventions
@@ -65,21 +69,23 @@ debug/
 - **Units:** metres everywhere in the scene; millimetres only for the ring
   offsets a human tunes. Camera at the origin looking down −Z.
 - **Finger frame:** X across the finger, Y along it toward the tip, Z out of the
-  palm. `ring.offsetMm` is expressed in this frame, so it means the same thing at
+  palm. `product.offsetMm` is expressed in this frame, so it means the same thing at
   any hand orientation or distance.
 - **Model orientation:** +Y is the finger axis, so a ring GLB is correct when its
-  hole runs along +Y. Rather than carrying a per-model quaternion, the hole axis
+  bore runs along +Y. Rather than carrying a per-model quaternion, the bore axis
   is detected at load from the narrowest bounding-box extent — a ring is a flat
-  torus, so its narrow axis is always the hole, gem or no gem — and the model is
-  rotated to match. `ring.holeAxis` overrides the detection; `ring.rollDeg` turns
-  the ring about the finger to place the gem.
+  torus, so its narrow axis is always the bore, gem or no gem — and the model is
+  rotated to match. `product.boreAxis` overrides the detection;
+  `product.rollDeg` turns the ring about the finger to place the gem.
+  (`boreAxisPolicy` is `narrowest` here; watches need the opposite rule — see
+  `../wrist-hybrid/README.md`.)
 - **Mirroring:** the video is CSS-mirrored (selfie view) and the solver mirrors
   the 3D to match. The mirror is applied to the finished quaternion, not to the
   basis vectors — negating a basis vector would make the matrix a reflection
   (det = −1) and `setFromRotationMatrix` would return garbage.
 - **Screen mapping:** the video, the landmark overlay and the WebGL canvas all
   cover the viewport under the same `object-fit: cover` crop, and
-  `HandPoseSolver.updateCamera()` derives the render camera's FOV from that same
+  `HandSolver.updateCamera()` derives the render camera's FOV from that same
   crop. If these three ever disagree, the 3D drifts off the hand.
 
 ## Smoothing
@@ -116,5 +122,6 @@ localhost or HTTPS. Press **D** to toggle the debug panel.
 ## Dependencies
 
 Three.js r167 and `@mediapipe/tasks-vision` 0.10.35, both pinned in the importmap
-in `index.html`. The MediaPipe wasm fileset URL in `MediaPipeTracker.js` must
-stay on the same version as the JS bundle.
+in `index.html`. The MediaPipe wasm fileset URL in
+`../shared/vto-core/MediaPipeTracker.js` must stay on the same version as the JS
+bundle.

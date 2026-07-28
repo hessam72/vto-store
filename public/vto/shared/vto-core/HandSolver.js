@@ -1,37 +1,36 @@
 /**
- * Hand Pose Solver
+ * Hand Solver — product-agnostic half of the MediaPipe → Three.js conversion.
  *
- * Converts MediaPipe hand landmarks into a metric Three.js pose.
- *
- * The old approach mapped normalized coords onto an arbitrary "frustum plane"
- * at a tunable distance, which coupled depth to world scale: pushing the ring
- * back to fix depth shrank it, enlarging it to compensate broke the fit. There
- * was no set of numbers that was simultaneously correct.
- *
- * This solver has no such coupling because it uses a real pinhole camera model:
+ * Owns the camera model, the metric depth solve and the coordinate plumbing.
+ * Knows nothing about rings, watches or bracelets: an *anchor* supplies the
+ * anatomy (which landmarks, which axes, what size) and this class supplies the
+ * geometry that is identical for every product.
  *
  *   1. f_px = (videoHeight / 2) / tan(vFOV / 2)          camera intrinsics
- *   2. Z    = f_px * L_perp / L_px                        metric depth, from
+ *   2. Z    = f_px * L_perp / L_px                        metric depth from
  *                                                         worldLandmarks (metres)
- *   3. X    = (px - cx) * Z / f_px,  Y = -(py - cy) * Z / f_px
+ *   3. X    = (px - cx) * Z / f_px                        pinhole back-projection
  *
- * Step 2 compares the image-plane component of a world-space segment against
- * its observed pixel length, which cancels foreshortening: a finger tilted
- * toward the camera no longer reads as "further away".
+ * Step 2 compares the image-plane component of a world-space segment against its
+ * observed pixel length, which cancels foreshortening, then refines by
+ * Gauss-Newton on reprojection error (see refineDepth).
  *
- * A useful property falls out of this: on-screen size is f_px * S / Z, where S
- * comes from worldLandmarks (independent of f_px) and Z is proportional to
- * f_px — so f_px cancels. Screen position and apparent size stay correct even
- * if the assumed vFOV is wrong; only the reported absolute depth shifts. That
- * is why vFOV is a documented constant here rather than a knob to hunt with.
+ * A useful property falls out: on-screen size is f_px * S / Z, where S comes
+ * from worldLandmarks (independent of f_px) and Z is proportional to f_px — so
+ * f_px cancels. Screen position and apparent size stay correct even if the
+ * assumed vFOV is wrong; only the reported absolute depth shifts. That is why
+ * vFOV is a documented constant rather than a knob to hunt with.
  *
  * Everything is in metres. Camera sits at the origin looking down -Z.
+ *
+ * See arch-docs/MEDIAPIPE_VTO_SYSTEM.md for the full derivation.
  */
 
 import * as THREE from 'three';
 
 export const HAND = {
   WRIST: 0,
+  THUMB_CMC: 1,
   INDEX_MCP: 5,
   MIDDLE_MCP: 9,
   RING_MCP: 13,
@@ -41,9 +40,9 @@ export const HAND = {
   PINKY_MCP: 17
 };
 
-// Segments used to estimate depth. Each is measured both in world space
-// (metres) and in image space (pixels); the ratio gives Z. Several are used
-// and the median taken, so one badly-tracked landmark cannot dominate.
+// Segments used to seed the depth estimate. Each is measured both in world
+// space (metres) and in image space (pixels); the ratio gives Z. Several are
+// used and the median taken, so one badly-tracked landmark cannot dominate.
 const DEPTH_REFERENCE_PAIRS = [
   [HAND.INDEX_MCP, HAND.PINKY_MCP],
   [HAND.WRIST, HAND.INDEX_MCP],
@@ -51,8 +50,8 @@ const DEPTH_REFERENCE_PAIRS = [
   [HAND.WRIST, HAND.MIDDLE_MCP]
 ];
 
-const MIN_DEPTH_M = 0.08;
-const MAX_DEPTH_M = 2.5;
+export const MIN_DEPTH_M = 0.08;
+export const MAX_DEPTH_M = 2.5;
 
 function median(values) {
   if (values.length === 0) return null;
@@ -85,30 +84,26 @@ function solve3x3Symmetric(a00, a01, a02, a11, a12, a22, b0, b1, b2) {
   ];
 }
 
-export class HandPoseSolver {
+export class HandSolver {
   /**
    * @param {Object} options
    * @param {number} options.vFOV - Assumed vertical field of view of the webcam, in degrees.
    * @param {boolean} options.mirror - True when the video is displayed mirrored (selfie view).
-   * @param {number} options.fingerWidthCoeff - Calibration for finger width from the MCP row.
-   * @param {number} options.anchorAlongPhalanx - 0 = at the MCP joint, 1 = at the PIP joint.
    * @param {boolean} options.flipHandedness - Correct MediaPipe's mirror assumption if it disagrees.
    */
   constructor(options = {}) {
     this.options = {
       vFOV: 60,
       mirror: true,
-      fingerWidthCoeff: 0.72,
-      anchorAlongPhalanx: 0.45,
       flipHandedness: false,
       ...options
     };
 
     // Scratch objects — the solver runs every frame, so nothing is allocated here.
     this._world = Array.from({ length: 21 }, () => new THREE.Vector3());
-    this._fingerAxis = new THREE.Vector3();
-    this._palmNormal = new THREE.Vector3();
-    this._sideAxis = new THREE.Vector3();
+    this._primary = new THREE.Vector3();
+    this._normal = new THREE.Vector3();
+    this._side = new THREE.Vector3();
     this._a = new THREE.Vector3();
     this._b = new THREE.Vector3();
     this._basis = new THREE.Matrix4();
@@ -120,10 +115,7 @@ export class HandPoseSolver {
     Object.assign(this.options, partial);
   }
 
-  /**
-   * Focal length in pixels, expressed in the video's own pixel grid.
-   * @param {number} videoHeight
-   */
+  /** Focal length in pixels, in the video's own pixel grid. */
   focalLengthPx(videoHeight) {
     const vFOVRad = THREE.MathUtils.degToRad(this.options.vFOV);
     return (videoHeight / 2) / Math.tan(vFOVRad / 2);
@@ -135,14 +127,11 @@ export class HandPoseSolver {
    *
    * The video is displayed with `object-fit: cover`, so one axis is cropped.
    * The visible half-height in video pixels is (videoHeight * sy / 2), and the
-   * crop is symmetric about the principal point, so the render camera's
-   * vertical FOV follows directly from the same f_px used for the solve.
+   * crop is symmetric about the principal point, so the render camera's vertical
+   * FOV follows from the same f_px used for the solve.
    *
-   * Call this BEFORE solve() each frame — the old code applied FOV changes
-   * after the pose was computed, so the two disagreed by a frame.
-   *
-   * @param {THREE.PerspectiveCamera} camera
-   * @param {{videoWidth:number, videoHeight:number, canvasWidth:number, canvasHeight:number}} view
+   * Call this BEFORE solve() each frame — applying FOV changes afterwards leaves
+   * the pose and the projection a frame apart.
    */
   updateCamera(camera, view) {
     const { videoWidth, videoHeight, canvasWidth, canvasHeight } = view;
@@ -158,9 +147,7 @@ export class HandPoseSolver {
     camera.updateProjectionMatrix();
   }
 
-  /**
-   * Fraction of the video that remains visible on each axis under `object-fit: cover`.
-   */
+  /** Fraction of the video still visible on each axis under `object-fit: cover`. */
   coverScale({ videoWidth, videoHeight, canvasWidth, canvasHeight }) {
     const videoAspect = videoWidth / videoHeight;
     const canvasAspect = canvasWidth / canvasHeight;
@@ -170,14 +157,12 @@ export class HandPoseSolver {
   }
 
   /**
-   * Solve the ring pose for the first detected hand.
+   * Per-frame context shared by every product: converted world landmarks, metric
+   * depth of the hand centre, handedness and the camera constants.
    *
-   * @param {Object} results - MediaPipe HandLandmarkerResult.
-   * @param {{videoWidth:number, videoHeight:number, canvasWidth:number, canvasHeight:number}} view
-   * @returns {Object|null} { position, quaternion, fingerAxis, palmNormal, fingerWidth, depth, handedness }
-   *                        or null when there is nothing usable to solve.
+   * @returns {Object|null} null when there is nothing usable to solve.
    */
-  solve(results, view) {
+  prepare(results, view) {
     const landmarks = results?.landmarks?.[0];
     const worldLandmarks = results?.worldLandmarks?.[0];
     if (!landmarks || !worldLandmarks || landmarks.length < 21) return null;
@@ -186,13 +171,12 @@ export class HandPoseSolver {
     if (!videoWidth || !videoHeight) return null;
 
     const fPx = this.focalLengthPx(videoHeight);
-    const mirrorSign = this.options.mirror ? -1 : 1;
 
     // MediaPipe world space is X-right, Y-down, Z-toward-the-camera-negative.
-    // Three.js is X-right, Y-up, Z-toward-the-viewer. Note the mirror is NOT
-    // applied here: mirroring the basis vectors would turn the rotation matrix
-    // into a reflection (det = -1) and setFromRotationMatrix would return
-    // garbage. It is applied to the finished quaternion instead.
+    // Three.js is X-right, Y-up, Z-toward-the-viewer. The mirror is NOT applied
+    // here: mirroring basis vectors would turn the rotation matrix into a
+    // reflection (det = -1) and setFromRotationMatrix would return garbage. It
+    // is applied to the finished quaternion instead, in buildBasis().
     for (let i = 0; i < 21; i++) {
       const w = worldLandmarks[i];
       this._world[i].set(w.x, -w.y, -w.z);
@@ -201,56 +185,101 @@ export class HandPoseSolver {
     const depth = this.solveDepth(landmarks, worldLandmarks, fPx, videoWidth, videoHeight);
     if (depth === null) return null;
 
-    const handedness = this.resolveHandedness(results);
-
-    // The ring sits on the proximal phalanx, between the MCP and PIP joints.
-    const t = this.options.anchorAlongPhalanx;
-    const mcp = landmarks[HAND.RING_MCP];
-    const pip = landmarks[HAND.RING_PIP];
-    const anchorU = THREE.MathUtils.lerp(mcp.x, pip.x, t);
-    const anchorV = THREE.MathUtils.lerp(mcp.y, pip.y, t);
-
-    // worldLandmarks are centred on the hand, so a landmark's own world z is
-    // its offset from the hand centre along the view axis.
-    const anchorWorldZ = THREE.MathUtils.lerp(
-      worldLandmarks[HAND.RING_MCP].z,
-      worldLandmarks[HAND.RING_PIP].z,
-      t
-    );
-    const anchorDepth = THREE.MathUtils.clamp(depth + anchorWorldZ, MIN_DEPTH_M, MAX_DEPTH_M);
-
-    // Pinhole back-projection. Camera at the origin looking down -Z, so a point
-    // in front of the camera has a negative Z.
-    const px = anchorU * videoWidth;
-    const py = anchorV * videoHeight;
-    this._position.set(
-      mirrorSign * (px - videoWidth / 2) * anchorDepth / fPx,
-      -(py - videoHeight / 2) * anchorDepth / fPx,
-      -anchorDepth
-    );
-
-    const quaternion = this.solveOrientation(handedness, mirrorSign);
-    const fingerWidth = this.solveFingerWidth();
-
     return {
-      position: this._position,
-      quaternion,
-      fingerAxis: this._fingerAxis,
-      palmNormal: this._palmNormal,
-      fingerWidth,
-      depth: anchorDepth,
-      handedness
+      landmarks,
+      worldLandmarks,
+      world: this._world,
+      depth,
+      fPx,
+      view,
+      mirrorSign: this.options.mirror ? -1 : 1,
+      handedness: this.resolveHandedness(results)
     };
   }
 
   /**
-   * Metric depth of the hand centre, in metres.
+   * Pinhole back-projection of a normalized image point at a given metric depth.
+   * Camera at the origin looking down -Z, so a point in front has a negative Z.
    *
-   * For each reference segment, the world-space x/y components give the length
-   * the segment would project to if it were at unit depth; comparing that with
-   * the observed pixel length yields Z. Because the world landmarks already
-   * encode the segment's 3D orientation, this is foreshortening-free.
+   * @param {number} u - Normalized x in the video frame, [0,1].
+   * @param {number} v - Normalized y in the video frame, [0,1].
+   * @param {number} depth - Metres along the view axis.
+   * @param {Object} frame - Result of prepare().
+   * @param {THREE.Vector3} [target]
    */
+  backProject(u, v, depth, frame, target = this._position) {
+    const { videoWidth, videoHeight } = frame.view;
+    const px = u * videoWidth;
+    const py = v * videoHeight;
+    return target.set(
+      frame.mirrorSign * (px - videoWidth / 2) * depth / frame.fPx,
+      -(py - videoHeight / 2) * depth / frame.fPx,
+      -depth
+    );
+  }
+
+  /**
+   * Palm normal in unmirrored world space.
+   *
+   * The index→pinky sweep runs the opposite way on the two hands, so the cross
+   * product flips; without the handedness correction the product would sit
+   * rotated 180° on one hand.
+   */
+  palmNormal(handedness, target = this._normal) {
+    const W = this._world;
+    this._a.subVectors(W[HAND.INDEX_MCP], W[HAND.WRIST]);
+    this._b.subVectors(W[HAND.PINKY_MCP], W[HAND.WRIST]);
+    target.crossVectors(this._a, this._b);
+
+    if (target.lengthSq() < 1e-10) target.set(0, 0, 1);
+    else target.normalize();
+
+    if (handedness === 'Left') target.negate();
+    return target;
+  }
+
+  /**
+   * Orthonormal basis from a primary axis (local +Y) and a normal hint (local
+   * +Z), re-orthogonalized because anatomical axes are never exactly
+   * perpendicular. Mirroring is applied to the finished quaternion.
+   *
+   * Mutates `primary` and `normalHint` in place to the final mirrored axes, so
+   * callers get axes consistent with the returned rotation.
+   *
+   * @returns {THREE.Quaternion} internal instance — copy before storing.
+   */
+  buildBasis(primary, normalHint, mirrorSign) {
+    if (primary.lengthSq() < 1e-10) primary.set(0, 1, 0);
+    else primary.normalize();
+
+    this._side.crossVectors(primary, normalHint);
+    if (this._side.lengthSq() < 1e-10) {
+      // Degenerate: primary is parallel to the hint. Any perpendicular will do.
+      this._side.set(1, 0, 0).cross(primary);
+      if (this._side.lengthSq() < 1e-10) this._side.set(0, 0, 1).cross(primary);
+    }
+    this._side.normalize();
+    normalHint.crossVectors(this._side, primary).normalize();
+
+    this._basis.makeBasis(this._side, primary, normalHint);
+    this._quaternion.setFromRotationMatrix(this._basis);
+
+    if (mirrorSign < 0) {
+      // Conjugating a rotation by diag(-1, 1, 1) negates its y and z components.
+      this._quaternion.set(
+        this._quaternion.x,
+        -this._quaternion.y,
+        -this._quaternion.z,
+        this._quaternion.w
+      );
+      primary.x *= -1;
+      normalHint.x *= -1;
+    }
+
+    return this._quaternion;
+  }
+
+  /** Metric depth of the hand centre, in metres. */
   solveDepth(landmarks, worldLandmarks, fPx, videoWidth, videoHeight) {
     const initial = this.estimateDepthWeakPerspective(
       landmarks, worldLandmarks, fPx, videoWidth, videoHeight
@@ -266,10 +295,8 @@ export class HandPoseSolver {
 
   /**
    * First estimate, assuming both ends of a segment sit at the same depth.
-   *
-   * Several segments are used and the median taken, so one badly-tracked
-   * landmark cannot dominate. Good to a few percent when the hand faces the
-   * camera; refineDepth() removes the rest.
+   * Good to a few percent when the hand faces the camera; refineDepth() removes
+   * the rest.
    */
   estimateDepthWeakPerspective(landmarks, worldLandmarks, fPx, videoWidth, videoHeight) {
     const estimates = [];
@@ -301,14 +328,14 @@ export class HandPoseSolver {
   }
 
   /**
-   * Refine the hand-centre translation by minimizing reprojection error over
-   * all 21 landmarks — pose estimation with known 3D points and known
-   * intrinsics, i.e. the translation half of PnP (the rotation is already given
-   * by worldLandmarks).
+   * Refine the hand-centre translation by minimizing reprojection error over all
+   * 21 landmarks — pose estimation with known 3D points and known intrinsics,
+   * i.e. the translation half of PnP (the rotation is already given by
+   * worldLandmarks).
    *
-   * This matters because the weak-perspective estimate above treats a segment's
-   * two ends as being at the same depth. When the hand tilts toward the camera
-   * they are not, and the error is real: a 50° tilt reads ~8% too close. Each
+   * This matters because the weak-perspective estimate treats a segment's two
+   * ends as being at the same depth. When the hand tilts toward the camera they
+   * are not, and the error is real: a 50° tilt reads ~8% too close. Each
    * landmark projects as
    *
    *   u = cx + f * (X + wx) / (Z + wz)
@@ -384,69 +411,6 @@ export class HandPoseSolver {
     }
 
     return Z;
-  }
-
-  /**
-   * Orthonormal basis on the ring finger, built from world landmarks only.
-   *
-   * Y is the finger axis (the ring's hole points along it), Z is the palm
-   * normal, X completes the frame. The basis is re-orthogonalized because the
-   * finger axis and the palm normal are not exactly perpendicular in practice.
-   */
-  solveOrientation(handedness, mirrorSign) {
-    const W = this._world;
-
-    this._fingerAxis.subVectors(W[HAND.RING_PIP], W[HAND.RING_MCP]);
-    if (this._fingerAxis.lengthSq() < 1e-10) {
-      this._fingerAxis.set(0, 1, 0);
-    } else {
-      this._fingerAxis.normalize();
-    }
-
-    this._a.subVectors(W[HAND.INDEX_MCP], W[HAND.WRIST]);
-    this._b.subVectors(W[HAND.PINKY_MCP], W[HAND.WRIST]);
-    this._palmNormal.crossVectors(this._a, this._b);
-    if (this._palmNormal.lengthSq() < 1e-10) {
-      this._palmNormal.set(0, 0, 1);
-    } else {
-      this._palmNormal.normalize();
-    }
-
-    // The index→pinky sweep runs the opposite way on the two hands, so the
-    // cross product flips. Without this the ring would sit rotated 180° about
-    // the finger on one hand.
-    if (handedness === 'Left') this._palmNormal.negate();
-
-    this._sideAxis.crossVectors(this._fingerAxis, this._palmNormal).normalize();
-    this._palmNormal.crossVectors(this._sideAxis, this._fingerAxis).normalize();
-
-    this._basis.makeBasis(this._sideAxis, this._fingerAxis, this._palmNormal);
-    this._quaternion.setFromRotationMatrix(this._basis);
-
-    // Mirror the finished rotation about the YZ plane. Conjugating by
-    // diag(-1, 1, 1) negates the y and z quaternion components.
-    if (mirrorSign < 0) {
-      this._quaternion.set(
-        this._quaternion.x,
-        -this._quaternion.y,
-        -this._quaternion.z,
-        this._quaternion.w
-      );
-      this._fingerAxis.x *= -1;
-      this._palmNormal.x *= -1;
-    }
-
-    return this._quaternion;
-  }
-
-  /**
-   * Finger width in metres, measured from the hand itself rather than assumed.
-   * The MCP row spans three inter-finger gaps, so a gap is roughly a finger
-   * width; fingerWidthCoeff calibrates that approximation.
-   */
-  solveFingerWidth() {
-    const span = this._world[HAND.INDEX_MCP].distanceTo(this._world[HAND.PINKY_MCP]);
-    return (span / 3) * this.options.fingerWidthCoeff;
   }
 
   /**

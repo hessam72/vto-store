@@ -1,33 +1,36 @@
 /**
- * Ring Positioner
+ * Product Positioner — solve, offset, smooth, gate.
  *
- * Thin layer over HandPoseSolver: takes the solved metric pose, applies the
- * ring's own offset/rotation in finger-local space, smooths, and gates on
- * detection stability.
+ * Product-agnostic: the anatomy comes from the injected anchor (RingAnchor,
+ * WristAnchor, ...), so this file is the same for every product.
  *
- * All offsets are in millimetres in the finger frame:
- *   X = across the finger, Y = along it (towards the fingertip), Z = out of the palm.
- * They are applied in the finger's local frame, so they stay meaningful no
- * matter how the hand is oriented or how far away it is.
+ * Offsets are in millimetres in the product's local frame:
+ *   X across the body part, Y along it, Z out of the skin.
+ * They are applied in that frame, so they mean the same thing at any orientation
+ * or distance.
  */
 
 import * as THREE from 'three';
-import { HandPoseSolver } from './HandPoseSolver.js';
-import { Vector3Filter, QuaternionFilter } from '../utils/OneEuroFilter.js';
+import { HandSolver } from './HandSolver.js';
+import { Vector3Filter, QuaternionFilter } from './OneEuroFilter.js';
 
 const OFFSET_AXIS_INDEX = { X: 0, Y: 1, Z: 2 };
 const UNIT_Y = new THREE.Vector3(0, 1, 0);
 
-export class RingPositioner {
-  constructor(config) {
+export class ProductPositioner {
+  /**
+   * @param {Object} config - The product config (see any app's config.js).
+   * @param {Object} anchor - Supplies the anatomy; must implement solve(frame, solver)
+   *                          and setOptions(partial).
+   */
+  constructor(config, anchor) {
     this.config = config;
+    this.anchor = anchor;
     this.debugParams = null; // Set by DebugPanel
 
-    this.solver = new HandPoseSolver({
+    this.solver = new HandSolver({
       vFOV: config.camera.vFOV,
       mirror: config.camera.mirror,
-      fingerWidthCoeff: config.ring.fingerWidthCoeff,
-      anchorAlongPhalanx: config.ring.anchorAlongPhalanx,
       flipHandedness: config.camera.flipHandedness
     });
 
@@ -35,7 +38,7 @@ export class RingPositioner {
     this.positionFilter = new Vector3Filter(position.minCutoff, position.beta);
     this.rotationFilter = new QuaternionFilter(rotation.minCutoff, rotation.beta);
 
-    // Detection hysteresis, so a single dropped frame does not blink the ring.
+    // Detection hysteresis, so a single dropped frame does not blink the product.
     this.confidenceFrames = 0;
     this.isStable = false;
     this.lastHandedness = null;
@@ -52,12 +55,13 @@ export class RingPositioner {
    * @param {Object} results - MediaPipe HandLandmarkerResult.
    * @param {Object} view - { videoWidth, videoHeight, canvasWidth, canvasHeight }.
    * @param {number} timestampMs - Monotonic frame timestamp, for the filters.
-   * @returns {Object} { visible, position, rotation, fingerWidth, depth, ... }
+   * @returns {Object} { visible, position, rotation, width, thickness, depth, ... }
    */
   calculate(results, view, timestampMs) {
     this.syncDebugParams();
 
-    const pose = this.solver.solve(results, view);
+    const frame = this.solver.prepare(results, view);
+    const pose = frame ? this.anchor.solve(frame, this.solver) : null;
 
     if (!pose) {
       this.confidenceFrames = Math.max(0, this.confidenceFrames - 1);
@@ -77,7 +81,7 @@ export class RingPositioner {
     this.isStable = this.confidenceFrames >= hysteresisFrames;
     if (!this.isStable) return { visible: false };
 
-    // Ring offset, in millimetres, expressed in the finger's local frame.
+    // Fine offset, in millimetres, expressed in the product's local frame.
     this._offset
       .set(this.offsetParam('X'), this.offsetParam('Y'), this.offsetParam('Z'))
       .multiplyScalar(0.001)
@@ -95,38 +99,37 @@ export class RingPositioner {
       ? this.rotationFilter.filter(this._targetQuat, timestampMs)
       : this._targetQuat;
 
-    // Roll about the finger axis — which way round the gem sits. The GLB's own
-    // orientation is corrected once at load by ThreeRingScene.applyHoleAxis(),
-    // so local Y is already the finger axis by the time this is applied.
-    const rollDeg = this.debugParams?.rollDeg ?? this.config.ring.rollDeg;
+    // Roll about the primary axis — which way round the product sits. The GLB's
+    // own orientation is corrected once at load by VTOScene.applyBoreAxis(), so
+    // local Y is already the primary axis by the time this is applied.
+    const rollDeg = this.debugParams?.rollDeg ?? this.config.product.rollDeg;
     this._modelQuat.setFromAxisAngle(UNIT_Y, THREE.MathUtils.degToRad(rollDeg));
-
     this._finalQuat.copy(smoothedRotation).multiply(this._modelQuat);
 
     return {
       visible: true,
       position: this._smoothedPosition,
       rotation: this._finalQuat,
-      // Unrotated by the model quaternion — the occluder follows the finger,
-      // not the GLB's authoring frame.
-      fingerRotation: smoothedRotation,
-      fingerAxis: pose.fingerAxis,
-      palmNormal: pose.palmNormal,
-      fingerWidth: pose.fingerWidth,
+      // Not rotated by the roll — the occluder follows the body part, not the GLB.
+      bodyRotation: smoothedRotation,
+      primaryAxis: pose.primaryAxis,
+      normal: pose.normal,
+      width: pose.width,
+      thickness: pose.thickness,
       depth: pose.depth,
       handedness: pose.handedness
     };
   }
 
   offsetParam(axis) {
-    const fromDebug = this.debugParams?.[`ringOffset${axis}Mm`];
+    const fromDebug = this.debugParams?.[`offset${axis}Mm`];
     if (fromDebug !== undefined) return fromDebug;
-    return this.config.ring.offsetMm[OFFSET_AXIS_INDEX[axis]];
+    return this.config.product.offsetMm[OFFSET_AXIS_INDEX[axis]];
   }
 
   /**
-   * Push live debug values into the solver and filters. Runs before the solve
-   * so a parameter change takes effect on the same frame it is made.
+   * Push live debug values into the solver, anchor and filters. Runs before the
+   * solve so a parameter change takes effect on the same frame it is made.
    */
   syncDebugParams() {
     if (!this.debugParams) return;
@@ -135,10 +138,9 @@ export class RingPositioner {
     this.solver.setOptions({
       vFOV: p.vFOV,
       mirror: p.mirror,
-      fingerWidthCoeff: p.fingerWidthCoeff,
-      anchorAlongPhalanx: p.anchorAlongPhalanx,
       flipHandedness: p.flipHandedness
     });
+    this.anchor.setOptions(p);
 
     this.positionFilter.setParams(p.positionMinCutoff, p.positionBeta);
     this.rotationFilter.setParams(p.rotationMinCutoff, p.rotationBeta);
