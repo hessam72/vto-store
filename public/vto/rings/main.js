@@ -43,7 +43,7 @@ const _settings = {
 modelQuaternion: [0, 0, 0.707, 0.707],
 
   // debug flags:
-  debugDisplayLandmarks: false,
+  debugDisplayLandmarks: true,  // Show hand landmarks as red points
   debugMeshMaterial: false,
   debugOccluder: false
 };
