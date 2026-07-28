@@ -283,18 +283,27 @@ export class ThreeRingScene {
       if (this.debugMarker && transform.rawLandmark) {
         this.debugMarker.visible = true;
 
-        // Convert MediaPipe normalized coords to screen position
-        // MediaPipe: x,y in [0,1], convert to NDC [-1,1]
-        const x = (transform.rawLandmark.x * 2) - 1;  // 0-1 → -1 to 1
-        const y = -((transform.rawLandmark.y * 2) - 1); // 0-1 → -1 to 1, flip Y
+        // Convert MediaPipe normalized coords [0,1] to centered [-0.5, 0.5]
+        const normX = transform.rawLandmark.x - 0.5;
+        const normY = -(transform.rawLandmark.y - 0.5); // Flip Y for Three.js
 
-        // Position marker at fixed distance from camera (screen overlay)
-        const distance = 5; // Close to camera for 2D overlay effect
-        const pos = new THREE.Vector3(x, y, -distance);
-        pos.unproject(this.camera);
+        // Use same distance calculation as GLB for comparison
+        const depthScale = this.debugParams?.globalScale ?? 1.0;
+        const depthMult = this.debugParams?.depthMultiplier ?? 1.0;
+        const distance = depthScale + (transform.rawLandmark.z * depthScale * depthMult);
 
+        // Calculate camera frustum size at distance
+        const vFOV = this.camera.fov * (Math.PI / 180);
+        const height = 2 * Math.tan(vFOV / 2) * distance;
+        const width = height * this.camera.aspect;
+
+        // Map normalized coords to frustum at distance
+        const x = normX * width;
+        const y = normY * height;
+        const z = this.camera.position.z - distance;
+
+        const pos = new THREE.Vector3(x, y, z);
         this.debugMarker.position.copy(pos);
-        // Make circle face camera
         this.debugMarker.lookAt(this.camera.position);
 
         // Log positions for debugging
@@ -303,7 +312,7 @@ export class ThreeRingScene {
           y: transform.rawLandmark.y.toFixed(3),
           z: transform.rawLandmark.z.toFixed(3)
         });
-        console.log('Ring debug dot (canvas pixels):', {
+        console.log('MediaPipe Yellow Dot (canvas pixels):', {
           x: (transform.rawLandmark.x * this.canvas.width).toFixed(1),
           y: (transform.rawLandmark.y * this.canvas.height).toFixed(1)
         });

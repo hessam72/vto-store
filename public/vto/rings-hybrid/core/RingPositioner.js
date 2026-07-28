@@ -84,19 +84,26 @@ export class RingPositioner {
     const ringDIP = landmarks[this.config.landmarks.ringDIP];   // Top (15)
     const ringTIP = landmarks[this.config.landmarks.ringTIP];   // Tip (16)
 
-    // Calculate base position using NDC unprojection (same as blue dot)
-    // Convert MediaPipe normalized coords [0,1] to NDC [-1,1]
-    const x = (ringMCP.x * 2) - 1;
-    const y = -((ringMCP.y * 2) - 1); // Flip Y
+    // Calculate base position using camera frustum mapping (AR overlay)
+    // Convert MediaPipe normalized coords [0,1] to centered [-0.5, 0.5]
+    const normX = ringMCP.x - 0.5;
+    const normY = -(ringMCP.y - 0.5); // Flip Y for Three.js
 
-    // Use MediaPipe's z-depth, scaled and adjusted
-    const depthScale = this.debugParams?.globalScale ?? 5.0;
+    // Calculate camera frustum size at distance
+    const depthScale = this.debugParams?.globalScale ?? 1.0;
     const depthMult = this.debugParams?.depthMultiplier ?? 1.0;
     const distance = depthScale + (ringMCP.z * depthScale * depthMult);
 
-    // Unproject from screen space to world space
-    const basePosition = new THREE.Vector3(x, y, -distance);
-    basePosition.unproject(camera);
+    const vFOV = camera.fov * (Math.PI / 180); // Convert to radians
+    const height = 2 * Math.tan(vFOV / 2) * distance;
+    const width = height * camera.aspect;
+
+    // Map normalized coords to frustum at distance
+    const x = normX * width;
+    const y = normY * height;
+    const z = camera.position.z - distance;
+
+    const basePosition = new THREE.Vector3(x, y, z);
 
     // Calculate finger orientation vector (MCP → TIP)
     const fingerStart = new THREE.Vector3(
