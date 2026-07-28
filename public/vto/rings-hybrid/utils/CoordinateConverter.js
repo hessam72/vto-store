@@ -32,7 +32,7 @@ export class CoordinateConverter {
    */
   static normalizedToThreeJS(landmark, scale = 1) {
     return new THREE.Vector3(
-      (-landmark.x + 0.5) * scale,  // Center and invert X
+      (landmark.x - 0.5) * scale,   // Center X (follow hand movement)
       (-landmark.y + 0.5) * scale,  // Center and invert Y
       -landmark.z * scale           // Negate Z (depth)
     );
