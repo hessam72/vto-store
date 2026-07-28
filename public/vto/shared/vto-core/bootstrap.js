@@ -108,7 +108,7 @@ function handleResults(app, results) {
     // The fit lives on the scene, not the pose. Surfacing it turns "it looks too
     // small" into a number next to the limb it is supposed to fit.
     app.debugPanel.setReadout(transform.visible
-      ? { ...transform, fittedInnerM: app.scene.fittedInnerDiameter(transform.width) }
+      ? { ...transform, fittedOuterM: app.scene.fittedOuterDiameter(transform.width) }
       : transform);
   }
 

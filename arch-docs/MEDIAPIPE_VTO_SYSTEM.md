@@ -214,13 +214,27 @@ For each candidate axis, project every vertex onto the perpendicular plane and
 take radial distances from the axis:
 
 ```js
-innerRadius = percentile(radii, 0.01);          // the hole — what the fit needs
-outerRadius = percentile(radii, 0.99);
-coverage    = occupiedAngularBins / 16;          // does material surround the centre?
+// Sample the SURFACE by area, not the vertices. Then, per angular sector:
+innerRadius = median(sectorMinima);      // the hole — what the fit needs
+outerRadius = median(sectorMaxima);
+coverage    = occupiedSectors / 16;       // does material surround the centre?
 score       = (innerRadius / outerRadius) × coverage;
 ```
 
-Percentiles rather than min/max, so one stray vertex cannot define the fit.
+**Sample the surface by area, never the vertices.** Two separate errors otherwise,
+and both under-size the product. Vertex counts are wildly uneven — engraving,
+stones and bezels carry most of a jewellery mesh while the plain inner surface,
+the part that touches the limb, can be a fraction of a percent — so any
+per-vertex statistic is dominated by the outside. And a sparsely tessellated
+inner surface has no vertex at all in most angular sectors, so the hole goes
+unseen exactly where it matters. Area weighting fixes both: one big plain
+triangle yields many samples, a thousand tiny engraving triangles yield as many
+as their area deserves.
+
+Then take **one value per angular sector** rather than a percentile over samples,
+so sector statistics do not re-introduce a density weighting. Medians across
+sectors, so a clasp bar crossing the bore or a gem occupying a few sectors is
+discarded.
 
 **Both factors are needed.** Hole size alone is not enough: a torus seen *edge-on*
 also has empty space in the middle of its projection — two blobs either side — so
@@ -229,13 +243,21 @@ the way *around* the centre. Measured on synthetic models, the combined score is
 0.35–0.93 for the true bore against 0.09–0.16 for every wrong axis: a clean
 decision, not a marginal one.
 
-**Find the bore's centre, not the box's.** A clasp, a charm or a solitaire sits off
-to one side and drags the bbox centre off the bore, after which the hole is
-measured about the wrong axis and reads as nothing. Seed from the *median* of the
-projected coordinates (robust to a minority of outlying geometry), then hill-climb
-to maximize the hole radius, clamped to a neighbourhood of the seed — a centre
-that wanders far from the model has found empty space beside the product, not its
-bore. Use that same centre to place the pivot, or the product orbits the limb
+**Find the bore's centre by searching, not by seeding.** A clasp, a charm or a
+solitaire sits off to one side and drags the bounding-box centre off the bore,
+after which the hole is measured about the wrong axis and reads as nothing. The
+coordinate median is no safer once samples are area-weighted, because a large gem
+can carry more surface area than the whole band. Any seed-and-refine scheme
+inherits the bias, so run a coarse grid over the section and hill-climb from the
+best cell.
+
+**Gate the search on enclosure.** Hole radius alone is an unbounded objective:
+travel far enough from the model and every sample is distant, so "the hole" grows
+without limit and the search escapes to infinity. Only points with coverage above
+~0.85 — material in most directions — are candidates at all. That makes the
+problem well posed and is the same signal that rejects an open watch.
+
+Use the found centre to place the pivot too, or the product orbits the limb
 instead of encircling it.
 
 **Fall back when the shape is not a loop.** An open watch — a case plus two strap
@@ -472,5 +494,7 @@ Symptoms observed during development, with causes, since several are misleading:
 | Every watch looks the same size on every wrist | Absolute-sized product put through the fit-driven path |
 | Product invisible, "inside" the limb | Fit derived from the bounding box, so the hole ended up narrower than the limb and the occluder swallowed it |
 | Product too small, band thickness matters | Same cause — fit the measured hole, not the outer diameter |
+| Product too small on a detailed model only | Measuring vertices rather than sampling the surface by area: dense outer decoration outvotes a sparse inner surface |
+| Fit changes when the same model is re-exported denser | Same cause — the measure must be density-independent |
 | Product orbits the limb instead of encircling it | Pivot centred on the bounding box rather than on the measured bore |
 | Watch tilts off the arm when the wrist bends | Hand-only forearm axis; inherent, see the flexion table |

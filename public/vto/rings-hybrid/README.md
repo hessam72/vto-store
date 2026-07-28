@@ -80,8 +80,9 @@ bootstrap.js           app wiring and render loop
 - **Sizing fits the hole, not the outside.** A bounding box cannot see a hole, and
   fitting the outer diameter leaves the bore narrower than the finger by twice the
   band thickness. `boreDiameterRatio` is clearance on the finger (~1.05), so band
-  thickness no longer affects the fit. The panel's "Fitted hole" readout should
-  always sit just above the measured finger width.
+  thickness no longer affects the fit. The panel's "Fitted outer" readout must
+  always exceed the measured finger width — the fitted *hole* is
+  `width x ratio` by algebra and so can never reveal a bad measurement.
 - **Mirroring:** the video is CSS-mirrored (selfie view) and the solver mirrors
   the 3D to match. The mirror is applied to the finished quaternion, not to the
   basis vectors — negating a basis vector would make the matrix a reflection

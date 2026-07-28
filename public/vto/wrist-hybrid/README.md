@@ -128,7 +128,9 @@ applied to the measured hole, so band thickness does not affect the fit. Fitting
 the *outer* diameter instead — what a bounding box gives you — leaves the hole
 narrower than the wrist by twice the band: on an 8 mm band that is 13 mm too
 small, the bracelet sits inside the arm, and the occluder hides it. The panel's
-"Fitted hole" readout must always exceed the measured wrist width.
+"Fitted outer" readout must always exceed the measured wrist width. (The fitted
+*hole* is `wristWidth x ratio` by algebra, so it can never reveal a bad
+measurement — which is why the readout reports the outer diameter instead.)
 
 ## Occlusion
 

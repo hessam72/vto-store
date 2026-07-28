@@ -36,71 +36,145 @@ function medianOf(values) {
   return percentile(sorted, 0.5);
 }
 
-/** 1st-percentile radius about a candidate centre — i.e. how big the hole is. */
-function holeRadius(a, b, cx, cy) {
-  const radii = new Float64Array(a.length);
-  for (let i = 0; i < a.length; i++) radii[i] = Math.hypot(a[i] - cx, b[i] - cy);
-  radii.sort();
-  return percentile(radii, 0.01);
-}
-
-const COVERAGE_BINS = 16;
+const RADIAL_BINS = 16;
 
 /**
- * Fraction of directions around a centre that have geometry in them.
+ * Radial profile about a candidate centre, measured PER ANGULAR SECTOR.
  *
- * This is what separates a bore from a coincidental gap. A torus seen edge-on
- * also has empty space in the middle of its projection — two blobs either side —
- * so a hole-size measure alone rates the wrong axis just as highly as the right
- * one. But only the true bore has material all the way *around* the centre:
- * coverage is 1.0 through the bore and ~0.1 edge-on.
+ * Taking a percentile over per-vertex radii assumes vertex density is uniform
+ * around the section. Real jewellery is the opposite: engraving, stones and
+ * bezels put the overwhelming majority of vertices on the outer surface, while
+ * the plain inner surface — the part that actually touches the limb — can be a
+ * fraction of a percent of the mesh. A 1st-percentile radius then lands above
+ * the true hole, the fit comes out too small, and the product renders inside the
+ * limb. Binning by angle and taking one value per sector removes the density
+ * weighting: a sector counts the same whether it holds four vertices or four
+ * thousand.
  *
- * It also correctly rejects an open watch, whose case sits on one side of the
- * wrist rather than encircling it — which is why watches fall back to the bbox
- * policy instead of trusting a bore that is not there.
+ *  - `innerRadius` — median of per-sector minima. Because the input samples the
+ *    surface by area rather than its vertices, every sector the inner surface
+ *    passes through really does have samples on it, so the median is both robust
+ *    (a clasp bar crossing the bore affects a few sectors and is discarded) and
+ *    sensitive (material near the axis in most sectors correctly reads as "no
+ *    bore here", which is what keeps an open watch from claiming one).
+ *  - `outerRadius` — median of per-sector maxima, so a charm or a gem occupying
+ *    a few sectors does not inflate it.
+ *  - `coverage` — fraction of sectors holding any geometry. This is what
+ *    separates a bore from a coincidental gap: a torus seen edge-on also has
+ *    empty space in the middle of its projection, two blobs either side, so a
+ *    hole-size measure alone rates the wrong axis just as highly. Only a true
+ *    bore has material all the way *around* the centre — coverage is 1.0 through
+ *    the bore and ~0.1 edge-on. It also correctly rejects an open watch, whose
+ *    case sits on one side of the wrist rather than encircling it.
  */
-function angularCoverage(a, b, cx, cy) {
-  const bins = new Uint8Array(COVERAGE_BINS);
+function radialProfile(a, b, cx, cy) {
+  const minima = new Float64Array(RADIAL_BINS).fill(Infinity);
+  const maxima = new Float64Array(RADIAL_BINS).fill(-Infinity);
+
   for (let i = 0; i < a.length; i++) {
-    const angle = Math.atan2(b[i] - cy, a[i] - cx);
-    const bin = Math.floor(((angle + Math.PI) / (2 * Math.PI)) * COVERAGE_BINS) % COVERAGE_BINS;
-    bins[bin] = 1;
+    const dx = a[i] - cx;
+    const dy = b[i] - cy;
+    const radius = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx);
+    const bin = Math.min(
+      RADIAL_BINS - 1,
+      Math.floor(((angle + Math.PI) / (2 * Math.PI)) * RADIAL_BINS)
+    );
+    if (radius < minima[bin]) minima[bin] = radius;
+    if (radius > maxima[bin]) maxima[bin] = radius;
   }
-  return bins.reduce((sum, occupied) => sum + occupied, 0) / COVERAGE_BINS;
+
+  const sectorMinima = [];
+  const sectorMaxima = [];
+  for (let bin = 0; bin < RADIAL_BINS; bin++) {
+    if (minima[bin] === Infinity) continue;
+    sectorMinima.push(minima[bin]);
+    sectorMaxima.push(maxima[bin]);
+  }
+  if (sectorMinima.length === 0) return { innerRadius: 0, outerRadius: 0, coverage: 0 };
+
+  sectorMinima.sort((p, q) => p - q);
+  sectorMaxima.sort((p, q) => p - q);
+
+  return {
+    innerRadius: percentile(sectorMinima, 0.5),
+    outerRadius: percentile(sectorMaxima, 0.5),
+    coverage: sectorMinima.length / RADIAL_BINS
+  };
+}
+
+/** Hole size about a candidate centre — what the centre search maximizes. */
+function holeRadius(a, b, cx, cy) {
+  return radialProfile(a, b, cx, cy).innerRadius;
 }
 
 /**
  * Locate the bore's centre in a projection plane.
  *
- * The bounding-box centre is not good enough: a clasp, a charm or a solitaire
- * sits off to one side and drags the bbox centre away from the bore, after which
- * the "hole" is measured about the wrong axis and reads as almost nothing.
+ * No summary statistic makes a safe seed. The bounding-box centre is dragged off
+ * the bore by a clasp or a solitaire, and so is the coordinate median once the
+ * samples are area-weighted, because a large gem can carry more surface area
+ * than the whole band. Seeding from either and refining locally inherits the
+ * bias.
  *
- * The median of the projected coordinates is a robust seed (a minority of
- * outlying geometry barely moves it), then a short hill-climb maximizes the hole
- * radius. The search is clamped to a neighbourhood of the seed: an off-centre
- * clasp displaces the bore by a little, so a centre that has wandered far from
- * the body of the model has found empty space outside the product, not its bore.
+ * So search rather than seed: a coarse grid over the section, then a hill-climb
+ * from the best cell. The objective is the hole radius itself, so the search is
+ * looking directly for "the point the material surrounds", which is the bore by
+ * definition and does not care what else the model carries. The grid runs on a
+ * subsample — locating the centre needs far fewer points than measuring it.
  */
+const CENTRE_GRID = 9;
+const CENTRE_SEARCH_STRIDE = 4;
+// A bore centre must be surrounded by material. Below this the candidate is not
+// inside a hole, so its "hole radius" is meaningless.
+const ENCLOSURE_MIN = 0.85;
+
 function findBoreCentre(a, b, extent) {
-  const seedX = medianOf(a);
-  const seedY = medianOf(b);
-  const limit = extent * 0.25;
+  // Subsample for the search; the final profile is measured on everything.
+  const sa = [];
+  const sb = [];
+  for (let i = 0; i < a.length; i += CENTRE_SEARCH_STRIDE) {
+    sa.push(a[i]);
+    sb.push(b[i]);
+  }
 
-  let cx = seedX;
-  let cy = seedY;
-  let best = holeRadius(a, b, cx, cy);
-  let step = extent * 0.1;
+  // Hole radius alone is an unbounded objective — travel far enough from the
+  // model and every sample is distant, so "the hole" grows without limit. The
+  // enclosure gate is what makes it well posed: only points the geometry
+  // surrounds are candidates at all.
+  const score = (x, y) => {
+    const { innerRadius, coverage } = radialProfile(sa, sb, x, y);
+    return coverage >= ENCLOSURE_MIN ? innerRadius : -1;
+  };
 
+  const span = extent * 0.4;
+  let cx = 0;
+  let cy = 0;
+  let best = score(0, 0);
+
+  for (let i = 0; i < CENTRE_GRID; i++) {
+    for (let j = 0; j < CENTRE_GRID; j++) {
+      const x = -span + (2 * span * i) / (CENTRE_GRID - 1);
+      const y = -span + (2 * span * j) / (CENTRE_GRID - 1);
+      const value = score(x, y);
+      if (value > best) {
+        best = value;
+        cx = x;
+        cy = y;
+      }
+    }
+  }
+
+  let step = (2 * span) / (CENTRE_GRID - 1);
   for (let round = 0; round < 6; round++) {
     let improved = false;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
       const nx = cx + dx * step;
       const ny = cy + dy * step;
-      if (Math.hypot(nx - seedX, ny - seedY) > limit) continue;
-      const radius = holeRadius(a, b, nx, ny);
-      if (radius > best) {
-        best = radius;
+      if (Math.abs(nx) > span || Math.abs(ny) > span) continue;
+      const value = score(nx, ny);
+      if (value > best) {
+        best = value;
         cx = nx;
         cy = ny;
         improved = true;
@@ -108,12 +182,88 @@ function findBoreCentre(a, b, extent) {
     }
     if (!improved) step *= 0.5;
   }
-  return { cx, cy, innerRadius: best };
+
+  return { cx, cy, innerRadius: holeRadius(a, b, cx, cy) };
 }
 
-// Cap the vertex count used for measurement; a dense GLB does not measure any
-// better than a well-spread sample of it, and the hill-climb is O(rounds x N).
-const MEASURE_MAX_VERTICES = 20000;
+// Sample budget for the surface measurement. A denser GLB does not measure any
+// better than a well-spread sample of it, and the centre search is O(rounds x N).
+const MEASURE_SAMPLES = 20000;
+
+// Deterministic stratified barycentric offsets, so a model always measures the
+// same. Enough spread that a large triangle still lands in several sectors.
+const BARYCENTRIC = [
+  [1 / 3, 1 / 3], [0.2, 0.2], [0.6, 0.2], [0.2, 0.6],
+  [0.1, 0.45], [0.45, 0.1], [0.45, 0.45], [0.7, 0.15]
+];
+
+/**
+ * Sample points across the model's SURFACE, weighted by area.
+ *
+ * Reading vertices directly gets both the density and the sampling wrong. Real
+ * jewellery puts most of its vertices on decorated outer surfaces, so a
+ * vertex-based statistic is dominated by the outside; and a sparsely tessellated
+ * inner surface has no vertex at all in most angular sectors, so the hole goes
+ * unseen exactly where it matters. Area-weighted sampling fixes both: a big
+ * plain triangle on the inner surface yields many samples, a thousand tiny
+ * triangles of engraving yield about as many as their area deserves.
+ *
+ * @returns {number[]|null} flat [x, y, z, ...] relative to `origin`.
+ */
+function sampleSurface(model, origin, THREE) {
+  const triangles = [];
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const ab = new THREE.Vector3();
+  const ac = new THREE.Vector3();
+  let totalArea = 0;
+
+  model.updateMatrixWorld(true);
+  model.traverse((child) => {
+    const geometry = child.isMesh && child.geometry;
+    const position = geometry?.getAttribute('position');
+    if (!position) return;
+
+    const index = geometry.getIndex();
+    const count = index ? index.count : position.count;
+    for (let i = 0; i + 2 < count; i += 3) {
+      const [i0, i1, i2] = index
+        ? [index.getX(i), index.getX(i + 1), index.getX(i + 2)]
+        : [i, i + 1, i + 2];
+      a.fromBufferAttribute(position, i0).applyMatrix4(child.matrixWorld);
+      b.fromBufferAttribute(position, i1).applyMatrix4(child.matrixWorld);
+      c.fromBufferAttribute(position, i2).applyMatrix4(child.matrixWorld);
+
+      const area = ab.subVectors(b, a).cross(ac.subVectors(c, a)).length() / 2;
+      if (area <= 0) continue;
+      totalArea += area;
+      triangles.push([a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, area]);
+    }
+  });
+
+  if (triangles.length === 0 || totalArea === 0) return null;
+
+  const points = [];
+  for (const [ax, ay, az, bx, by, bz, cx, cy, cz, area] of triangles) {
+    const wanted = Math.max(1, Math.round((area / totalArea) * MEASURE_SAMPLES));
+    for (let s = 0; s < wanted; s++) {
+      // Cycle the stratified offsets; beyond them, jitter deterministically so a
+      // very large triangle keeps spreading rather than repeating a few spots.
+      const [u0, v0] = BARYCENTRIC[s % BARYCENTRIC.length];
+      const jitter = Math.floor(s / BARYCENTRIC.length) * 0.6180339887;
+      let u = (u0 + jitter) % 1;
+      let v = (v0 + jitter * 0.7548776662) % 1;
+      if (u + v > 1) { u = 1 - u; v = 1 - v; }
+      points.push(
+        ax + (bx - ax) * u + (cx - ax) * v - origin.x,
+        ay + (by - ay) * u + (cy - ay) * v - origin.y,
+        az + (bz - az) * u + (cz - az) * v - origin.z
+      );
+    }
+  }
+  return points;
+}
 
 /**
  * Measure the model about each candidate axis by looking at its actual vertices.
@@ -143,50 +293,26 @@ function measureModel(model, THREE) {
   const box = new THREE.Box3().setFromObject(model);
   const centre = box.getCenter(new THREE.Vector3());
   const extents = box.getSize(new THREE.Vector3());
-  const points = { x: [], y: [], z: [] };
-  const vertex = new THREE.Vector3();
-
-  // Total first, so the sample is spread across the whole model rather than
-  // taken entirely from whichever mesh happens to come first.
-  let total = 0;
-  model.updateMatrixWorld(true);
-  model.traverse((child) => {
-    const position = child.isMesh && child.geometry?.getAttribute('position');
-    if (position) total += position.count;
-  });
-  if (total === 0) return null;
-
-  const stride = Math.max(1, Math.ceil(total / MEASURE_MAX_VERTICES));
-  let seen = 0;
-  model.traverse((child) => {
-    const position = child.isMesh && child.geometry?.getAttribute('position');
-    if (!position) return;
-    for (let i = 0; i < position.count; i++, seen++) {
-      if (seen % stride !== 0) continue;
-      vertex.fromBufferAttribute(position, i).applyMatrix4(child.matrixWorld).sub(centre);
-      points.x.push(vertex.y, vertex.z);
-      points.y.push(vertex.x, vertex.z);
-      points.z.push(vertex.x, vertex.y);
-    }
-  });
+  const samples = sampleSurface(model, centre, THREE);
+  if (!samples) return null;
 
   const measured = {};
   for (const axis of AXES) {
-    const flat = points[axis];
+    // Project onto the plane perpendicular to this axis.
     const a = [];
     const b = [];
-    for (let i = 0; i < flat.length; i += 2) {
-      a.push(flat[i]);
-      b.push(flat[i + 1]);
+    for (let i = 0; i < samples.length; i += 3) {
+      const [x, y, z] = [samples[i], samples[i + 1], samples[i + 2]];
+      if (axis === 'x') { a.push(y); b.push(z); }
+      else if (axis === 'y') { a.push(x); b.push(z); }
+      else { a.push(x); b.push(y); }
     }
 
     const perpendicular = AXES.filter((other) => other !== axis);
     const extent = Math.max(extents[perpendicular[0]], extents[perpendicular[1]]);
     const { cx, cy, innerRadius } = findBoreCentre(a, b, extent);
 
-    const radii = a.map((value, i) => Math.hypot(value - cx, b[i] - cy)).sort((p, q) => p - q);
-    const outerRadius = percentile(radii, 0.99);
-    const coverage = angularCoverage(a, b, cx, cy);
+    const { outerRadius, coverage } = radialProfile(a, b, cx, cy);
 
     measured[axis] = {
       centre: [cx, cy],
@@ -547,9 +673,18 @@ export class VTOScene {
     return (width * ratio) / this.modelInnerDiameter;
   }
 
-  /** Rendered inner diameter in metres, for the debug readout. */
-  fittedInnerDiameter(width) {
-    return this.modelInnerDiameter * this.fitScale(width);
+  /**
+   * Rendered OUTER diameter in metres — what is actually on screen.
+   *
+   * Deliberately not the inner diameter: that one is
+   * `modelInnerDiameter x (width x ratio) / modelInnerDiameter`, i.e. exactly
+   * `width x ratio` whatever the model does, so it can never reveal a bad
+   * measurement. The outer diameter carries the model through, and for a
+   * fit-driven product it must exceed the limb width or the product is inside
+   * the limb.
+   */
+  fittedOuterDiameter(width) {
+    return this.modelOuterDiameter * this.fitScale(width);
   }
 
   /**
@@ -572,10 +707,28 @@ export class VTOScene {
     }
 
     if (this.productPivot) {
+      const scale = this.fitScale(transform.width);
       this.productPivot.visible = true;
       this.productPivot.position.copy(transform.position);
       this.productPivot.quaternion.copy(transform.rotation);
-      this.productPivot.scale.setScalar(this.fitScale(transform.width));
+      this.productPivot.scale.setScalar(scale);
+
+      // Report the fit once, when a limb measurement first exists. Model size
+      // and limb size are independent inputs, so seeing both alongside the
+      // result is what makes a bad fit attributable rather than mysterious.
+      if (!this._loggedFit) {
+        this._loggedFit = true;
+        const mm = (metres) => (metres * 1000).toFixed(1);
+        console.log(
+          `Fit | limb ${mm(transform.width)}mm | model hole ${mm(this.modelInnerDiameter)} ` +
+          `outer ${mm(this.modelOuterDiameter)} (model units) | scale ${scale.toFixed(4)} ` +
+          `| rendered hole ${mm(this.modelInnerDiameter * scale)}mm ` +
+          `outer ${mm(this.modelOuterDiameter * scale)}mm` +
+          (this.config.product.sizing.mode === 'fit' && this.modelOuterDiameter * scale <= transform.width
+            ? '  <-- OUTER IS INSIDE THE LIMB, the product will be hidden by the occluder'
+            : '')
+        );
+      }
     }
 
     if (this.occluderMesh) {

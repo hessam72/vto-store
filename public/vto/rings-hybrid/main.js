@@ -45,9 +45,9 @@ startVTO({
     readouts: [
       { key: 'depthCm', name: 'Depth (cm)', format: (t) => (t.depth * 100).toFixed(1) },
       { key: 'fingerWidthMm', name: 'Finger width (mm)', format: (t) => (t.width * 1000).toFixed(1) },
-      // Should sit just above the finger width; if it is below, the ring is
-      // inside the finger and the occluder will eat it.
-      { key: 'fittedHoleMm', name: 'Fitted hole (mm)', format: (t) => (t.fittedInnerM * 1000).toFixed(1) },
+      // Must exceed the finger width, or the ring is inside the finger and the
+      // occluder eats it. Unlike the fitted hole, this reflects the model.
+      { key: 'fittedOuterMm', name: 'Fitted outer (mm)', format: (t) => (t.fittedOuterM * 1000).toFixed(1) },
       { key: 'handedness', name: 'Hand', format: (t) => t.handedness }
     ]
   }

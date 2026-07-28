@@ -12,6 +12,10 @@
 
 import GUI from 'lil-gui';
 
+// Bump whenever a parameter's MEANING changes, even if its name does not.
+// Saved presets from an older schema are discarded rather than reinterpreted.
+const SCHEMA_VERSION = 2;
+
 export const COMMON_DEFAULTS = {
   // Camera model
   vFOV: 60,
@@ -146,9 +150,24 @@ export class DebugPanel {
     try {
       const saved = localStorage.getItem(this.options.storageKey);
       if (!saved) return {};
-      // Only keep keys that still exist, so a stale entry cannot reintroduce a
-      // parameter that no longer means anything.
       const parsed = JSON.parse(saved);
+
+      // Filtering by key presence is not enough. `boreDiameterRatio` kept its
+      // name while its meaning changed from "multiplier on the outer diameter"
+      // to "clearance on the hole", and a saved 1.15 then silently overrode the
+      // new default — the config change appeared to do nothing. Version the
+      // payload so changing what a parameter MEANS invalidates old presets, not
+      // just adding or removing one.
+      if (parsed.schemaVersion !== SCHEMA_VERSION) {
+        console.warn(
+          `Discarding saved debug params (schema ${parsed.schemaVersion ?? 'none'} ` +
+          `!= ${SCHEMA_VERSION}); parameter meanings have changed.`
+        );
+        localStorage.removeItem(this.options.storageKey);
+        return {};
+      }
+
+      // Still drop keys that no longer exist at all.
       return Object.fromEntries(
         Object.entries(parsed).filter(([key]) => key in this.defaults)
       );
@@ -159,7 +178,10 @@ export class DebugPanel {
   }
 
   writeStorage() {
-    localStorage.setItem(this.options.storageKey, JSON.stringify(this.params));
+    localStorage.setItem(
+      this.options.storageKey,
+      JSON.stringify({ ...this.params, schemaVersion: SCHEMA_VERSION })
+    );
   }
 
   toggle() {
