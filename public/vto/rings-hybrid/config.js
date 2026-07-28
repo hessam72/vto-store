@@ -37,10 +37,14 @@ export const RingConfig = {
     // X across the finger, Y along it toward the tip, Z out of the palm.
     offsetMm: [0, 0, 0],
 
-    // Corrects however the GLB is authored, applied after the finger rotation.
-    // The solver's Y axis runs along the finger, so a ring modelled lying flat
-    // in the XZ plane needs no correction.
-    modelQuaternion: [0, 0, 0, 1],
+    // Which axis the ring's hole runs along in the GLB. The solver's +Y is the
+    // finger axis, so the model is rotated to match. 'auto' takes the narrowest
+    // bounding-box axis, which for a ring is always the hole; override with
+    // 'x' / 'y' / 'z' if a model is shaped unusually enough to fool that.
+    holeAxis: 'auto',
+
+    // Rotation about the finger axis, in degrees — where the gem ends up.
+    rollDeg: 0,
 
     // Finger width is measured from the hand: the index→pinky MCP row spans
     // three inter-finger gaps, and this calibrates a gap to a finger width.

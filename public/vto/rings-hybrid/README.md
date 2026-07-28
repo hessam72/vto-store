@@ -62,6 +62,12 @@ debug/
 - **Finger frame:** X across the finger, Y along it toward the tip, Z out of the
   palm. `ring.offsetMm` is expressed in this frame, so it means the same thing at
   any hand orientation or distance.
+- **Model orientation:** +Y is the finger axis, so a ring GLB is correct when its
+  hole runs along +Y. Rather than carrying a per-model quaternion, the hole axis
+  is detected at load from the narrowest bounding-box extent — a ring is a flat
+  torus, so its narrow axis is always the hole, gem or no gem — and the model is
+  rotated to match. `ring.holeAxis` overrides the detection; `ring.rollDeg` turns
+  the ring about the finger to place the gem.
 - **Mirroring:** the video is CSS-mirrored (selfie view) and the solver mirrors
   the 3D to match. The mirror is applied to the finished quaternion, not to the
   basis vectors — negating a basis vector would make the matrix a reflection

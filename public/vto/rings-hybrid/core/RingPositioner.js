@@ -16,6 +16,7 @@ import { HandPoseSolver } from './HandPoseSolver.js';
 import { Vector3Filter, QuaternionFilter } from '../utils/OneEuroFilter.js';
 
 const OFFSET_AXIS_INDEX = { X: 0, Y: 1, Z: 2 };
+const UNIT_Y = new THREE.Vector3(0, 1, 0);
 
 export class RingPositioner {
   constructor(config) {
@@ -94,14 +95,11 @@ export class RingPositioner {
       ? this.rotationFilter.filter(this._targetQuat, timestampMs)
       : this._targetQuat;
 
-    // Model-space correction for however the GLB happens to be authored.
-    const q = this.config.ring.modelQuaternion;
-    this._modelQuat.set(
-      this.debugParams?.modelQuatX ?? q[0],
-      this.debugParams?.modelQuatY ?? q[1],
-      this.debugParams?.modelQuatZ ?? q[2],
-      this.debugParams?.modelQuatW ?? q[3]
-    ).normalize();
+    // Roll about the finger axis — which way round the gem sits. The GLB's own
+    // orientation is corrected once at load by ThreeRingScene.applyHoleAxis(),
+    // so local Y is already the finger axis by the time this is applied.
+    const rollDeg = this.debugParams?.rollDeg ?? this.config.ring.rollDeg;
+    this._modelQuat.setFromAxisAngle(UNIT_Y, THREE.MathUtils.degToRad(rollDeg));
 
     this._finalQuat.copy(smoothedRotation).multiply(this._modelQuat);
 

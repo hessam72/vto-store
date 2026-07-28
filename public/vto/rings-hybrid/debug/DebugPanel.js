@@ -23,10 +23,8 @@ const DEFAULTS = {
   ringOffsetXMm: 0,
   ringOffsetYMm: 0,
   ringOffsetZMm: 0,
-  modelQuatX: 0,
-  modelQuatY: 0,
-  modelQuatZ: 0,
-  modelQuatW: 1,
+  holeAxis: 'auto',
+  rollDeg: 0,
 
   // Fit
   fingerWidthCoeff: 0.72,
@@ -78,10 +76,10 @@ export class DebugPanel {
     this.add(ring, 'ringOffsetXMm', -20, 20, 0.5).name('Offset across (mm)');
     this.add(ring, 'ringOffsetYMm', -20, 20, 0.5).name('Offset along (mm)');
     this.add(ring, 'ringOffsetZMm', -20, 20, 0.5).name('Offset out of palm (mm)');
-    this.add(ring, 'modelQuatX', -1, 1, 0.001).name('Model quat X');
-    this.add(ring, 'modelQuatY', -1, 1, 0.001).name('Model quat Y');
-    this.add(ring, 'modelQuatZ', -1, 1, 0.001).name('Model quat Z');
-    this.add(ring, 'modelQuatW', -1, 1, 0.001).name('Model quat W');
+    // Orientation as two things a human can reason about, rather than four
+    // coupled quaternion components that have to stay normalized.
+    this.add(ring, 'holeAxis', ['auto', 'x', 'y', 'z']).name('GLB hole axis');
+    this.add(ring, 'rollDeg', 0, 360, 1).name('Roll about finger (deg)');
 
     const fit = this.gui.addFolder('Fit');
     this.add(fit, 'fingerWidthCoeff', 0.4, 1.2, 0.01).name('Finger width calib.');

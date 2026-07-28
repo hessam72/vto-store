@@ -13,6 +13,13 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 const NEAR_M = 0.02;
 const FAR_M = 10;
 
+/** The narrowest bounding-box axis of a ring is the one its hole runs along. */
+function detectHoleAxis({ x, y, z }) {
+  if (x <= y && x <= z) return 'x';
+  if (z <= x && z <= y) return 'z';
+  return 'y';
+}
+
 export class ThreeRingScene {
   constructor(canvas, config) {
     this.canvas = canvas;
@@ -31,6 +38,11 @@ export class ThreeRingScene {
     // model can be scaled to the hand. public/models is not in the repo, so the
     // GLB's authoring units are unknown and must be derived rather than assumed.
     this.modelBaseDiameter = 1;
+
+    // Bounding-box extents of the loaded GLB, kept so the hole axis can be
+    // re-derived without re-fetching the model.
+    this.modelExtents = null;
+    this.detectedHoleAxis = null;
 
     this._onResize = () => this.handleResize();
 
@@ -145,16 +157,7 @@ export class ThreeRingScene {
           this.ringMesh = gltf.scene;
 
           const box = new THREE.Box3().setFromObject(this.ringMesh);
-          const size = box.getSize(new THREE.Vector3());
-          const center = box.getCenter(new THREE.Vector3());
-
-          // Centre the model on its own bounding box so it rotates about the
-          // finger axis rather than about some arbitrary authoring origin.
-          this.ringMesh.position.sub(center);
-
-          // A ring's outer diameter is its largest cross-section; the band
-          // thickness is the smallest dimension.
-          this.modelBaseDiameter = Math.max(size.x, size.y, size.z) || 1;
+          this.modelExtents = box.getSize(new THREE.Vector3());
 
           if (this.config.debug.meshMaterial) {
             this.ringMesh.traverse((child) => {
@@ -166,10 +169,8 @@ export class ThreeRingScene {
           this.ringPivot.visible = false;
           this.scene.add(this.ringPivot);
 
-          console.log(
-            `Ring model loaded | bbox ${size.x.toFixed(3)} x ${size.y.toFixed(3)} x ${size.z.toFixed(3)} ` +
-            `| base diameter ${this.modelBaseDiameter.toFixed(4)}`
-          );
+          this.applyHoleAxis(this.config.ring.holeAxis);
+
           resolve(this.ringPivot);
         },
         (progress) => {
@@ -183,6 +184,51 @@ export class ThreeRingScene {
         }
       );
     });
+  }
+
+  /**
+   * Rotate the model so its hole runs along +Y, which is the finger axis in the
+   * solver's frame. A GLB authored with the hole on X or Z otherwise renders
+   * standing across the finger instead of encircling it.
+   *
+   * The axis is detected from the geometry rather than configured per model: a
+   * ring is a flat torus, so two bounding-box extents are the diameter and the
+   * third — the narrowest — is the band width, which runs along the hole. That
+   * holds even with a gem, since a gem grows a radial extent and never the
+   * narrowest one.
+   *
+   * @param {'auto'|'x'|'y'|'z'} preference
+   */
+  applyHoleAxis(preference = 'auto') {
+    if (!this.ringMesh || !this.modelExtents) return;
+
+    const extents = this.modelExtents;
+    const axis = preference === 'auto' ? detectHoleAxis(extents) : preference;
+    this.detectedHoleAxis = axis;
+
+    // Bring the hole axis onto +Y.
+    this.ringMesh.quaternion.identity();
+    this.ringMesh.position.set(0, 0, 0);
+    if (axis === 'x') this.ringMesh.rotateZ(Math.PI / 2);
+    else if (axis === 'z') this.ringMesh.rotateX(-Math.PI / 2);
+
+    // Recentre after rotating — the pivot must sit at the ring's centre so the
+    // per-frame pose rotates it about the finger and not about the GLB's origin.
+    this.ringMesh.updateMatrixWorld(true);
+    const rotatedBox = new THREE.Box3().setFromObject(this.ringMesh);
+    this.ringMesh.position.sub(rotatedBox.getCenter(new THREE.Vector3()));
+
+    // Diameter comes from the two extents perpendicular to the hole. The
+    // smaller of them is used because a gem inflates one radial direction, and
+    // taking the max there would undersize the band against the finger.
+    const [d1, d2] = ['x', 'y', 'z'].filter((a) => a !== axis).map((a) => extents[a]);
+    this.modelBaseDiameter = Math.min(d1, d2) || 1;
+
+    console.log(
+      `Ring model oriented | bbox ${extents.x.toFixed(3)} x ${extents.y.toFixed(3)} x ${extents.z.toFixed(3)} ` +
+      `| hole axis ${axis}${preference === 'auto' ? ' (auto)' : ' (forced)'} ` +
+      `| diameter ${this.modelBaseDiameter.toFixed(4)}`
+    );
   }
 
   /**
@@ -219,6 +265,14 @@ export class ThreeRingScene {
    * @param {Object} transform - Result of RingPositioner.calculate().
    */
   updateRingTransform(transform) {
+    // The hole-axis correction is baked in at load, so a live change to it has
+    // to re-run the orientation. Cheap, and only when the value actually moves.
+    const holeAxis = this.debugParams?.holeAxis;
+    if (holeAxis && holeAxis !== this._appliedHoleAxis) {
+      this._appliedHoleAxis = holeAxis;
+      this.applyHoleAxis(holeAxis);
+    }
+
     if (!transform.visible) {
       if (this.ringPivot) this.ringPivot.visible = false;
       if (this.occluderMesh) this.occluderMesh.visible = false;
