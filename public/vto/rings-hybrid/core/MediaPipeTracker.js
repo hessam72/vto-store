@@ -224,11 +224,11 @@ export class MediaPipeTracker {
         this.ctx.fill();
       });
 
-      // Draw landmark 0 (wrist) in different color
-      const wristLandmark = handLandmarks[0];
-      this.ctx.fillStyle = '#FFD700';  // Gold for wrist
+      // Draw landmark 13 (ring finger MCP) in different color
+      const ringMCP = handLandmarks[13];
+      this.ctx.fillStyle = '#FFD700';  // Gold for ring finger anchor
       this.ctx.beginPath();
-      this.ctx.arc(wristLandmark.x * width, wristLandmark.y * height, 8, 0, 2 * Math.PI);
+      this.ctx.arc(ringMCP.x * width, ringMCP.y * height, 8, 0, 2 * Math.PI);
       this.ctx.fill();
     });
   }

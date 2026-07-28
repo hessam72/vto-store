@@ -6,8 +6,8 @@
 export const RingConfig = {
   // Model settings (proven values from current implementation)
   modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
-  modelScale: .1,
-  modelOffset: [-1.5, -11, 0], // [x, y, z] - Fine-tuned position on finger
+  modelScale: 1,
+  modelOffset: [0, 0, 0], // [x, y, z] - Fine-tuned position on finger
   modelQuaternion: [0, 0, 0.707, 0.707], // [X, Y, Z, W] - 90° Z rotation
 
   // MediaPipe settings
