@@ -64,6 +64,10 @@ export const RingConfig = {
     displayLandmarks: true,
     meshMaterial: false,
     occluder: false,
-    logPositions: false
-  }
+    logPositions: false,
+    panelEnabled: true // Enable debug control panel
+  },
+
+  // Debug panel parameters (will be overridden by DebugPanel)
+  debugParams: null
 };

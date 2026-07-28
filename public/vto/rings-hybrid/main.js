@@ -7,12 +7,15 @@ import { RingConfig } from './config.js';
 import { MediaPipeTracker } from './core/MediaPipeTracker.js';
 import { RingPositioner } from './core/RingPositioner.js';
 import { ThreeRingScene } from './core/ThreeRingScene.js';
+import { DebugPanel } from './debug/DebugPanel.js';
+import { CoordinateConverter } from './utils/CoordinateConverter.js';
 
 // Application state
 const app = {
   tracker: null,
   positioner: null,
   threeScene: null,
+  debugPanel: null,
   isInstructionsHidden: false,
   isLoading: true
 };
@@ -68,6 +71,31 @@ async function init() {
       }
     });
 
+    // Initialize debug panel (if enabled)
+    if (RingConfig.debug.panelEnabled) {
+      console.log('🎛️ Initializing debug panel...');
+      app.debugPanel = new DebugPanel(RingConfig);
+
+      // Connect debug params to components
+      app.debugPanel.onUpdate = (params) => {
+        CoordinateConverter.debugParams = params;
+        app.positioner.debugParams = params;
+        app.threeScene.debugParams = params;
+      };
+
+      // Trigger initial update
+      app.debugPanel.onUpdate(app.debugPanel.params);
+
+      // Keyboard toggle: Press 'D' to show/hide panel
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'd' || e.key === 'D') {
+          app.debugPanel.toggle();
+        }
+      });
+
+      console.log('✅ Debug panel ready (Press D to toggle)');
+    }
+
     // Start render loop
     console.log('🔄 Starting render loop...');
     startRenderLoop();
@@ -90,7 +118,7 @@ function handleTrackingResults(results) {
   const videoWidth = app.tracker.canvasElement.width;
   const videoHeight = app.tracker.canvasElement.height;
 
-  const transform = app.positioner.calculate(results, videoWidth, videoHeight);
+  const transform = app.positioner.calculate(results, videoWidth, videoHeight, app.threeScene.camera);
 
   // Update Three.js ring
   app.threeScene.updateRingTransform(transform);
@@ -158,6 +186,9 @@ window.addEventListener('beforeunload', () => {
   }
   if (app.threeScene) {
     app.threeScene.destroy();
+  }
+  if (app.debugPanel) {
+    app.debugPanel.destroy();
   }
 });
 

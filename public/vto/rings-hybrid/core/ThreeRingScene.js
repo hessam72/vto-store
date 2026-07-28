@@ -11,6 +11,7 @@ export class ThreeRingScene {
   constructor(canvas, config) {
     this.canvas = canvas;
     this.config = config;
+    this.debugParams = null; // Set by DebugPanel
 
     // Three.js components
     this.scene = null;
@@ -18,6 +19,7 @@ export class ThreeRingScene {
     this.renderer = null;
     this.ringMesh = null;
     this.occluderMesh = null;
+    this.debugMarker = null; // Blue circle for ring finger position
 
     this.init();
   }
@@ -32,10 +34,13 @@ export class ThreeRingScene {
     // Create scene
     this.scene = new THREE.Scene();
 
-    // Create camera
+    // Create camera with realistic FOV matching video perspective
     const aspect = this.canvas.width / this.canvas.height;
-    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-    this.camera.position.z = 100;
+    const videoHeight = this.canvas.height || 720;
+    const focalLengthPx = videoHeight * 0.7;  // Realistic webcam focal length
+    const fov = 2 * Math.atan(videoHeight / (2 * focalLengthPx)) * (180 / Math.PI);
+    this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 50);
+    this.camera.position.z = 20;  // AR overlay alignment
 
     // Create renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -51,6 +56,9 @@ export class ThreeRingScene {
 
     // Setup lighting
     this.setupLighting();
+
+    // Create debug marker (blue circle on ring finger)
+    this.createDebugMarker();
 
     console.log('Three.js scene initialized');
   }
@@ -92,6 +100,27 @@ export class ThreeRingScene {
         this.scene.add(ambientLight);
         this.scene.add(directionalLight);
       });
+  }
+
+  /**
+   * Create debug marker (blue circle on ring finger)
+   */
+  createDebugMarker() {
+    const geometry = new THREE.CircleGeometry(0.5, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x0000ff, // Blue
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8,
+      depthTest: false // Always visible on top
+    });
+
+    this.debugMarker = new THREE.Mesh(geometry, material);
+    this.debugMarker.renderOrder = 999; // Render on top
+    this.debugMarker.visible = true;
+
+    this.scene.add(this.debugMarker);
+    console.log('Debug marker created');
   }
 
   /**
@@ -207,16 +236,41 @@ export class ThreeRingScene {
   }
 
   /**
+   * Update camera settings from debug params
+   */
+  updateCameraSettings() {
+    if (!this.camera || !this.debugParams) return;
+
+    // Update camera Z position
+    if (this.debugParams.cameraZ !== undefined) {
+      this.camera.position.z = this.debugParams.cameraZ;
+    }
+
+    // Update camera FOV
+    if (this.debugParams.cameraFOV !== undefined) {
+      this.camera.fov = this.debugParams.cameraFOV;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
+  /**
    * Update ring position and rotation
    * @param {Object} transform - {position: Vector3, rotation: Quaternion, visible: boolean}
    */
   updateRingTransform(transform) {
     if (!this.ringMesh) return;
 
+    // Update camera settings if debug params available
+    this.updateCameraSettings();
+
     if (transform.visible) {
       this.ringMesh.visible = true;
       this.ringMesh.position.copy(transform.position);
       this.ringMesh.quaternion.copy(transform.rotation);
+
+      // Apply debug model scale if available
+      const scale = this.debugParams?.modelScale ?? this.config.modelScale;
+      this.ringMesh.scale.setScalar(scale);
 
       // Update occluder to follow ring
       if (this.occluderMesh) {
@@ -224,10 +278,54 @@ export class ThreeRingScene {
         this.occluderMesh.position.copy(transform.position);
         // Occluder rotation is relative to ring, keep its local rotation
       }
+
+      // Update debug marker to follow ring finger (2D screen position)
+      if (this.debugMarker && transform.rawLandmark) {
+        this.debugMarker.visible = true;
+
+        // Convert MediaPipe normalized coords to screen position
+        // MediaPipe: x,y in [0,1], convert to NDC [-1,1]
+        const x = (transform.rawLandmark.x * 2) - 1;  // 0-1 → -1 to 1
+        const y = -((transform.rawLandmark.y * 2) - 1); // 0-1 → -1 to 1, flip Y
+
+        // Position marker at fixed distance from camera (screen overlay)
+        const distance = 5; // Close to camera for 2D overlay effect
+        const pos = new THREE.Vector3(x, y, -distance);
+        pos.unproject(this.camera);
+
+        this.debugMarker.position.copy(pos);
+        // Make circle face camera
+        this.debugMarker.lookAt(this.camera.position);
+
+        // Log positions for debugging
+        console.log('MediaPipe raw landmark (normalized 0-1):', {
+          x: transform.rawLandmark.x.toFixed(3),
+          y: transform.rawLandmark.y.toFixed(3),
+          z: transform.rawLandmark.z.toFixed(3)
+        });
+        console.log('Ring debug dot (canvas pixels):', {
+          x: (transform.rawLandmark.x * this.canvas.width).toFixed(1),
+          y: (transform.rawLandmark.y * this.canvas.height).toFixed(1)
+        });
+        console.log('Ring GLB position (3D transformed):', {
+          x: transform.position.x.toFixed(3),
+          y: transform.position.y.toFixed(3),
+          z: transform.position.z.toFixed(3)
+        });
+        console.log('Blue dot position (2D overlay):', {
+          x: pos.x.toFixed(3),
+          y: pos.y.toFixed(3),
+          z: pos.z.toFixed(3)
+        });
+        console.log('---');
+      }
     } else {
       this.ringMesh.visible = false;
       if (this.occluderMesh) {
         this.occluderMesh.visible = false;
+      }
+      if (this.debugMarker) {
+        this.debugMarker.visible = false;
       }
     }
   }
@@ -263,6 +361,12 @@ export class ThreeRingScene {
       this.scene.remove(this.occluderMesh);
       this.occluderMesh.geometry?.dispose();
       this.occluderMesh.material?.dispose();
+    }
+
+    if (this.debugMarker) {
+      this.scene.remove(this.debugMarker);
+      this.debugMarker.geometry?.dispose();
+      this.debugMarker.material?.dispose();
     }
 
     this.renderer.dispose();

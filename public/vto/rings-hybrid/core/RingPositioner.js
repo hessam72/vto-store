@@ -9,6 +9,7 @@ import * as THREE from 'three';
 export class RingPositioner {
   constructor(config) {
     this.config = config;
+    this.debugParams = null; // Set by DebugPanel
 
     // Smoothing filters
     this.positionFilter = {
@@ -36,9 +37,10 @@ export class RingPositioner {
    * @param {Object} results - MediaPipe hand detection results
    * @param {number} videoWidth - Video width in pixels
    * @param {number} videoHeight - Video height in pixels
+   * @param {THREE.Camera} camera - Three.js camera for unprojection
    * @returns {Object} {position: Vector3, rotation: Quaternion, visible: boolean}
    */
-  calculate(results, videoWidth, videoHeight) {
+  calculate(results, videoWidth, videoHeight, camera) {
     // No hand detected
     if (!results.landmarks || results.landmarks.length === 0) {
       this.confidenceFrames = Math.max(0, this.confidenceFrames - 1);
@@ -75,17 +77,26 @@ export class RingPositioner {
       return { visible: false };
     }
 
-    // Extract ring finger landmarks
-    const ringMCP = landmarks[this.config.landmarks.ringMCP];   // Base (13)
+    // Extract ring finger landmarks (use debug anchor if available)
+    const anchorIndex = this.debugParams?.landmarkAnchor ?? this.config.landmarks.ringMCP;
+    const ringMCP = landmarks[anchorIndex];   // Base
     const ringPIP = landmarks[this.config.landmarks.ringPIP];   // Middle (14)
     const ringDIP = landmarks[this.config.landmarks.ringDIP];   // Top (15)
     const ringTIP = landmarks[this.config.landmarks.ringTIP];   // Tip (16)
 
-    // Calculate base position (ring MCP joint)
-    const basePosition = CoordinateConverter.normalizedToThreeJS(
-      ringMCP,
-      100 // scale factor
-    );
+    // Calculate base position using NDC unprojection (same as blue dot)
+    // Convert MediaPipe normalized coords [0,1] to NDC [-1,1]
+    const x = (ringMCP.x * 2) - 1;
+    const y = -((ringMCP.y * 2) - 1); // Flip Y
+
+    // Use MediaPipe's z-depth, scaled and adjusted
+    const depthScale = this.debugParams?.globalScale ?? 5.0;
+    const depthMult = this.debugParams?.depthMultiplier ?? 1.0;
+    const distance = depthScale + (ringMCP.z * depthScale * depthMult);
+
+    // Unproject from screen space to world space
+    const basePosition = new THREE.Vector3(x, y, -distance);
+    basePosition.unproject(camera);
 
     // Calculate finger orientation vector (MCP → TIP)
     const fingerStart = new THREE.Vector3(
@@ -103,11 +114,11 @@ export class RingPositioner {
     // Calculate rotation quaternion from finger orientation
     const targetRotation = this.calculateRotationFromVector(fingerVector);
 
-    // Apply model offset (from config - proven values)
+    // Apply model offset (use debug params if available)
     const offset = new THREE.Vector3(
-      this.config.modelOffset[0],
-      this.config.modelOffset[1],
-      this.config.modelOffset[2]
+      this.debugParams?.modelOffsetX ?? this.config.modelOffset[0],
+      this.debugParams?.modelOffsetY ?? this.config.modelOffset[1],
+      this.debugParams?.modelOffsetZ ?? this.config.modelOffset[2]
     );
 
     // Transform offset by current rotation
@@ -115,12 +126,15 @@ export class RingPositioner {
 
     const targetPosition = basePosition.clone().add(offset);
 
-    // Apply smoothing
+    // Apply smoothing (use debug params if available)
+    const posAlpha = this.debugParams?.positionSmoothing ?? this.positionFilter.alpha;
+    const rotAlpha = this.debugParams?.rotationSmoothing ?? this.rotationFilter.alpha;
+
     if (this.config.smoothing.position.enabled) {
       this.positionFilter.target.copy(targetPosition);
       this.positionFilter.current.lerp(
         this.positionFilter.target,
-        this.positionFilter.alpha
+        posAlpha
       );
     } else {
       this.positionFilter.current.copy(targetPosition);
@@ -130,18 +144,18 @@ export class RingPositioner {
       this.rotationFilter.target.copy(targetRotation);
       this.rotationFilter.current.slerp(
         this.rotationFilter.target,
-        this.rotationFilter.alpha
+        rotAlpha
       );
     } else {
       this.rotationFilter.current.copy(targetRotation);
     }
 
-    // Apply model quaternion (from config)
+    // Apply model quaternion (use debug params if available)
     const modelQuat = new THREE.Quaternion(
-      this.config.modelQuaternion[0],
-      this.config.modelQuaternion[1],
-      this.config.modelQuaternion[2],
-      this.config.modelQuaternion[3]
+      this.debugParams?.modelQuatX ?? this.config.modelQuaternion[0],
+      this.debugParams?.modelQuatY ?? this.config.modelQuaternion[1],
+      this.debugParams?.modelQuatZ ?? this.config.modelQuaternion[2],
+      this.debugParams?.modelQuatW ?? this.config.modelQuaternion[3]
     );
 
     const finalRotation = this.rotationFilter.current.clone().multiply(modelQuat);
@@ -155,7 +169,8 @@ export class RingPositioner {
       visible: true,
       position: this.positionFilter.current.clone(),
       rotation: finalRotation,
-      handedness: handedness?.categoryName || 'unknown'
+      handedness: handedness?.categoryName || 'unknown',
+      rawLandmark: ringMCP // Raw MediaPipe landmark for 2D positioning
     };
   }
 

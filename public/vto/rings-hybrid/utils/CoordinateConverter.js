@@ -7,6 +7,9 @@
 import * as THREE from 'three';
 
 export class CoordinateConverter {
+  // Debug parameters (set by DebugPanel)
+  static debugParams = null;
+
   /**
    * Convert MediaPipe normalized landmark to pixel coordinates
    * MediaPipe: x,y in [0, 1], z is relative depth
@@ -31,11 +34,32 @@ export class CoordinateConverter {
    * @returns {THREE.Vector3}
    */
   static normalizedToThreeJS(landmark, scale = 1) {
-    return new THREE.Vector3(
-      (landmark.x - 0.5) * scale,   // Center X (follow hand movement)
-      (-landmark.y + 0.5) * scale,  // Center and invert Y
-      -landmark.z * scale           // Negate Z (depth)
-    );
+    // Use debug params if available
+    const params = this.debugParams || {
+      mirrorX: true,
+      invertY: true,
+      invertZ: true,
+      offsetX: 0.5,
+      offsetY: 0.5,
+      offsetZ: 0,
+      globalScale: scale
+    };
+
+    const actualScale = this.debugParams ? params.globalScale : scale;
+
+    const x = params.mirrorX
+      ? (-landmark.x + params.offsetX) * actualScale
+      : (landmark.x - params.offsetX) * actualScale;
+
+    const y = params.invertY
+      ? (-landmark.y + params.offsetY) * actualScale
+      : (landmark.y - params.offsetY) * actualScale;
+
+    const z = params.invertZ
+      ? (-landmark.z + params.offsetZ) * actualScale
+      : (landmark.z - params.offsetZ) * actualScale;
+
+    return new THREE.Vector3(x, y, z);
   }
 
   /**
