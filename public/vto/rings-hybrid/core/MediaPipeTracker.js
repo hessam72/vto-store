@@ -14,6 +14,8 @@ export class MediaPipeTracker {
     this.stream = null;
     this.rafId = null;
     this.isRunning = false;
+    this.lastVideoTime = -1;
+    this.lastResults = null;
 
     // Configuration
     this.config = {
@@ -24,6 +26,9 @@ export class MediaPipeTracker {
       facingMode: 'user',  // 'user' or 'environment'
       videoWidth: 1280,
       videoHeight: 720,
+      // Pin the release: the wasm fileset and the JS bundle must be the same
+      // version, and the importmap used to float on `@latest`.
+      version: '0.10.35',
       ...config
     };
 
@@ -45,7 +50,7 @@ export class MediaPipeTracker {
       // Initialize MediaPipe vision tasks
       console.log('  📌 Loading MediaPipe FilesetResolver...');
       const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${this.config.version}/wasm`
       );
       console.log('  ✅ MediaPipe FilesetResolver loaded');
 
@@ -126,33 +131,27 @@ export class MediaPipeTracker {
     const detectHands = () => {
       if (!this.isRunning) return;
 
-      const timestamp = performance.now();
+      // Only run inference when the camera has actually produced a new frame.
+      // detectForVideo requires strictly increasing timestamps, and re-running
+      // it on a repeated frame is a wasted GPU pass on every rAF tick that
+      // outpaces the camera's frame rate.
+      if (this.videoElement.currentTime !== this.lastVideoTime) {
+        this.lastVideoTime = this.videoElement.currentTime;
+        this.lastResults = this.handLandmarker.detectForVideo(
+          this.videoElement,
+          performance.now()
+        );
 
-      // Detect hands in video frame
-      const results = this.handLandmarker.detectForVideo(
-        this.videoElement,
-        timestamp
-      );
-
-      // Draw video frame to canvas
-      this.ctx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
-      this.ctx.drawImage(
-        this.videoElement,
-        0,
-        0,
-        this.canvasElement.width,
-        this.canvasElement.height
-      );
-
-      // Optional: Draw landmarks on canvas for debugging
-      if (this.config.debugDrawLandmarks) {
-        this.drawLandmarks(results);
+        // The video element itself is what the user sees; this canvas is a
+        // transparent overlay for the landmark debug drawing only.
+        this.ctx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+        if (this.config.debugDrawLandmarks) {
+          this.drawLandmarks(this.lastResults);
+        }
       }
 
-      // Call user callback with results
-      this.onResults(results);
+      if (this.lastResults) this.onResults(this.lastResults);
 
-      // Continue tracking loop
       this.rafId = requestAnimationFrame(detectHands);
     };
 
@@ -165,6 +164,8 @@ export class MediaPipeTracker {
    */
   stop() {
     this.isRunning = false;
+    this.lastVideoTime = -1;
+    this.lastResults = null;
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;

@@ -1,11 +1,24 @@
 /**
  * Three.js Ring Scene Manager
- * Handles 3D scene, ring model, and soft occluder
+ *
+ * The scene works in metres, with the camera at the origin looking down -Z.
+ * The camera's projection is configured by HandPoseSolver.updateCamera() so it
+ * matches the physical webcam over the region of video actually on screen.
  */
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+const NEAR_M = 0.02;
+const FAR_M = 10;
+
+/** The narrowest bounding-box axis of a ring is the one its hole runs along. */
+function detectHoleAxis({ x, y, z }) {
+  if (x <= y && x <= z) return 'x';
+  if (z <= x && z <= y) return 'z';
+  return 'y';
+}
 
 export class ThreeRingScene {
   constructor(canvas, config) {
@@ -13,153 +26,157 @@ export class ThreeRingScene {
     this.config = config;
     this.debugParams = null; // Set by DebugPanel
 
-    // Three.js components
     this.scene = null;
     this.camera = null;
     this.renderer = null;
     this.ringMesh = null;
+    this.ringPivot = null;
     this.occluderMesh = null;
-    this.debugMarker = null; // Blue circle for ring finger position
+    this.debugMarker = null;
+
+    // Outer diameter of the loaded GLB in its own units, measured once so the
+    // model can be scaled to the hand. public/models is not in the repo, so the
+    // GLB's authoring units are unknown and must be derived rather than assumed.
+    this.modelBaseDiameter = 1;
+
+    // Bounding-box extents of the loaded GLB, kept so the hole axis can be
+    // re-derived without re-fetching the model.
+    this.modelExtents = null;
+    this.detectedHoleAxis = null;
+
+    this._onResize = () => this.handleResize();
 
     this.init();
   }
 
-  /**
-   * Initialize Three.js scene
-   */
   init() {
-    // Set canvas size to match viewport
-    this.resizeCanvas();
-
-    // Create scene
     this.scene = new THREE.Scene();
 
-    // Create camera with realistic FOV matching video perspective
-    const aspect = this.canvas.width / this.canvas.height;
-    const videoHeight = this.canvas.height || 720;
-    const focalLengthPx = videoHeight * 0.7;  // Realistic webcam focal length
-    const fov = 2 * Math.atan(videoHeight / (2 * focalLengthPx)) * (180 / Math.PI);
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 50);
-    this.camera.position.z = 20;  // AR overlay alignment
+    // FOV and aspect are set every frame by HandPoseSolver.updateCamera().
+    this.camera = new THREE.PerspectiveCamera(60, 1, NEAR_M, FAR_M);
+    this.camera.position.set(0, 0, 0);
 
-    // Create renderer
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       alpha: true,
       antialias: true,
       powerPreference: 'high-performance'
     });
-    this.renderer.setSize(this.canvas.width, this.canvas.height);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.setClearAlpha(0);
+    this.handleResize();
 
-    // Setup lighting
     this.setupLighting();
-
-    // Create debug marker (blue circle on ring finger)
     this.createDebugMarker();
 
-    console.log('Three.js scene initialized');
+    window.addEventListener('resize', this._onResize);
+
+    console.log('Three.js scene initialized (metric, camera at origin)');
   }
 
   /**
-   * Resize canvas to match viewport
+   * Size the drawing buffer.
+   *
+   * setSize() takes CSS pixels and derives the buffer from the pixel ratio, so
+   * the backing store must not be set by hand. The previous code passed the
+   * already-multiplied buffer width back into setSize(), which wrote an inline
+   * CSS width of twice the viewport on any HiDPI display — the whole scene
+   * rendered at 2x into the top-left quadrant, which is why the ring was offset
+   * and moved at twice the hand's speed.
    */
-  resizeCanvas() {
+  handleResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const pixelRatio = window.devicePixelRatio || 1;
 
-    this.canvas.width = width * pixelRatio;
-    this.canvas.height = height * pixelRatio;
-    this.canvas.style.width = width + 'px';
-    this.canvas.style.height = height + 'px';
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setSize(width, height);
+
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
   }
 
-  /**
-   * Setup HDR environment lighting
-   */
+  /** Canvas size in CSS pixels, for the cover-fit maths in the solver. */
+  getViewSize() {
+    return {
+      canvasWidth: this.canvas.clientWidth || window.innerWidth,
+      canvasHeight: this.canvas.clientHeight || window.innerHeight
+    };
+  }
+
   setupLighting() {
     const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-    pmremGenerator.compileEquirectangularShader();
 
-    new RGBELoader()
-      .setDataType(THREE.HalfFloatType)
-      .load('/models/envmaps/hotel_room_1k.hdr', (texture) => {
-        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+    new RGBELoader().load(
+      '/models/envmaps/hotel_room_1k.hdr',
+      (texture) => {
+        this.scene.environment = pmremGenerator.fromEquirectangular(texture).texture;
+        texture.dispose();
         pmremGenerator.dispose();
-        this.scene.environment = envMap;
         console.log('Environment map loaded');
-      }, undefined, (error) => {
+      },
+      undefined,
+      (error) => {
         console.warn('Environment map failed to load, using basic lighting', error);
-        // Fallback to basic lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(1, 1, 1);
-        this.scene.add(ambientLight);
-        this.scene.add(directionalLight);
-      });
+        pmremGenerator.dispose();
+        const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+        const key = new THREE.DirectionalLight(0xffffff, 2.5);
+        key.position.set(0.5, 0.5, 1);
+        this.scene.add(ambient, key);
+      }
+    );
   }
 
   /**
-   * Create debug marker (blue circle on ring finger)
+   * Small disc pinned to the solved anchor. Sized in metres — the previous
+   * CircleGeometry(0.5) was a half-metre disc, which filled the screen.
    */
   createDebugMarker() {
-    const geometry = new THREE.CircleGeometry(0.5, 32);
+    const geometry = new THREE.CircleGeometry(0.004, 24);
     const material = new THREE.MeshBasicMaterial({
-      color: 0x0000ff, // Blue
+      color: 0x2196f3,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.8,
-      depthTest: false // Always visible on top
+      opacity: 0.85,
+      depthTest: false
     });
 
     this.debugMarker = new THREE.Mesh(geometry, material);
-    this.debugMarker.renderOrder = 999; // Render on top
-    this.debugMarker.visible = true;
-
+    this.debugMarker.renderOrder = 999;
+    this.debugMarker.visible = false;
     this.scene.add(this.debugMarker);
-    console.log('Debug marker created');
   }
 
-  /**
-   * Load ring model
-   */
   async loadRingModel() {
     return new Promise((resolve, reject) => {
-      const loader = new GLTFLoader();
-
-      loader.load(
+      new GLTFLoader().load(
         this.config.modelURL,
         (gltf) => {
-          this.ringMesh = gltf.scene.children[0];
+          // A pivot decouples the fitted scale from the model's own transform,
+          // so the GLB can keep whatever root transform it was exported with.
+          this.ringPivot = new THREE.Group();
+          this.ringMesh = gltf.scene;
 
-          // Apply scale
-          this.ringMesh.scale.set(
-            this.config.modelScale,
-            this.config.modelScale,
-            this.config.modelScale
-          );
+          const box = new THREE.Box3().setFromObject(this.ringMesh);
+          this.modelExtents = box.getSize(new THREE.Vector3());
 
-          // Debug material
           if (this.config.debug.meshMaterial) {
             this.ringMesh.traverse((child) => {
-              if (child.material) {
-                child.material = new THREE.MeshNormalMaterial();
-              }
+              if (child.isMesh) child.material = new THREE.MeshNormalMaterial();
             });
           }
 
-          this.ringMesh.visible = false;
-          this.scene.add(this.ringMesh);
+          this.ringPivot.add(this.ringMesh);
+          this.ringPivot.visible = false;
+          this.scene.add(this.ringPivot);
 
-          console.log('Ring model loaded');
-          resolve(this.ringMesh);
+          this.applyHoleAxis(this.config.ring.holeAxis);
+
+          resolve(this.ringPivot);
         },
         (progress) => {
-          const percent = (progress.loaded / progress.total) * 100;
-          console.log(`Loading ring model: ${percent.toFixed(1)}%`);
+          if (progress.total > 0) {
+            console.log(`Loading ring model: ${((progress.loaded / progress.total) * 100).toFixed(0)}%`);
+          }
         },
         (error) => {
           console.error('Error loading ring model:', error);
@@ -170,214 +187,161 @@ export class ThreeRingScene {
   }
 
   /**
-   * Add soft occluder (ported from WebARRocks)
+   * Rotate the model so its hole runs along +Y, which is the finger axis in the
+   * solver's frame. A GLB authored with the hole on X or Z otherwise renders
+   * standing across the finger instead of encircling it.
+   *
+   * The axis is detected from the geometry rather than configured per model: a
+   * ring is a flat torus, so two bounding-box extents are the diameter and the
+   * third — the narrowest — is the band width, which runs along the hole. That
+   * holds even with a gem, since a gem grows a radial extent and never the
+   * narrowest one.
+   *
+   * @param {'auto'|'x'|'y'|'z'} preference
+   */
+  applyHoleAxis(preference = 'auto') {
+    if (!this.ringMesh || !this.modelExtents) return;
+
+    const extents = this.modelExtents;
+    const axis = preference === 'auto' ? detectHoleAxis(extents) : preference;
+    this.detectedHoleAxis = axis;
+
+    // Bring the hole axis onto +Y.
+    this.ringMesh.quaternion.identity();
+    this.ringMesh.position.set(0, 0, 0);
+    if (axis === 'x') this.ringMesh.rotateZ(Math.PI / 2);
+    else if (axis === 'z') this.ringMesh.rotateX(-Math.PI / 2);
+
+    // Recentre after rotating — the pivot must sit at the ring's centre so the
+    // per-frame pose rotates it about the finger and not about the GLB's origin.
+    this.ringMesh.updateMatrixWorld(true);
+    const rotatedBox = new THREE.Box3().setFromObject(this.ringMesh);
+    this.ringMesh.position.sub(rotatedBox.getCenter(new THREE.Vector3()));
+
+    // Diameter comes from the two extents perpendicular to the hole. The
+    // smaller of them is used because a gem inflates one radial direction, and
+    // taking the max there would undersize the band against the finger.
+    const [d1, d2] = ['x', 'y', 'z'].filter((a) => a !== axis).map((a) => extents[a]);
+    this.modelBaseDiameter = Math.min(d1, d2) || 1;
+
+    console.log(
+      `Ring model oriented | bbox ${extents.x.toFixed(3)} x ${extents.y.toFixed(3)} x ${extents.z.toFixed(3)} ` +
+      `| hole axis ${axis}${preference === 'auto' ? ' (auto)' : ' (forced)'} ` +
+      `| diameter ${this.modelBaseDiameter.toFixed(4)}`
+    );
+  }
+
+  /**
+   * Depth-only cylinder standing in for the finger, so the far side of the band
+   * is hidden. It must stay opaque: with transparent:true it lands in the
+   * transparent pass, where renderOrder no longer places it ahead of the ring.
+   * Its size comes from the measured finger, not from constants.
    */
   addSoftOccluder() {
     if (!this.config.occluder.enabled) return;
 
-    const radiusOuter = this.config.occluder.radiusRange[1];
-    const radiusInner = this.config.occluder.radiusRange[0];
-    const height = this.config.occluder.height;
-    const flattenCoeff = this.config.occluder.flattenCoeff;
+    // Unit cylinder (radius 0.5, height 1) along Y, scaled per frame to match
+    // the finger. Y is the finger axis in the solver's frame.
+    const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 1, true);
 
-    // Create cylinder geometry for finger occluder
-    const geometry = new THREE.CylinderGeometry(
-      radiusOuter,
-      radiusOuter,
-      height,
-      32,
-      1,
-      true
-    );
-
-    // Occluder material (depth-only, no color)
+    const debug = this.config.occluder.debug;
     const material = new THREE.MeshBasicMaterial({
-      colorWrite: false,
+      colorWrite: debug,
       depthWrite: true,
-      transparent: true,
-      opacity: 0,
-      side: THREE.DoubleSide
+      transparent: false,
+      side: THREE.DoubleSide,
+      ...(debug ? { color: new THREE.Color(0xff00ff), wireframe: true } : {})
     });
 
-    if (this.config.debug.occluder) {
-      // Debug mode: make occluder visible
-      material.colorWrite = true;
-      material.color = new THREE.Color(0xff00ff);
-      material.opacity = 0.3;
-      material.transparent = true;
-    }
-
     this.occluderMesh = new THREE.Mesh(geometry, material);
-
-    // Apply offset
-    this.occluderMesh.position.set(
-      this.config.occluder.offset[0],
-      this.config.occluder.offset[1],
-      this.config.occluder.offset[2]
-    );
-
-    // Apply rotation (90° around X-axis)
-    this.occluderMesh.quaternion.set(
-      this.config.occluder.quaternion[0],
-      this.config.occluder.quaternion[1],
-      this.config.occluder.quaternion[2],
-      this.config.occluder.quaternion[3]
-    );
-
-    // Apply flattening
-    this.occluderMesh.scale.set(1.0, 1.0, flattenCoeff);
-
-    // Render occluder first (before ring)
-    this.occluderMesh.renderOrder = -1e12;
+    this.occluderMesh.renderOrder = -1;
     this.occluderMesh.visible = false;
 
     this.scene.add(this.occluderMesh);
-    console.log('Soft occluder added');
+    console.log('Soft occluder added (opaque, depth-only)');
   }
 
   /**
-   * Update camera settings from debug params
-   */
-  updateCameraSettings() {
-    if (!this.camera || !this.debugParams) return;
-
-    // Update camera Z position
-    if (this.debugParams.cameraZ !== undefined) {
-      this.camera.position.z = this.debugParams.cameraZ;
-    }
-
-    // Update camera FOV
-    if (this.debugParams.cameraFOV !== undefined) {
-      this.camera.fov = this.debugParams.cameraFOV;
-      this.camera.updateProjectionMatrix();
-    }
-  }
-
-  /**
-   * Update ring position and rotation
-   * @param {Object} transform - {position: Vector3, rotation: Quaternion, visible: boolean}
+   * @param {Object} transform - Result of RingPositioner.calculate().
    */
   updateRingTransform(transform) {
-    if (!this.ringMesh) return;
+    // The hole-axis correction is baked in at load, so a live change to it has
+    // to re-run the orientation. Cheap, and only when the value actually moves.
+    const holeAxis = this.debugParams?.holeAxis;
+    if (holeAxis && holeAxis !== this._appliedHoleAxis) {
+      this._appliedHoleAxis = holeAxis;
+      this.applyHoleAxis(holeAxis);
+    }
 
-    // Update camera settings if debug params available
-    this.updateCameraSettings();
+    if (!transform.visible) {
+      if (this.ringPivot) this.ringPivot.visible = false;
+      if (this.occluderMesh) this.occluderMesh.visible = false;
+      if (this.debugMarker) this.debugMarker.visible = false;
+      return;
+    }
 
-    if (transform.visible) {
-      this.ringMesh.visible = true;
-      this.ringMesh.position.copy(transform.position);
-      this.ringMesh.quaternion.copy(transform.rotation);
+    const { fingerWidth } = transform;
 
-      // Apply debug model scale if available
-      const scale = this.debugParams?.modelScale ?? this.config.modelScale;
-      this.ringMesh.scale.setScalar(scale);
+    if (this.ringPivot) {
+      this.ringPivot.visible = true;
+      this.ringPivot.position.copy(transform.position);
+      this.ringPivot.quaternion.copy(transform.rotation);
 
-      // Update occluder to follow ring
-      if (this.occluderMesh) {
-        this.occluderMesh.visible = true;
-        this.occluderMesh.position.copy(transform.position);
-        // Occluder rotation is relative to ring, keep its local rotation
+      // Fit the ring to the finger: target outer diameter in metres divided by
+      // the model's own diameter. No magic numbers, and it tracks the hand as
+      // it moves nearer or further.
+      const ratio = this.debugParams?.outerDiameterRatio ?? this.config.ring.outerDiameterRatio;
+      const targetDiameter = fingerWidth * ratio;
+      this.ringPivot.scale.setScalar(targetDiameter / this.modelBaseDiameter);
+    }
+
+    if (this.occluderMesh) {
+      const { radiusRatio, lengthRatio, flattenCoeff } = this.config.occluder;
+      const diameter = fingerWidth * radiusRatio * 2;
+
+      this.occluderMesh.visible = true;
+      this.occluderMesh.position.copy(transform.position);
+      this.occluderMesh.quaternion.copy(transform.fingerRotation);
+      this.occluderMesh.scale.set(
+        diameter,
+        fingerWidth * lengthRatio,
+        diameter * flattenCoeff
+      );
+    }
+
+    if (this.debugMarker) {
+      const show = this.debugParams?.showMarker ?? this.config.debug.marker;
+      this.debugMarker.visible = show;
+      if (show) {
+        this.debugMarker.position.copy(transform.position);
+        this.debugMarker.quaternion.copy(this.camera.quaternion);
       }
+    }
 
-      // Update debug marker to follow ring finger (2D screen position)
-      if (this.debugMarker && transform.rawLandmark) {
-        this.debugMarker.visible = true;
-
-        // Convert MediaPipe normalized coords [0,1] to centered [-0.5, 0.5]
-        const normX = transform.rawLandmark.x - 0.5;
-        const normY = -(transform.rawLandmark.y - 0.5); // Flip Y for Three.js
-
-        // Use same distance calculation as GLB for comparison
-        const depthScale = this.debugParams?.globalScale ?? 1.0;
-        const depthMult = this.debugParams?.depthMultiplier ?? 1.0;
-        const distance = depthScale + (transform.rawLandmark.z * depthScale * depthMult);
-
-        // Calculate camera frustum size at distance
-        const vFOV = this.camera.fov * (Math.PI / 180);
-        const height = 2 * Math.tan(vFOV / 2) * distance;
-        const width = height * this.camera.aspect;
-
-        // Map normalized coords to frustum at distance
-        const x = normX * width;
-        const y = normY * height;
-        const z = this.camera.position.z - distance;
-
-        const pos = new THREE.Vector3(x, y, z);
-        this.debugMarker.position.copy(pos);
-        this.debugMarker.lookAt(this.camera.position);
-
-        // Log positions for debugging
-        console.log('MediaPipe raw landmark (normalized 0-1):', {
-          x: transform.rawLandmark.x.toFixed(3),
-          y: transform.rawLandmark.y.toFixed(3),
-          z: transform.rawLandmark.z.toFixed(3)
-        });
-        console.log('MediaPipe Yellow Dot (canvas pixels):', {
-          x: (transform.rawLandmark.x * this.canvas.width).toFixed(1),
-          y: (transform.rawLandmark.y * this.canvas.height).toFixed(1)
-        });
-        console.log('Ring GLB position (3D transformed):', {
-          x: transform.position.x.toFixed(3),
-          y: transform.position.y.toFixed(3),
-          z: transform.position.z.toFixed(3)
-        });
-        console.log('Blue dot position (2D overlay):', {
-          x: pos.x.toFixed(3),
-          y: pos.y.toFixed(3),
-          z: pos.z.toFixed(3)
-        });
-        console.log('---');
-      }
-    } else {
-      this.ringMesh.visible = false;
-      if (this.occluderMesh) {
-        this.occluderMesh.visible = false;
-      }
-      if (this.debugMarker) {
-        this.debugMarker.visible = false;
-      }
+    if (this.config.debug.logPositions) {
+      console.log(
+        `depth ${(transform.depth * 100).toFixed(1)}cm | ` +
+        `finger ${(fingerWidth * 1000).toFixed(1)}mm | ` +
+        `pos ${transform.position.x.toFixed(3)}, ${transform.position.y.toFixed(3)}, ${transform.position.z.toFixed(3)}`
+      );
     }
   }
 
-  /**
-   * Render scene
-   */
   render() {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /**
-   * Update camera aspect ratio
-   */
-  updateCameraAspect() {
-    this.resizeCanvas();
-    this.camera.aspect = this.canvas.width / this.canvas.height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(this.canvas.width, this.canvas.height);
-  }
-
-  /**
-   * Cleanup resources
-   */
   destroy() {
-    if (this.ringMesh) {
-      this.scene.remove(this.ringMesh);
-      this.ringMesh.geometry?.dispose();
-      this.ringMesh.material?.dispose();
-    }
+    window.removeEventListener('resize', this._onResize);
 
-    if (this.occluderMesh) {
-      this.scene.remove(this.occluderMesh);
-      this.occluderMesh.geometry?.dispose();
-      this.occluderMesh.material?.dispose();
-    }
+    this.scene.traverse((object) => {
+      object.geometry?.dispose();
+      const material = object.material;
+      if (Array.isArray(material)) material.forEach((m) => m.dispose());
+      else material?.dispose();
+    });
 
-    if (this.debugMarker) {
-      this.scene.remove(this.debugMarker);
-      this.debugMarker.geometry?.dispose();
-      this.debugMarker.material?.dispose();
-    }
-
+    this.scene.environment?.dispose();
     this.renderer.dispose();
     console.log('Three.js scene destroyed');
   }

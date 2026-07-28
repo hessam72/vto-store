@@ -8,7 +8,6 @@ import { MediaPipeTracker } from './core/MediaPipeTracker.js';
 import { RingPositioner } from './core/RingPositioner.js';
 import { ThreeRingScene } from './core/ThreeRingScene.js';
 import { DebugPanel } from './debug/DebugPanel.js';
-import { CoordinateConverter } from './utils/CoordinateConverter.js';
 
 // Application state
 const app = {
@@ -78,7 +77,6 @@ async function init() {
 
       // Connect debug params to components
       app.debugPanel.onUpdate = (params) => {
-        CoordinateConverter.debugParams = params;
         app.positioner.debugParams = params;
         app.threeScene.debugParams = params;
       };
@@ -114,14 +112,22 @@ async function init() {
  * Handle MediaPipe tracking results
  */
 function handleTrackingResults(results) {
-  // Calculate ring position and rotation from landmarks
-  const videoWidth = app.tracker.canvasElement.width;
-  const videoHeight = app.tracker.canvasElement.height;
+  const { canvasWidth, canvasHeight } = app.threeScene.getViewSize();
+  const view = {
+    videoWidth: app.tracker.videoElement.videoWidth,
+    videoHeight: app.tracker.videoElement.videoHeight,
+    canvasWidth,
+    canvasHeight
+  };
 
-  const transform = app.positioner.calculate(results, videoWidth, videoHeight, app.threeScene.camera);
+  // Match the render camera to the physical webcam BEFORE solving, so the pose
+  // is computed with the same projection that will be used to draw it.
+  app.positioner.solver.updateCamera(app.threeScene.camera, view);
 
-  // Update Three.js ring
+  const transform = app.positioner.calculate(results, view, performance.now());
+
   app.threeScene.updateRingTransform(transform);
+  app.debugPanel?.setReadout(transform);
 
   // Hide instructions when hand detected
   if (transform.visible && !app.isInstructionsHidden) {
@@ -167,15 +173,6 @@ function hideInstructions() {
     }, 500);
   }
 }
-
-/**
- * Handle window resize
- */
-window.addEventListener('resize', () => {
-  if (app.threeScene) {
-    app.threeScene.updateCameraAspect();
-  }
-});
 
 /**
  * Cleanup on page unload
