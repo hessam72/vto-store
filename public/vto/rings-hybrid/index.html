@@ -11,7 +11,7 @@
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
       "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/",
-      "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs",
+      "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs",
       "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.19.2/dist/lil-gui.esm.min.js"
     }
   }
@@ -28,17 +28,33 @@
       background: #000;
     }
 
-    #videoElement {
-      display: none;
-    }
-
+    /*
+     * The video, the landmark overlay and the WebGL canvas must share one
+     * mapping from the camera frame to the screen, or the 3D drifts away from
+     * the hand. All three cover the viewport; the video and the overlay use
+     * `object-fit: cover` (the overlay's backing store matches the video's
+     * dimensions, so the crop is identical), and HandPoseSolver.updateCamera()
+     * derives the render camera's FOV from the same cover maths.
+     * The mirror is CSS-only; the solver mirrors the 3D to match.
+     */
+    #videoElement,
     #canvasElement {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #videoElement {
+      z-index: 0;
+    }
+
+    #canvasElement {
       z-index: 1;
+      pointer-events: none;
     }
 
     #VTOCanvas {

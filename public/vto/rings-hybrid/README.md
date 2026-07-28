@@ -1,237 +1,109 @@
-# Hybrid Ring VTO
+# Ring VTO — MediaPipe + Three.js
 
-Combines **MediaPipe Hands** (superior hand detection) with **WebARRocks ring placement logic** (proven position/rotation).
+Real-time ring try-on. MediaPipe Hand Landmarker supplies the landmarks; a metric
+pinhole solve turns them into a Three.js pose.
 
-## Architecture
+## How the 2D → 3D conversion works
 
-```
-MediaPipe Hands (21 landmarks)
-    ↓
-Extract Ring Finger (landmarks 13-16)
-    ↓
-RingPositioner (calculate position + rotation)
-    ↓
-Apply WebARRocks proven offset/quaternion
-    ↓
-Three.js (render ring + soft occluder)
-```
-
-## Features
-
-- **MediaPipe Detection**: GPU-accelerated, 21-landmark hand tracking
-- **Proven Placement**: Uses tested `modelOffset` and `modelQuaternion` from WebARRocks implementation
-- **Soft Occluder**: Depth-based finger occlusion for realistic rendering
-- **Smoothing Filters**: Position (alpha 0.65) and rotation (alpha 0.45) filters
-- **Confidence Hysteresis**: 5-frame stability check before showing ring
-
-## File Structure
+MediaPipe gives two things per hand: `landmarks` (normalized image coordinates,
+with a relative and unitless `z`) and `worldLandmarks` (metres, but centred on
+the hand, so the translation is thrown away). Neither alone can place an object
+in a 3D scene. Used together they can.
 
 ```
-rings-hybrid/
-├── index.html              # Entry point
-├── main.js                 # Application orchestrator
-├── config.js               # Ring settings (modelOffset, modelQuaternion, etc.)
-├── core/
-│   ├── MediaPipeTracker.js    # Hand detection (copied from watch-mediapipe)
-│   ├── RingPositioner.js      # Landmark → position/rotation calculation
-│   └── ThreeRingScene.js      # Three.js scene + ring model + occluder
-└── utils/
-    └── CoordinateConverter.js # Coordinate transformations
+1. f_px = (videoHeight / 2) / tan(vFOV / 2)             camera intrinsics
+2. Z    = f_px * L_perp / L_px                          metric depth
+3. X    = (px - cx) * Z / f_px,  Y = -(py - cy) * Z / f_px
 ```
 
-## Key Components
+Step 2 takes a segment of the hand, measures its image-plane extent in
+`worldLandmarks` (metres) and its observed length in pixels, and solves for
+depth. Using the world segment's x/y components rather than its full 3D length
+cancels foreshortening — a finger pointing toward the camera no longer reads as
+"further away".
 
-### 1. MediaPipeTracker
-- Initializes MediaPipe Hands
-- Detects 21 hand landmarks
-- Draws debug landmarks (if enabled)
-- Returns results to callback
+Step 3 is plain pinhole back-projection, so the ring lands on the finger's actual
+pixel by construction.
 
-### 2. RingPositioner
-- **Input**: MediaPipe 21 landmarks
-- **Extract**: Ring finger (13=MCP, 14=PIP, 15=DIP, 16=TIP)
-- **Calculate**:
-  - Position: Ring MCP (landmark 13) as anchor
-  - Rotation: Quaternion from finger vector (13→16)
-- **Apply**: `modelOffset` [-1.5, -11, 0] and `modelQuaternion` [0, 0, 0.707, 0.707]
-- **Smooth**: Low-pass filters for position/rotation
-- **Output**: `{visible, position: Vector3, rotation: Quaternion}`
+**vFOV is not a tuning knob.** On-screen size is `f_px · S / Z`, where `S` comes
+from `worldLandmarks` (independent of `f_px`) and `Z ∝ f_px` — so `f_px`
+cancels. Position and apparent size stay correct even if the assumed FOV is
+wrong; only the reported absolute depth shifts.
 
-### 3. ThreeRingScene
-- Three.js scene setup
-- GLTF ring model loading
-- Soft occluder (cylinder geometry, depth-only material)
-- Ring transform updates
-- Render loop
+Orientation comes from `worldLandmarks` only, as an orthonormal basis: Y along
+the proximal phalanx (13→14), Z the palm normal, X completing the frame. Never
+from projected pixels, which mix in perspective and flip Y.
 
-## Configuration (config.js)
+Scale comes from the hand: the index→pinky MCP row spans three inter-finger
+gaps, giving a measured finger width in metres. The GLB is normalized from its
+own bounding box and fitted to that width, so it holds its size as the hand moves
+nearer or further.
 
-```javascript
-modelOffset: [-1.5, -11, 0]        // Proven position offset
-modelQuaternion: [0, 0, 0.707, 0.707]  // 90° Z rotation
-modelScale: 0.1                     // Ring size
-
-occluder: {
-  radiusRange: [1.2, 1.5],         // Finger cylinder size
-  height: 30,                      // Occluder length
-  flattenCoeff: 0.7                // Cylinder flattening
-}
-
-smoothing: {
-  position: { alpha: 0.65 },       // Position filter
-  rotation: { alpha: 0.45 }        // Rotation filter
-}
-```
-
-## How It Works
-
-1. **MediaPipe** detects hand → 21 landmarks
-2. **RingPositioner** extracts ring finger (13-16):
-   - Anchor: Landmark 13 (ring MCP joint)
-   - Orientation: Vector from 13→16 (finger direction)
-3. **Calculate rotation**: Quaternion aligning Y-axis with finger vector
-4. **Apply offset**: `modelOffset` transformed by rotation
-5. **Apply model rotation**: `modelQuaternion` for final orientation
-6. **Smooth**: Low-pass filters reduce jitter
-7. **Render**: Three.js draws ring at calculated position
-
-## MediaPipe Landmarks Used
+## Files
 
 ```
-Ring Finger Chain:
-13 (MCP)  ← Base/anchor point
-14 (PIP)
-15 (DIP)
-16 (TIP)  ← Used for orientation vector
+config.js                  metric configuration, no scale/depth knobs
+main.js                    wiring and render loop
+core/
+  MediaPipeTracker.js      camera + HandLandmarker, frame-gated inference
+  HandPoseSolver.js        the conversion above; no scene knowledge
+  RingPositioner.js        mm offsets in finger space, smoothing, hysteresis
+  ThreeRingScene.js        renderer, GLB fitting, depth-only finger occluder
+utils/
+  OneEuroFilter.js         speed-adaptive smoothing (scalar, Vector3, quaternion)
+debug/
+  DebugPanel.js            lil-gui panel + solved depth/finger-width readout
 ```
 
-## Coordinate Systems
+## Conventions
 
-### MediaPipe Output
-- Normalized [0, 1] (x, y)
-- Relative depth (z)
+- **Units:** metres everywhere in the scene; millimetres only for the ring
+  offsets a human tunes. Camera at the origin looking down −Z.
+- **Finger frame:** X across the finger, Y along it toward the tip, Z out of the
+  palm. `ring.offsetMm` is expressed in this frame, so it means the same thing at
+  any hand orientation or distance.
+- **Mirroring:** the video is CSS-mirrored (selfie view) and the solver mirrors
+  the 3D to match. The mirror is applied to the finished quaternion, not to the
+  basis vectors — negating a basis vector would make the matrix a reflection
+  (det = −1) and `setFromRotationMatrix` would return garbage.
+- **Screen mapping:** the video, the landmark overlay and the WebGL canvas all
+  cover the viewport under the same `object-fit: cover` crop, and
+  `HandPoseSolver.updateCamera()` derives the render camera's FOV from that same
+  crop. If these three ever disagree, the 3D drifts off the hand.
 
-### Three.js Scene
-- Pixel-based coordinates
-- Camera at (0, 0, 100)
-- Ring positioned in 3D space
+## Smoothing
 
-### Transformation Pipeline
-```
-MediaPipe normalized → Pixel coords → Three.js Vector3
-                                    ↓
-                            Apply modelOffset
-                                    ↓
-                         Apply modelQuaternion
-                                    ↓
-                             Final ring pose
-```
+One Euro filter: `fc = minCutoff + beta · |ẋ|`. Low cutoff while the hand is
+still (kills jitter), high cutoff while it moves (kills lag) — a fixed alpha has
+to trade one for the other. Rotations use a slerp with the same adaptation law,
+driven by angular speed; filtering quaternion components independently is not
+valid.
 
-## Debug Options
+## Running
 
-In `config.js`:
-
-```javascript
-debug: {
-  displayLandmarks: true,   // Show MediaPipe landmarks on canvas
-  meshMaterial: false,      // Use normal material for ring
-  occluder: false,          // Make occluder visible (pink)
-  logPositions: false       // Console log positions
-}
+```bash
+npm run dev
+# http://localhost:3000/vto/rings-hybrid/index.html
 ```
 
-## Proven Settings (from WebARRocks)
+Served straight from `public/`; the two-segment path bypasses the
+`app/vto/[category]` route handler, so `window.VTO_MODEL_URL` is not injected and
+`config.js` falls back to `/models/rings/default.glb`. Camera access needs
+localhost or HTTPS. Press **D** to toggle the debug panel.
 
-These values were fine-tuned in the original WebARRocks implementation:
+## Checks that should hold
 
-- **modelOffset**: `[-1.5, -11, 0]` - Positions ring on finger segment
-- **modelQuaternion**: `[0, 0, 0.707, 0.707]` - ~90° rotation around Z-axis
-- **modelScale**: `0.1` - Ring size relative to hand
-
-## Smoothing Filters
-
-**Low-Pass Filter (Exponential Moving Average)**:
-```javascript
-current = current * (1 - alpha) + target * alpha
-```
-
-- **Position alpha 0.65**: More responsive, less smooth
-- **Rotation alpha 0.45**: Smoother, less jitter
-
-## Advantages Over Pure Implementations
-
-| Feature | WebARRocks | MediaPipe | Hybrid |
-|---------|-----------|-----------|--------|
-| Hand Detection | ⚠️ Moderate | ✅ Excellent | ✅ Excellent |
-| Ring Placement | ✅ Proven | ❌ Basic | ✅ Proven |
-| Performance | ⚠️ CPU-heavy | ✅ GPU-accelerated | ✅ GPU-accelerated |
-| Maintenance | ❌ Proprietary | ✅ Open-source | ✅ Open-source |
+- The blue anchor marker sits on the ring-finger landmark drawn by the 2D debug
+  overlay, at every position in frame, on both standard and HiDPI displays.
+- Hand at ~30 cm then ~70 cm reads roughly 30 → 70 in the panel's depth readout,
+  and the ring keeps the same size relative to the finger throughout.
+- Setting vFOV to 40 or 80 changes the reported depth but not the alignment or
+  the apparent size.
+- Rotating the hand keeps the ring perpendicular to the finger, with no free spin
+  about the finger axis.
 
 ## Dependencies
 
-- **MediaPipe Tasks Vision**: Hand landmark detection
-- **Three.js r167**: 3D rendering
-- **GLTFLoader**: Ring model loading
-- **RGBELoader**: HDR environment maps
-
-## Usage
-
-```bash
-# Serve with any HTTP server
-python3 -m http.server 8000
-# or
-npx serve .
-
-# Open in browser
-http://localhost:8000/index.html
-```
-
-## Browser Requirements
-
-- Modern browser (Chrome 90+, Safari 15+, Firefox 88+)
-- WebGL 2.0 support
-- Camera access (HTTPS or localhost)
-
-## Performance Notes
-
-- **MediaPipe model**: ~5MB download (one-time)
-- **GPU acceleration**: Uses WebGL for landmark detection
-- **Frame rate**: 30-60 FPS on modern devices
-- **Latency**: ~50-100ms total (detection + rendering)
-
-## Troubleshooting
-
-**Ring not appearing?**
-- Check browser console for errors
-- Verify camera permissions granted
-- Ensure HTTPS or localhost (required for camera)
-- Check MediaPipe model downloaded (5MB)
-
-**Ring position wrong?**
-- Adjust `modelOffset` in config.js
-- Try different camera distances (30-50cm optimal)
-- Check `debugDisplayLandmarks` to see detection points
-
-**Ring rotation wrong?**
-- Adjust `modelQuaternion` in config.js
-- Verify finger orientation vector calculation
-- Test with different hand poses
-
-**Jittery ring movement?**
-- Increase smoothing alpha values (0.45 → 0.3)
-- Improve lighting conditions
-- Reduce background motion
-
-## Future Enhancements
-
-- [ ] Multi-finger support (all fingers simultaneously)
-- [ ] Ring sizing based on finger width
-- [ ] Collision detection with other fingers
-- [ ] Screenshot/save functionality
-- [ ] Multiple ring models selector
-
-## Credits
-
-- **MediaPipe Hands**: Google MediaPipe team
-- **WebARRocks**: WebAR.rocks team (placement logic inspiration)
-- **Three.js**: Three.js contributors
+Three.js r167 and `@mediapipe/tasks-vision` 0.10.35, both pinned in the importmap
+in `index.html`. The MediaPipe wasm fileset URL in `MediaPipeTracker.js` must
+stay on the same version as the JS bundle.

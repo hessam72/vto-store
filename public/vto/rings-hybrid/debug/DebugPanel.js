@@ -1,201 +1,163 @@
 /**
  * Debug Control Panel
- * Live parameter adjustment for ring positioning
+ *
+ * The old panel exposed `globalScale` and `depthMultiplier`, which set depth and
+ * world scale at the same time — tuning one always broke the other. Those are
+ * gone. What is left are parameters that each do exactly one thing, in real
+ * units, plus a readout of what the solver actually computed.
  */
 
 import GUI from 'lil-gui';
 
+// Bumped so browsers holding the old coupled parameters do not restore them.
+const STORAGE_KEY = 'ring-vto-debug-params-v2';
+
+const DEFAULTS = {
+  // Camera model
+  vFOV: 60,
+  mirror: true,
+  flipHandedness: false,
+
+  // Ring placement
+  anchorAlongPhalanx: 0.45,
+  ringOffsetXMm: 0,
+  ringOffsetYMm: 0,
+  ringOffsetZMm: 0,
+  modelQuatX: 0,
+  modelQuatY: 0,
+  modelQuatZ: 0,
+  modelQuatW: 1,
+
+  // Fit
+  fingerWidthCoeff: 0.72,
+  outerDiameterRatio: 1.25,
+
+  // Smoothing (One Euro: cutoff in Hz, beta is the speed coefficient)
+  positionMinCutoff: 1.0,
+  positionBeta: 0.007,
+  rotationMinCutoff: 1.5,
+  rotationBeta: 0.35,
+
+  showMarker: true
+};
+
 export class DebugPanel {
   constructor(config) {
     this.config = config;
-    this.gui = new GUI({ title: 'Ring VTO Debug Panel', width: 320 });
-    this.gui.close(); // Start closed
+    this.params = { ...DEFAULTS, ...this.readStorage() };
 
-    // Debug parameters (reactive)
-    this.params = {
-      // Coordinate System
-      mirrorX: true,
-      invertY: true,
-      invertZ: true,
-      offsetX: 0.5,
-      offsetY: 0.5,
-      offsetZ: 0,
-      globalScale: 5.0,
-      depthMultiplier: 1.0,
-
-      // Ring Positioning
-      landmarkAnchor: 13,
-      modelOffsetX: 0,
-      modelOffsetY: 0,
-      modelOffsetZ: 0,
-      modelQuatX: 0,
-      modelQuatY: 0,
-      modelQuatZ: 0.707,
-      modelQuatW: 0.707,
-      modelScale: 1,
-
-      // Camera
-      cameraZ: 20,
-      cameraFOV: 63,
-
-      // Smoothing
-      positionSmoothing: 0.65,
-      rotationSmoothing: 0.45,
-
-      // Actions
-      reset: () => this.reset(),
-      save: () => this.save(),
-      load: () => this.load(),
-      export: () => this.export()
+    // Live solver output, displayed read-only.
+    this.readout = {
+      depthCm: 0,
+      fingerWidthMm: 0,
+      handedness: '-'
     };
 
-    this.setupGUI();
-    this.loadFromLocalStorage();
+    this.buildGUI();
   }
 
-  setupGUI() {
-    // Coordinate System folder
-    const coordFolder = this.gui.addFolder('Coordinate System');
-    coordFolder.add(this.params, 'mirrorX').name('Mirror X').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'invertY').name('Invert Y').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'invertZ').name('Invert Z').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'offsetX').name('Offset X').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'offsetY').name('Offset Y').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'offsetZ').name('Offset Z').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'globalScale').name('Global Scale').onChange(() => this.onChange());
-    coordFolder.add(this.params, 'depthMultiplier').name('Depth Multiplier').onChange(() => this.onChange());
+  buildGUI() {
+    this.gui = new GUI({ title: 'Ring VTO Debug', width: 320 });
+    this.gui.close();
 
-    // Ring Positioning folder
-    const ringFolder = this.gui.addFolder('Ring Positioning');
-    ringFolder.add(this.params, 'landmarkAnchor', 0, 20, 1).name('Landmark Anchor').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelOffsetX').name('Model Offset X').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelOffsetY').name('Model Offset Y').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelOffsetZ').name('Model Offset Z').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelQuatX').name('Quat X').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelQuatY').name('Quat Y').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelQuatZ').name('Quat Z').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelQuatW').name('Quat W').onChange(() => this.onChange());
-    ringFolder.add(this.params, 'modelScale').name('Model Scale').onChange(() => this.onChange());
+    const solved = this.gui.addFolder('Solved (read-only)');
+    this.readoutControllers = [
+      solved.add(this.readout, 'depthCm').name('Depth (cm)').disable(),
+      solved.add(this.readout, 'fingerWidthMm').name('Finger width (mm)').disable(),
+      solved.add(this.readout, 'handedness').name('Hand').disable()
+    ];
+    solved.open();
 
-    // Camera folder
-    const cameraFolder = this.gui.addFolder('Camera');
-    cameraFolder.add(this.params, 'cameraZ').name('Camera Z').onChange(() => this.onChange());
-    cameraFolder.add(this.params, 'cameraFOV').name('FOV').onChange(() => this.onChange());
+    const camera = this.gui.addFolder('Camera model');
+    this.add(camera, 'vFOV', 30, 90, 1).name('Vertical FOV (deg)');
+    this.add(camera, 'mirror').name('Mirror (selfie)');
+    this.add(camera, 'flipHandedness').name('Flip handedness');
 
-    // Smoothing folder
-    const smoothingFolder = this.gui.addFolder('Smoothing');
-    smoothingFolder.add(this.params, 'positionSmoothing', 0, 1, 0.01).name('Position Alpha').onChange(() => this.onChange());
-    smoothingFolder.add(this.params, 'rotationSmoothing', 0, 1, 0.01).name('Rotation Alpha').onChange(() => this.onChange());
+    const ring = this.gui.addFolder('Ring placement');
+    this.add(ring, 'anchorAlongPhalanx', 0, 1, 0.01).name('Along phalanx (0=MCP)');
+    this.add(ring, 'ringOffsetXMm', -20, 20, 0.5).name('Offset across (mm)');
+    this.add(ring, 'ringOffsetYMm', -20, 20, 0.5).name('Offset along (mm)');
+    this.add(ring, 'ringOffsetZMm', -20, 20, 0.5).name('Offset out of palm (mm)');
+    this.add(ring, 'modelQuatX', -1, 1, 0.001).name('Model quat X');
+    this.add(ring, 'modelQuatY', -1, 1, 0.001).name('Model quat Y');
+    this.add(ring, 'modelQuatZ', -1, 1, 0.001).name('Model quat Z');
+    this.add(ring, 'modelQuatW', -1, 1, 0.001).name('Model quat W');
 
-    // Actions
-    this.gui.add(this.params, 'reset').name('🔄 Reset to Defaults');
-    this.gui.add(this.params, 'save').name('💾 Save Preset');
-    this.gui.add(this.params, 'load').name('📂 Load Preset');
-    this.gui.add(this.params, 'export').name('📋 Export JSON');
+    const fit = this.gui.addFolder('Fit');
+    this.add(fit, 'fingerWidthCoeff', 0.4, 1.2, 0.01).name('Finger width calib.');
+    this.add(fit, 'outerDiameterRatio', 0.8, 2.0, 0.01).name('Ring / finger width');
+
+    const smoothing = this.gui.addFolder('Smoothing (One Euro)');
+    this.add(smoothing, 'positionMinCutoff', 0.1, 10, 0.1).name('Pos min cutoff (Hz)');
+    this.add(smoothing, 'positionBeta', 0, 0.1, 0.001).name('Pos beta');
+    this.add(smoothing, 'rotationMinCutoff', 0.1, 10, 0.1).name('Rot min cutoff (Hz)');
+    this.add(smoothing, 'rotationBeta', 0, 2, 0.01).name('Rot beta');
+
+    const view = this.gui.addFolder('View');
+    this.add(view, 'showMarker').name('Anchor marker');
+
+    this.gui.add({ reset: () => this.reset() }, 'reset').name('Reset to defaults');
+    this.gui.add({ copy: () => this.copy() }, 'copy').name('Copy config JSON');
+  }
+
+  add(folder, key, ...range) {
+    return folder.add(this.params, key, ...range).onChange(() => this.onChange());
   }
 
   onChange() {
-    // Auto-save to localStorage on any change
-    this.saveToLocalStorage();
+    this.writeStorage();
+    this.onUpdate?.(this.params);
+  }
 
-    // Notify config update (will be used by other components)
-    if (this.onUpdate) {
-      this.onUpdate(this.params);
-    }
+  /**
+   * Show what the solver produced this frame. This is the panel's real job now:
+   * confirming the metric solve is sane rather than offering knobs to guess with.
+   */
+  setReadout(transform) {
+    if (!transform?.visible) return;
+    this.readout.depthCm = Number((transform.depth * 100).toFixed(1));
+    this.readout.fingerWidthMm = Number((transform.fingerWidth * 1000).toFixed(1));
+    this.readout.handedness = transform.handedness;
+    this.readoutControllers.forEach((controller) => controller.updateDisplay());
   }
 
   reset() {
-    // Reset to default values
-    this.params.mirrorX = true;
-    this.params.invertY = true;
-    this.params.invertZ = true;
-    this.params.offsetX = 0.5;
-    this.params.offsetY = 0.5;
-    this.params.offsetZ = 0;
-    this.params.globalScale = 5.0;
-    this.params.depthMultiplier = 1.0;
-    this.params.landmarkAnchor = 13;
-    this.params.modelOffsetX = 0;
-    this.params.modelOffsetY = 0;
-    this.params.modelOffsetZ = 0;
-    this.params.modelQuatX = 0;
-    this.params.modelQuatY = 0;
-    this.params.modelQuatZ = 0.707;
-    this.params.modelQuatW = 0.707;
-    this.params.modelScale = 1;
-    this.params.cameraZ = 20;
-    this.params.cameraFOV = 63;
-    this.params.positionSmoothing = 0.65;
-    this.params.rotationSmoothing = 0.45;
-
+    Object.assign(this.params, DEFAULTS);
     this.gui.destroy();
-    this.gui = new GUI({ title: 'Ring VTO Debug Panel', width: 320 });
-    this.setupGUI();
+    this.buildGUI();
     this.onChange();
-
-    console.log('✅ Reset to default values');
+    console.log('Debug params reset to defaults');
   }
 
-  save() {
-    this.saveToLocalStorage();
-    console.log('✅ Preset saved to localStorage');
-    alert('Preset saved!');
+  copy() {
+    const json = JSON.stringify(this.params, null, 2);
+    navigator.clipboard?.writeText(json);
+    console.log('Config:\n', json);
   }
 
-  load() {
-    this.loadFromLocalStorage();
-    console.log('✅ Preset loaded from localStorage');
-    alert('Preset loaded!');
-  }
-
-  export() {
-    const json = JSON.stringify(this.params, (key, value) => {
-      // Skip function values
-      if (typeof value === 'function') return undefined;
-      return value;
-    }, 2);
-
-    // Copy to clipboard
-    navigator.clipboard.writeText(json).then(() => {
-      console.log('📋 Config exported to clipboard:\n', json);
-      alert('Config copied to clipboard!');
-    });
-  }
-
-  saveToLocalStorage() {
-    const data = {};
-    for (const key in this.params) {
-      if (typeof this.params[key] !== 'function') {
-        data[key] = this.params[key];
-      }
+  readStorage() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return {};
+      // Only keep keys that still exist, so a stale entry cannot reintroduce a
+      // parameter that no longer means anything.
+      const parsed = JSON.parse(saved);
+      return Object.fromEntries(
+        Object.entries(parsed).filter(([key]) => key in DEFAULTS)
+      );
+    } catch (error) {
+      console.warn('Failed to read debug params from localStorage:', error);
+      return {};
     }
-    localStorage.setItem('ring-vto-debug-params', JSON.stringify(data));
   }
 
-  loadFromLocalStorage() {
-    const saved = localStorage.getItem('ring-vto-debug-params');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        Object.assign(this.params, data);
-        console.log('📂 Loaded params from localStorage:', data);
-
-        // Refresh GUI with loaded values
-        this.gui.destroy();
-        this.gui = new GUI({ title: 'Ring VTO Debug Panel', width: 320 });
-        this.setupGUI();
-      } catch (e) {
-        console.warn('Failed to load params from localStorage:', e);
-      }
-    }
+  writeStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.params));
   }
 
   toggle() {
-    if (this.gui._hidden) {
-      this.gui.show();
-    } else {
-      this.gui.hide();
-    }
+    if (this.gui._hidden) this.gui.show();
+    else this.gui.hide();
   }
 
   show() {

@@ -1,73 +1,97 @@
 /**
  * Ring VTO Configuration
- * Proven settings from WebARRocks implementation
+ *
+ * Everything here is metric. Lengths are millimetres where a human would think
+ * in millimetres (ring offsets) and metres in the solver. There is deliberately
+ * no "global scale" or "depth multiplier": those two knobs were coupled — depth
+ * and world scale moved together — so no combination of them was ever correct.
+ * Scale now comes from the hand's own measured size.
  */
 
 export const RingConfig = {
-  // Model settings (proven values from current implementation)
   modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
-  modelScale: 1,
-  modelOffset: [0, 0, 0], // [x, y, z] - Fine-tuned position on finger
-  modelQuaternion: [0, 0, 0.707, 0.707], // [X, Y, Z, W] - 90° Z rotation
 
-  // MediaPipe settings
-  mediaPipe: {
-    numHands: 1,
-    minHandDetectionConfidence: 0.7,
-    minHandPresenceConfidence: 0.7,
-    minTrackingConfidence: 0.7,
-    facingMode: 'user',
-    debugDrawLandmarks: true
+  camera: {
+    // Assumed vertical field of view of the webcam, in degrees.
+    // Screen alignment and apparent size are independent of this value (the
+    // focal length cancels between the depth solve and the projection), so it
+    // only affects the reported absolute depth and subtle perspective.
+    // ~60 suits phone front cameras, ~50 most laptop webcams.
+    vFOV: 60,
+
+    // The video is displayed mirrored, selfie-style. The 3D is mirrored to match.
+    mirror: true,
+
+    // MediaPipe labels handedness assuming a mirrored input image. Flip this if
+    // the reported hand is the opposite of the one on screen. Affects only the
+    // label and the palm-normal sign, never the position.
+    flipHandedness: false
   },
 
-  // Soft occluder parameters (from WebARRocks)
+  ring: {
+    // Where the ring sits along the proximal phalanx: 0 = MCP joint (knuckle),
+    // 1 = PIP joint. A worn ring sits just above the knuckle.
+    anchorAlongPhalanx: 0.45,
+
+    // Offset in millimetres in the finger frame:
+    // X across the finger, Y along it toward the tip, Z out of the palm.
+    offsetMm: [0, 0, 0],
+
+    // Corrects however the GLB is authored, applied after the finger rotation.
+    // The solver's Y axis runs along the finger, so a ring modelled lying flat
+    // in the XZ plane needs no correction.
+    modelQuaternion: [0, 0, 0, 1],
+
+    // Finger width is measured from the hand: the index→pinky MCP row spans
+    // three inter-finger gaps, and this calibrates a gap to a finger width.
+    // Raise it if the ring reads slightly small on your hand.
+    fingerWidthCoeff: 0.72,
+
+    // Ring outer diameter as a multiple of the finger width. A band adds a
+    // couple of millimetres of metal around the finger.
+    outerDiameterRatio: 1.25
+  },
+
+  mediaPipe: {
+    numHands: 1,
+    minHandDetectionConfidence: 0.6,
+    minHandPresenceConfidence: 0.6,
+    minTrackingConfidence: 0.6,
+    facingMode: 'user',
+    debugDrawLandmarks: true,
+
+    // Pinned deliberately. The importmap used to resolve `@latest`, which rolled
+    // over to the 1.0.0 release; the wasm fileset must match the JS bundle.
+    version: '0.10.35'
+  },
+
+  // Depth-only cylinder along the finger, so the far side of the band is hidden.
   occluder: {
     enabled: true,
-    radiusRange: [1.2, 1.5], // [inner, outer] - Finger size
-    height: 30,
-    offset: [0, 0, 0],
-    quaternion: [0.707, 0, 0, 0.707], // 90° X rotation
-    flattenCoeff: 0.7, // 1 = cylinder, 0.5 = 50% flattened
+    // Multiples of the measured finger width.
+    radiusRatio: 0.5,
+    lengthRatio: 3.0,
+    // 1 = round, lower = flatter. Fingers are wider than they are deep.
+    flattenCoeff: 0.75,
     debug: false
   },
 
-  // Smoothing filters (from watch-mediapipe)
+  /**
+   * One Euro filter parameters. Inputs are metric, so these are physical:
+   * minCutoff is in Hz (lower = smoother while the hand is still) and beta is
+   * the speed coefficient (higher = less lag while the hand moves).
+   */
   smoothing: {
-    position: {
-      enabled: true,
-      alpha: 0.65 // Higher = more responsive, lower = smoother
-    },
-    rotation: {
-      enabled: true,
-      alpha: 0.45
-    },
-    confidence: {
-      hysteresisFrames: 5,
-      threshold: 0.6
-    }
+    position: { enabled: true, minCutoff: 1.0, beta: 0.007 },
+    rotation: { enabled: true, minCutoff: 1.5, beta: 0.35 },
+    confidence: { hysteresisFrames: 3 }
   },
 
-  // Ring finger landmarks (MediaPipe indices)
-  landmarks: {
-    ringMCP: 13, // Ring finger base (Metacarpophalangeal joint)
-    ringPIP: 14, // Ring finger middle knuckle
-    ringDIP: 15, // Ring finger top knuckle
-    ringTIP: 16, // Ring finger tip
-    wrist: 0,
-    // For calculating finger orientation
-    middlePIP: 10,
-    pinkyPIP: 18
-  },
-
-  // Debug flags
   debug: {
     displayLandmarks: true,
     meshMaterial: false,
-    occluder: false,
+    marker: true,
     logPositions: false,
-    panelEnabled: true // Enable debug control panel
-  },
-
-  // Debug panel parameters (will be overridden by DebugPanel)
-  debugParams: null
+    panelEnabled: true
+  }
 };
