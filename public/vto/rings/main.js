@@ -1,5 +1,5 @@
 const _settings = {
-  threshold: 0.95, // detection sensitivity, between 0 and 1
+  threshold: 0.9, // detection sensitivity, between 0 and 1
 
   // pose computation and stabilization:
   // Ring finger landmarks (NN_RING_14)
@@ -18,7 +18,7 @@ const _settings = {
   ],
 
   modelOffset: [0, -10, 0], // adjust ring position on hand
-  modelScale: 0.45, // scale factor for ring model
+  modelScale: 0.1, // scale factor for ring model
   NNsPaths: ['./neuralNets/NN_RING_13.json'],
   objectPointsPositionFactors: [1.0, 1.0, 1.0],
   isPoseFilter: true,

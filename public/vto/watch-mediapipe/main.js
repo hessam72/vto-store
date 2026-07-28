@@ -31,8 +31,8 @@ async function init() {
     console.log('🎨 Step 3: Creating Three.js scene...');
     appState.threeScene = new ThreeSceneManager(vtoCanvas, {
       modelURL: window.VTO_MODEL_URL || '/models/watch/default.glb',
-      modelScale: 1.0,
-      watchDiameter: 42,  // 42mm standard watch
+      modelScale: 90,
+      watchDiameter: 100,  // 42mm standard watch
       occluderRadiusRange: [4.0, 4.5],
       occluderHeight: 8,
       debugOccluder: false
@@ -48,6 +48,11 @@ async function init() {
     console.log('🔲 Step 7: Adding occluder...');
     appState.threeScene.addSoftOccluder();
     console.log('✅ Step 8: Occluder added');
+
+    // Add debug box
+    console.log('🔴 Step 8.5: Adding debug box...');
+    appState.threeScene.addDebugBox();
+    console.log('✅ Step 8.5: Debug box added');
 
     // Initialize MediaPipe tracker
     console.log('👋 Step 9: Initializing MediaPipe tracker...');

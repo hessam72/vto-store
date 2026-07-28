@@ -30,6 +30,7 @@ export class ThreeSceneManager {
     this.renderer = null;
     this.watchMesh = null;
     this.occluderMesh = null;
+    this.debugBox = null;  // DEBUG: Simple box to test positioning
     this.loadingManager = null;
 
     // State
@@ -226,6 +227,22 @@ export class ThreeSceneManager {
   }
 
   /**
+   * Add debug box to visualize wrist position
+   */
+  addDebugBox() {
+    const geometry = new THREE.BoxGeometry(0.05, 0.05, 0.05);  // 5cm cube
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xff0000,  // Red
+      wireframe: false
+    });
+
+    this.debugBox = new THREE.Mesh(geometry, material);
+    this.debugBox.visible = false;
+    this.scene.add(this.debugBox);
+    console.log('DEBUG: Red box added for wrist visualization');
+  }
+
+  /**
    * Update watch position and orientation from MediaPipe landmarks
    * @param {Object} results - MediaPipe results with landmarks
    */
@@ -310,6 +327,12 @@ export class ThreeSceneManager {
       this.occluderMesh.quaternion.copy(quaternion);
       this.occluderMesh.visible = true;
     }
+
+    // DEBUG: Update debug box
+    if (this.debugBox) {
+      this.debugBox.position.copy(position);
+      this.debugBox.visible = true;
+    }
   }
 
   /**
@@ -321,6 +344,9 @@ export class ThreeSceneManager {
     }
     if (this.occluderMesh) {
       this.occluderMesh.visible = false;
+    }
+    if (this.debugBox) {
+      this.debugBox.visible = false;
     }
     this.isWatchVisible = false;
 
