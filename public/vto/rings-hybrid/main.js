@@ -144,9 +144,8 @@ function hideInstructions() {
  * Handle window resize
  */
 window.addEventListener('resize', () => {
-  const vtoCanvas = document.getElementById('VTOCanvas');
-  if (vtoCanvas && app.threeScene) {
-    app.threeScene.updateCameraAspect(vtoCanvas.width, vtoCanvas.height);
+  if (app.threeScene) {
+    app.threeScene.updateCameraAspect();
   }
 });
 

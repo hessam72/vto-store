@@ -26,6 +26,9 @@ export class ThreeRingScene {
    * Initialize Three.js scene
    */
   init() {
+    // Set canvas size to match viewport
+    this.resizeCanvas();
+
     // Create scene
     this.scene = new THREE.Scene();
 
@@ -50,6 +53,20 @@ export class ThreeRingScene {
     this.setupLighting();
 
     console.log('Three.js scene initialized');
+  }
+
+  /**
+   * Resize canvas to match viewport
+   */
+  resizeCanvas() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    this.canvas.width = width * pixelRatio;
+    this.canvas.height = height * pixelRatio;
+    this.canvas.style.width = width + 'px';
+    this.canvas.style.height = height + 'px';
   }
 
   /**
@@ -225,10 +242,11 @@ export class ThreeRingScene {
   /**
    * Update camera aspect ratio
    */
-  updateCameraAspect(width, height) {
-    this.camera.aspect = width / height;
+  updateCameraAspect() {
+    this.resizeCanvas();
+    this.camera.aspect = this.canvas.width / this.canvas.height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(this.canvas.width, this.canvas.height);
   }
 
   /**
