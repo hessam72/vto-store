@@ -61,6 +61,13 @@ startVTO({
     readouts: [
       { key: 'depthCm', name: 'Depth (cm)', format: (t) => (t.depth * 100).toFixed(1) },
       { key: 'wristWidthMm', name: 'Wrist width (mm)', format: (t) => (t.width * 1000).toFixed(1) },
+      // Must exceed the wrist width, or the product is inside the arm and the
+      // occluder hides it — which is exactly what a bbox-derived fit produced.
+      ...(isAbsolute ? [] : [{
+        key: 'fittedHoleMm',
+        name: 'Fitted hole (mm)',
+        format: (t) => (t.fittedInnerM * 1000).toFixed(1)
+      }]),
       { key: 'handedness', name: 'Hand', format: (t) => t.handedness }
     ]
   }

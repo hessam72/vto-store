@@ -103,7 +103,14 @@ function handleResults(app, results) {
   const transform = app.positioner.calculate(results, view, performance.now());
 
   app.scene.updateTransform(transform);
-  app.debugPanel?.setReadout(transform);
+
+  if (app.debugPanel) {
+    // The fit lives on the scene, not the pose. Surfacing it turns "it looks too
+    // small" into a number next to the limb it is supposed to fit.
+    app.debugPanel.setReadout(transform.visible
+      ? { ...transform, fittedInnerM: app.scene.fittedInnerDiameter(transform.width) }
+      : transform);
+  }
 
   if (transform.visible && !app.isInstructionsHidden) {
     app.isInstructionsHidden = true;

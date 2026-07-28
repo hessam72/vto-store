@@ -40,9 +40,9 @@ the proximal phalanx (13→14), Z the palm normal, X completing the frame. Never
 from projected pixels, which mix in perspective and flip Y.
 
 Scale comes from the hand: the index→pinky MCP row spans three inter-finger
-gaps, giving a measured finger width in metres. The GLB is normalized from its
-own bounding box and fitted to that width, so it holds its size as the hand moves
-nearer or further.
+gaps, giving a measured finger width in metres. The GLB's own **hole** is measured
+from its geometry and fitted to that width, so the ring holds its size as the hand
+moves nearer or further, and band thickness does not affect the fit.
 
 ## Files
 
@@ -72,13 +72,16 @@ bootstrap.js           app wiring and render loop
   palm. `product.offsetMm` is expressed in this frame, so it means the same thing at
   any hand orientation or distance.
 - **Model orientation:** +Y is the finger axis, so a ring GLB is correct when its
-  bore runs along +Y. Rather than carrying a per-model quaternion, the bore axis
-  is detected at load from the narrowest bounding-box extent — a ring is a flat
-  torus, so its narrow axis is always the bore, gem or no gem — and the model is
-  rotated to match. `product.boreAxis` overrides the detection;
+  bore runs along +Y. Rather than carrying a per-model quaternion, the bore is
+  measured from the geometry at load — vertices projected about each candidate
+  axis, scored on hole size × how completely material surrounds the centre — and
+  the model is rotated to match. `product.boreAxis` overrides it;
   `product.rollDeg` turns the ring about the finger to place the gem.
-  (`boreAxisPolicy` is `narrowest` here; watches need the opposite rule — see
-  `../wrist-hybrid/README.md`.)
+- **Sizing fits the hole, not the outside.** A bounding box cannot see a hole, and
+  fitting the outer diameter leaves the bore narrower than the finger by twice the
+  band thickness. `boreDiameterRatio` is clearance on the finger (~1.05), so band
+  thickness no longer affects the fit. The panel's "Fitted hole" readout should
+  always sit just above the measured finger width.
 - **Mirroring:** the video is CSS-mirrored (selfie view) and the solver mirrors
   the 3D to match. The mirror is applied to the finished quaternion, not to the
   basis vectors — negating a basis vector would make the matrix a reflection

@@ -59,9 +59,10 @@ export const RingConfig = {
     sizing: {
       // A ring must fit the finger, so it scales with the measured hand.
       mode: 'fit',
-      // Ring outer diameter as a multiple of the finger width — a band adds a
-      // couple of millimetres of metal around the finger.
-      boreDiameterRatio: 1.25
+      // Clearance on the finger: the ring's HOLE is fitted to fingerWidth x this.
+      // Because the hole is measured from the geometry rather than the bounding
+      // box, band thickness no longer affects the fit.
+      boreDiameterRatio: 1.05
     }
   },
 

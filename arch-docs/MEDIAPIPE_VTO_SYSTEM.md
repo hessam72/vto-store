@@ -165,8 +165,17 @@ anatomy. Rings and bracelets: the wearer's finger or wrist sets the size.
 ```js
 // The index→pinky MCP row spans three inter-finger gaps.
 fingerWidth = |W[5] − W[17]| / 3 × coefficient;   // coefficient ≈ 0.72
-scale = (fingerWidth × boreDiameterRatio) / modelBoreDiameter;
+scale = (fingerWidth × clearanceRatio) / modelInnerDiameter;   // ratio ≈ 1.05
 ```
+
+**Fit the hole, not the outside.** This is the one that bites. A bounding box
+cannot see a hole: for a torus, *both* extents perpendicular to the bore are the
+OUTER diameter, so a bbox-derived fit sizes the outside of the band and leaves the
+hole narrower than the limb by twice the band thickness. On a ring with a 2 mm
+band the error hides; on a bracelet with an 8 mm band the hole comes out 13 mm
+too small, the product sits inside the arm, and the occluder — a cylinder of
+exactly limb width — swallows it. The symptom reads as three separate bugs
+(invisible, too small, wrong) from one line of measurement.
 
 **Absolute** — the product has a fixed real-world size that is itself the thing
 being shopped for. A watch case is 38/40/42/44mm, and that number is the point:
@@ -184,10 +193,10 @@ concrete payoff of everything above. Verified: a 42mm case renders at 42.00mm on
 45/53/65mm wrists, with a bit-identical scale factor.
 
 The model's own dimensions must be measured at load, not assumed — GLB authoring
-units vary wildly between tools. Measure the bounding box once and derive
-everything from it: the **bore** diameter from the smaller of the two extents
-perpendicular to the bore (a gem or a case inflates one radial direction), and the
-**max** diameter from the larger (which is the watch case's own size).
+units vary wildly between tools. Measure from the **geometry**, not the bounding
+box (see the next section), except for absolute sizing: the radial distance from
+the bore axis to a watch case is its height above the wrist, not its diameter, so
+the case's own size is the larger bbox extent perpendicular to the bore.
 
 ---
 
@@ -198,29 +207,52 @@ A GLB is only correct when its axes match the solver's frame (in the ring case,
 that breaks on the next asset and is unusable in a GUI — four coupled components
 that must stay normalized.
 
-Detect it from the geometry instead — but note that **the two product shapes need
-opposite rules**, so this is a per-product policy, not one universal heuristic:
+Detect it from the geometry instead. One pass over the vertices at load answers
+both the orientation and the fit, and neither can be had from a bounding box.
 
-- **`narrowest`** — a ring or a closed bracelet is a flat torus: two bounding-box
-  extents are the diameter, and the narrowest is the band width, which runs along
-  the bore. Survives a gem, because a gem grows a radial extent and never the
-  narrowest one.
-- **`longest`** — an **open watch** (a case plus two strap stubs, which is how
-  most watch GLBs are authored) is *elongated* along the bore instead: the strap
-  runs up and down the arm while the case is wider than it is thick.
+For each candidate axis, project every vertex onto the perpendicular plane and
+take radial distances from the axis:
 
-Applying the ring rule to a watch picks the case thickness and stands the watch on
-end. Verified: a case-plus-stubs mesh with its bore on Y detects as `z` under
-`narrowest` and correctly as `y` under `longest`. A *closed-loop* watch model
-behaves like a bracelet and wants `narrowest`.
+```js
+innerRadius = percentile(radii, 0.01);          // the hole — what the fit needs
+outerRadius = percentile(radii, 0.99);
+coverage    = occupiedAngularBins / 16;          // does material surround the centre?
+score       = (innerRadius / outerRadius) × coverage;
+```
 
-A shape heuristic cannot separate the two automatically — a solitaire ring and an
-open watch have similarly lopsided bounding boxes — so let each product category
-declare its policy and log the choice at load. Expose a manual axis override for
-unusual geometry, and a **roll in degrees** about the primary axis for rotational
-placement.
+Percentiles rather than min/max, so one stray vertex cannot define the fit.
 
----
+**Both factors are needed.** Hole size alone is not enough: a torus seen *edge-on*
+also has empty space in the middle of its projection — two blobs either side — so
+it scores just as well about the wrong axis. Only the true bore has material all
+the way *around* the centre. Measured on synthetic models, the combined score is
+0.35–0.93 for the true bore against 0.09–0.16 for every wrong axis: a clean
+decision, not a marginal one.
+
+**Find the bore's centre, not the box's.** A clasp, a charm or a solitaire sits off
+to one side and drags the bbox centre off the bore, after which the hole is
+measured about the wrong axis and reads as nothing. Seed from the *median* of the
+projected coordinates (robust to a minority of outlying geometry), then hill-climb
+to maximize the hole radius, clamped to a neighbourhood of the seed — a centre
+that wanders far from the model has found empty space beside the product, not its
+bore. Use that same centre to place the pivot, or the product orbits the limb
+instead of encircling it.
+
+**Fall back when the shape is not a loop.** An open watch — a case plus two strap
+stubs, which is how most watch GLBs are authored — has no bore to find and is not
+centred on the wrist axis. Its coverage score is low, which correctly reads as
+"inconclusive", and a per-product bounding-box policy decides instead:
+
+- `narrowest` — a ring or closed bracelet is a flat torus, so the bore is its
+  narrowest extent.
+- `longest` — an open watch is elongated along the bore, since the strap runs up
+  and down the arm.
+
+Log which path decided, with the scores. When a model does come out wrong, that
+line says immediately whether the geometry was annular at all.
+
+Expose a manual axis override for unusual geometry, and a **roll in degrees** about
+the primary axis for rotational placement.
 
 ## Smoothing: One Euro, Not Fixed Alpha
 
@@ -436,7 +468,9 @@ Symptoms observed during development, with causes, since several are misleading:
 | Occluder stops working, or hides everything | `transparent: true`, or proxy sized by constants |
 | Object blinks on dropped frames | No detection hysteresis |
 | Ring stands across the finger | GLB bore axis not aligned to the solver's primary axis |
-| Watch stands on end | Ring's `narrowest` bore policy applied to an open watch — use `longest` |
+| Watch stands on end | Bore policy fallback set to `narrowest` for an open watch — use `longest` |
 | Every watch looks the same size on every wrist | Absolute-sized product put through the fit-driven path |
-| Band looks undersized | Fitting diameter taken as `max()` over all three extents (gem inflates it) |
+| Product invisible, "inside" the limb | Fit derived from the bounding box, so the hole ended up narrower than the limb and the occluder swallowed it |
+| Product too small, band thickness matters | Same cause — fit the measured hole, not the outer diameter |
+| Product orbits the limb instead of encircling it | Pivot centred on the bounding box rather than on the measured bore |
 | Watch tilts off the arm when the wrist bends | Hand-only forearm axis; inherent, see the flexion table |

@@ -33,7 +33,8 @@ export const COMMON_DEFAULTS = {
   rotationMinCutoff: 1.5,
   rotationBeta: 0.35,
 
-  showMarker: true
+  showMarker: true,
+  showOccluder: false
 };
 
 export class DebugPanel {
@@ -98,6 +99,9 @@ export class DebugPanel {
 
     const view = this.gui.addFolder('View');
     this.add(view, 'showMarker').name('Anchor marker');
+    // Renders the occluder as a wireframe limb, so a bad fit is visible
+    // rather than just a product that mysteriously vanished.
+    this.add(view, 'showOccluder').name('Show occluder (limb)');
 
     this.gui.add({ reset: () => this.reset() }, 'reset').name('Reset to defaults');
     this.gui.add({ copy: () => this.copy() }, 'copy').name('Copy config JSON');

@@ -117,7 +117,11 @@ export const BRACELET_PRESET = {
     sizing: {
       // Like a ring, a bracelet wraps the wearer — size follows the measurement.
       mode: 'fit',
-      boreDiameterRatio: 1.15
+      // Clearance on the wrist: the bracelet's HOLE is fitted to wristWidth x
+      // this. Was 1.15 against the OUTER diameter, which left the hole narrower
+      // than the wrist by twice the band thickness — the bracelet sat inside the
+      // arm and the occluder hid it.
+      boreDiameterRatio: 1.05
     }
   }
 };

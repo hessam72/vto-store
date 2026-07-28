@@ -94,27 +94,41 @@ wristDepth = wristWidth × wristDepthRatio        // ≈0.72, the wrist is ellip
 Adult palm breadth at the knuckles averages ~79 mm against a ~55 mm wrist breadth,
 hence 0.70. Calibrate it in the panel if the product reads wide or narrow.
 
-## Model orientation
+## Model orientation and fit
 
-The GLB's bore must run along +Y, the forearm axis. It is detected at load, but
-watches and rings need **opposite rules**, so it is a per-product policy:
+The GLB's bore must run along +Y, the forearm axis, and its **hole** must fit the
+wrist. Both come from measuring the geometry at load rather than its bounding box,
+because a bounding box cannot see a hole.
 
-- `boreAxisPolicy: 'narrowest'` — a ring or closed bracelet is a flat torus: two
-  extents are the diameter, the narrow one is the band width along the bore.
-- `boreAxisPolicy: 'longest'` — an **open watch** (a case plus two strap stubs,
-  how most watch GLBs are authored) is elongated along the bore instead: the strap
-  runs up and down the arm while the case is wider than it is thick.
+Vertices are projected about each candidate axis and scored on hole size × how
+completely material surrounds the centre. A real bore scores 0.35–0.93; every
+wrong axis scores ~0.1, because a bangle seen edge-on has empty space in the
+middle but nothing *around* it. The bore's centre is found the same way, so a
+clasp or charm cannot drag the pivot off-axis.
 
-Applying the ring rule to a watch picks the case thickness and stands the watch on
-end — verified: a case-plus-stubs mesh with its bore on Y detects as `z` under
-`narrowest` and correctly as `y` under `longest`.
+An **open watch** — a case plus two strap stubs, how most watch GLBs are authored
+— has no bore to find and is not centred on the wrist axis. It scores as
+inconclusive and falls back to a bounding-box policy:
 
-A **closed-loop** watch model behaves like a bracelet; set `boreAxisPolicy:
-'narrowest'` or pin `boreAxis` outright. The load-time log names both:
+- `boreAxisPolicy: 'longest'` — an open watch is elongated along the bore, since
+  the strap runs up and down the arm. (Verified: a case-plus-stubs mesh with its
+  bore on Y detects as `z` under the ring rule and correctly as `y` under this one.)
+- `boreAxisPolicy: 'narrowest'` — a **closed-loop** watch behaves like a bracelet.
+
+The load-time log names the path taken and the scores, so a wrong pick is
+immediately identifiable:
 
 ```
-Model oriented | bbox 0.042 x 0.070 x 0.012 | bore axis y (auto, longest) | bore 0.0420 max 0.0700
+Model oriented | bbox 0.042 x 0.070 x 0.012 | bore axis y (bbox longest,
+  annularity inconclusive: z 0.26, y 0.18, x 0.11) | hole 42.0mm outer 70.0mm case 70.0mm
 ```
+
+**Sizing fits the hole.** `boreDiameterRatio` is clearance on the wrist (~1.05),
+applied to the measured hole, so band thickness does not affect the fit. Fitting
+the *outer* diameter instead — what a bounding box gives you — leaves the hole
+narrower than the wrist by twice the band: on an 8 mm band that is 13 mm too
+small, the bracelet sits inside the arm, and the occluder hides it. The panel's
+"Fitted hole" readout must always exceed the measured wrist width.
 
 ## Occlusion
 
@@ -143,7 +157,7 @@ app.
 | | Watch | Bracelet |
 |---|---|---|
 | `anchorOffsetMm` | 35 | 18 |
-| `sizing.mode` | `absolute`, 42 mm | `fit`, 1.15 × wrist |
+| `sizing.mode` | `absolute`, 42 mm case | `fit`, hole = 1.05 × wrist |
 | `boreAxisPolicy` | `longest` | `narrowest` |
 
 `smoothing.confidence.hysteresisFrames` is 5 for both, up from the ring's 3: the
