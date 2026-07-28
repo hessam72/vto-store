@@ -1,8 +1,10 @@
 /**
  * Coordinate Conversion Utilities
  * Converts MediaPipe normalized coordinates to Three.js world space
- * Based on proven Codrops implementation
+ * Enhanced with wrist-specific positioning for watch try-on
  */
+
+import * as THREE from 'three';
 
 export class CoordinateConverter {
   /**
@@ -34,6 +36,38 @@ export class CoordinateConverter {
       (-landmark.y + 0.5) * scale,  // Center and invert Y
       -landmark.z * scale           // Negate Z (depth)
     );
+  }
+
+  /**
+   * Convert wrist landmark to Three.js position with surface offset
+   * Calculates proper position for watch to sit ON wrist surface
+   * @param {Array} landmarks - All 21 hand landmarks
+   * @param {number} scale - Scene scale multiplier
+   * @returns {THREE.Vector3}
+   */
+  static wristToThreeJS(landmarks, scale = 5.0) {
+    const wrist = landmarks[0];
+
+    // Calculate palm center from finger bases
+    const fingerBases = [landmarks[5], landmarks[9], landmarks[13], landmarks[17]];
+    const palmCenter = {
+      x: fingerBases.reduce((sum, lm) => sum + lm.x, 0) / 4,
+      y: fingerBases.reduce((sum, lm) => sum + lm.y, 0) / 4,
+      z: fingerBases.reduce((sum, lm) => sum + lm.z, 0) / 4
+    };
+
+    // Get base wrist position
+    const wristPos = this.normalizedToThreeJS(wrist, scale);
+    const palmPos = this.normalizedToThreeJS(palmCenter, scale);
+
+    // Calculate vector from palm to wrist (points toward camera)
+    const toCamera = new THREE.Vector3()
+      .subVectors(wristPos, palmPos)
+      .normalize()
+      .multiplyScalar(0.005 * scale);  // 5mm offset scaled
+
+    // Add offset to push watch toward camera (sit ON wrist, not IN it)
+    return wristPos.clone().add(toCamera);
   }
 
   /**
@@ -80,30 +114,6 @@ export class CoordinateConverter {
   }
 
   /**
-   * Calculate finger orientation from landmarks
-   * @param {Array} landmarks - Array of {x, y, z} for finger
-   * @param {number} baseIdx - Index of base landmark
-   * @param {number} tipIdx - Index of tip landmark
-   * @returns {THREE.Quaternion}
-   */
-  static calculateFingerRotation(landmarks, baseIdx, tipIdx) {
-    const base = this.normalizedToThreeJS(landmarks[baseIdx]);
-    const tip = this.normalizedToThreeJS(landmarks[tipIdx]);
-
-    // Direction vector from base to tip
-    const direction = new THREE.Vector3().subVectors(tip, base).normalize();
-
-    // Default finger direction (pointing up along Y axis)
-    const defaultDir = new THREE.Vector3(0, 1, 0);
-
-    // Calculate rotation quaternion
-    const quaternion = new THREE.Quaternion();
-    quaternion.setFromUnitVectors(defaultDir, direction);
-
-    return quaternion;
-  }
-
-  /**
    * Convert normalized [0,1] to centered [-1, 1] for WebGL
    * @param {Object} landmark - {x, y, z}
    * @returns {Object}
@@ -133,28 +143,5 @@ export class CoordinateConverter {
     }
 
     return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  /**
-   * Estimate ring size from finger width
-   * Measures distance between adjacent MCP joints
-   * @param {Array} landmarks - All 21 hand landmarks
-   * @param {number} fingerMCP - MCP index of target finger
-   * @param {number} leftMCP - MCP index of left adjacent finger
-   * @param {number} rightMCP - MCP index of right adjacent finger
-   * @returns {number} - Estimated ring radius scale factor
-   */
-  static estimateRingSize(landmarks, fingerMCP, leftMCP, rightMCP) {
-    const finger = landmarks[fingerMCP];
-    const left = landmarks[leftMCP];
-    const right = landmarks[rightMCP];
-
-    // Average distance to adjacent fingers
-    const distLeft = this.landmarkDistance(finger, left);
-    const distRight = this.landmarkDistance(finger, right);
-    const avgDistance = (distLeft + distRight) / 2;
-
-    // Map to ring scale (0.8 - 1.2 range)
-    return THREE.MathUtils.mapLinear(avgDistance, 0.05, 0.15, 0.8, 1.2);
   }
 }
