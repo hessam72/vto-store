@@ -3,6 +3,11 @@
 Real-time ring try-on. MediaPipe Hand Landmarker supplies the landmarks; a metric
 pinhole solve turns them into a Three.js pose.
 
+> The general method, its derivation, and the failure modes it replaces are
+> documented in [`arch-docs/MEDIAPIPE_VTO_SYSTEM.md`](../../../arch-docs/MEDIAPIPE_VTO_SYSTEM.md).
+> Read that before adapting this to a watch, bracelet or other product. What
+> follows is this implementation's specifics.
+
 ## How the 2D → 3D conversion works
 
 MediaPipe gives two things per hand: `landmarks` (normalized image coordinates,
