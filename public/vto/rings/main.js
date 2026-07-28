@@ -17,7 +17,7 @@ const _settings = {
     'ringBasePalm'
   ],
 
-  modelOffset: [0, -10, 0], // adjust ring position on hand
+  modelOffset: [-1.5, -11, 0], // adjust ring position on hand
   modelScale: 0.1, // scale factor for ring model
   NNsPaths: ['./neuralNets/NN_RING_13.json'],
   objectPointsPositionFactors: [1.0, 1.0, 1.0],
@@ -39,7 +39,8 @@ const _settings = {
 
   // model settings:
   modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
-  modelQuaternion: [0,0,0,1], // Format: X,Y,Z,W (and not W,X,Y,Z like Blender)
+  // modelQuaternion: [0,0,0,1], // Format: X,Y,Z,W (and not W,X,Y,Z like Blender)
+modelQuaternion: [0, 0, 0.707, 0.707],
 
   // debug flags:
   debugDisplayLandmarks: false,
@@ -99,8 +100,36 @@ function main(){
       }
     },
     objectPointsPositionFactors: _settings.objectPointsPositionFactors,
-    poseRotationDirectionSrc: [0,1,0],
-    poseRotationDirectionDst: [0,0,1],
+
+    // ROTATION TEST OPTIONS - Uncomment ONE option at a time to test
+    // Option 1: Watch style (Y→Z) - Ring appears VERTICAL (broken)
+    // poseRotationDirectionSrc: [0,1,0],
+    // poseRotationDirectionDst: [0,0,1],
+
+    // Option 2: Inverse of watch (Z→Y) - MOST LIKELY TO WORK
+    // poseRotationDirectionSrc: [0,0,1],
+    // poseRotationDirectionDst: [0,1,0],
+
+    // Option 3: X→Y mapping
+    // poseRotationDirectionSrc: [1,0,0],
+    // poseRotationDirectionDst: [0,1,0],
+
+    // Option 4: X→Z mapping
+    // poseRotationDirectionSrc: [1,0,0],
+    // poseRotationDirectionDst: [0,0,1],
+
+    // Option 5: Y→X mapping
+    // poseRotationDirectionSrc: [0,1,0],
+    // poseRotationDirectionDst: [1,0,0],
+
+    // Option 6: Z→X mapping
+    // poseRotationDirectionSrc: [0,0,1],
+    // poseRotationDirectionDst: [1,0,0],
+
+    // Option 7: No rotation override (let WebARRocks decide)
+    poseRotationDirectionSrc: null,
+    poseRotationDirectionDst: null,
+
     poseLandmarksLabels: _settings.poseLandmarksLabels,
     poseFilter: (_settings.isPoseFilter) ? PoseFlipFilter.instance({}) : null,
     NNsPaths: _settings.NNsPaths,
