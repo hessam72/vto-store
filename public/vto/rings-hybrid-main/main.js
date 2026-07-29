@@ -25,6 +25,25 @@ const app = {
 };
 
 /**
+ * Apply camera-specific transforms for back camera mirroring fix
+ */
+function applyBackCameraTransforms(videoElement, canvasElement, vtoCanvas) {
+  const isBackCamera = app.tracker.config.facingMode === 'environment';
+
+  if (isBackCamera) {
+    // Back camera: no mirror
+    videoElement.style.transform = 'scale(1)';
+    canvasElement.style.transform = 'scale(1)';
+    vtoCanvas.style.transform = 'scaleX(-1)';
+  } else {
+    // Front camera: mirror everything
+    videoElement.style.transform = 'scaleX(-1)';
+    canvasElement.style.transform = 'scaleX(-1)';
+    vtoCanvas.style.transform = 'none';
+  }
+}
+
+/**
  * Initialize application
  */
 async function init() {
@@ -78,6 +97,9 @@ async function init() {
 
     await app.tracker.init(videoElement, canvasElement);
 
+    // Apply initial camera transforms
+    applyBackCameraTransforms(videoElement, canvasElement, vtoCanvas);
+
     // Start tracking
     console.log('▶️ Starting hand tracking...');
     app.tracker.start();
@@ -86,6 +108,8 @@ async function init() {
     changeCameraBtn.addEventListener('click', async () => {
       try {
         await app.tracker.switchCamera();
+        // Apply transforms after camera switch
+        applyBackCameraTransforms(videoElement, canvasElement, vtoCanvas);
       } catch (error) {
         console.error('Error switching camera:', error);
       }
