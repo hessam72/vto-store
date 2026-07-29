@@ -1,12 +1,14 @@
 'use client'
 
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, useGLTF } from '@react-three/drei'
-import { Suspense, useRef, useMemo, useEffect } from 'react'
+import { Suspense, useMemo, useLayoutEffect, useState } from 'react'
 import * as THREE from 'three'
 
 // Configure DRACO path for useGLTF
 useGLTF.setDecoderPath('/draco/')
+
+const FIT_MARGIN = 1.15
 
 interface ProductModelProps {
   glbPath: string
@@ -14,15 +16,8 @@ interface ProductModelProps {
 
 function ProductModel({ glbPath }: ProductModelProps) {
   const gltf = useGLTF(glbPath)
-  const groupRef = useRef<THREE.Group>(null)
 
-  useEffect(() => {
-    console.log('🔍 Model loaded:', glbPath)
-    console.log('📦 Scene:', gltf.scene)
-    console.log('👥 Children:', gltf.scene.children.length)
-  }, [glbPath, gltf])
-
-  const processedScene = useMemo(() => {
+  const { scene, offset, fitScale } = useMemo(() => {
     const clonedScene = gltf.scene.clone(true)
 
     // Ensure all meshes are visible and properly configured
@@ -44,32 +39,53 @@ function ProductModel({ glbPath }: ProductModelProps) {
       }
     })
 
-    // Center the model
+    // Measure the untouched clone: the offset must stay in the model's own units,
+    // the normalizing scale is applied by the parent group so it scales the offset too.
     const box = new THREE.Box3().setFromObject(clonedScene)
-    const center = box.getCenter(new THREE.Vector3())
-    const size = box.getSize(new THREE.Vector3())
+    const sphere = box.getBoundingSphere(new THREE.Sphere())
 
-    console.log('📍 Center:', center.toArray())
-    console.log('📏 Size:', size.toArray())
-
-    clonedScene.position.sub(center)
-
-    // Scale to fit
-    const maxDim = Math.max(size.x, size.y, size.z)
-    const scale = maxDim > 0 ? 2 / maxDim : 1
-
-    console.log('🔢 Scale:', scale)
-
-    clonedScene.scale.setScalar(scale)
-
-    return clonedScene
+    return {
+      scene: clonedScene,
+      offset: sphere.center.clone().negate(),
+      // Normalize to a unit bounding sphere so the camera fit below is exact.
+      fitScale: sphere.radius > 0 ? 1 / sphere.radius : 1,
+    }
   }, [gltf.scene])
 
   return (
-    <group ref={groupRef}>
-      <primitive object={processedScene} />
+    <group scale={fitScale}>
+      <primitive object={scene} position={offset} />
     </group>
   )
+}
+
+interface FitCameraProps {
+  radius: number
+  onFit: (distance: number) => void
+}
+
+/** Frames a sphere of `radius` centered at the origin, accounting for canvas aspect. */
+function FitCamera({ radius, onFit }: FitCameraProps) {
+  const camera = useThree((state) => state.camera)
+  const size = useThree((state) => state.size)
+
+  useLayoutEffect(() => {
+    if (!(camera instanceof THREE.PerspectiveCamera)) return
+
+    const vFov = THREE.MathUtils.degToRad(camera.fov)
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect)
+    const distance = (FIT_MARGIN * radius) / Math.sin(Math.min(vFov, hFov) / 2)
+
+    camera.position.set(0, 0, distance)
+    camera.near = distance / 100
+    camera.far = distance * 10
+    camera.lookAt(0, 0, 0)
+    camera.updateProjectionMatrix()
+
+    onFit(distance)
+  }, [camera, size.width, size.height, radius, onFit])
+
+  return null
 }
 
 interface ProductViewer3DProps {
@@ -86,12 +102,17 @@ function LoadingFallback() {
 }
 
 export default function ProductViewer3D({ glbPath }: ProductViewer3DProps) {
+  // Model is normalized to a unit bounding sphere, so the fit distance is aspect-driven only.
+  const [fitDistance, setFitDistance] = useState(3)
+
   return (
     <div className="w-full h-full min-h-[300px] rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 to-black">
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 45 }}
+        camera={{ position: [0, 0, 3], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
+        <FitCamera radius={1} onFit={setFitDistance} />
+
         <Suspense fallback={<LoadingFallback />}>
         <Environment
           files="/hdr/main_hdr.exr"
@@ -105,19 +126,23 @@ export default function ProductViewer3D({ glbPath }: ProductViewer3DProps) {
           {/* <directionalLight position={[5, 5, 5]} intensity={2} /> */}
           {/* <directionalLight position={[-5, -5, -5]} intensity={0.5} /> */}
           <ProductModel glbPath={glbPath} />
-          <OrbitControls
-            target={[0, 0, 0]}
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={2}
-            maxDistance={10}
-            touches={{
-              ONE: THREE.TOUCH.ROTATE,
-              TWO: THREE.TOUCH.DOLLY_PAN
-            }}
-          />
         </Suspense>
+
+        <OrbitControls
+          makeDefault
+          target={[0, 0, 0]}
+          autoRotate={false}
+          enableDamping
+          enablePan={false}
+          enableZoom={true}
+          enableRotate={true}
+          minDistance={fitDistance * 0.4}
+          maxDistance={fitDistance * 3}
+          touches={{
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY_PAN
+          }}
+        />
       </Canvas>
     </div>
   )
