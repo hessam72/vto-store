@@ -60,7 +60,7 @@ const BASE = {
   },
 
   debug: {
-    displayLandmarks: true,
+    displayLandmarks: false,
     meshMaterial: false,
     marker: false,
     logPositions: false,
