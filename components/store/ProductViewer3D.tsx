@@ -3,7 +3,6 @@
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, useGLTF } from '@react-three/drei'
 import { Suspense, useRef, useMemo, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 // Configure DRACO path for useGLTF
@@ -22,13 +21,6 @@ function ProductModel({ glbPath }: ProductModelProps) {
     console.log('📦 Scene:', gltf.scene)
     console.log('👥 Children:', gltf.scene.children.length)
   }, [glbPath, gltf])
-
-  // Auto-rotate continuously
-  useFrame((_, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.5 // 0.5 rad/s
-    }
-  })
 
   const processedScene = useMemo(() => {
     const clonedScene = gltf.scene.clone(true)
@@ -114,6 +106,7 @@ export default function ProductViewer3D({ glbPath }: ProductViewer3DProps) {
           {/* <directionalLight position={[-5, -5, -5]} intensity={0.5} /> */}
           <ProductModel glbPath={glbPath} />
           <OrbitControls
+            target={[0, 0, 0]}
             enablePan={true}
             enableZoom={true}
             enableRotate={true}
