@@ -29,6 +29,9 @@ export const GestureConfig = {
     // Time window for Fist → Palm sequence (milliseconds)
     fistToPalmTimeoutMs: 3000,
 
+    // Hold duration for thumb gestures (milliseconds)
+    thumbHoldDurationMs: 1500,
+
     // Cooldown period after swap to prevent double-trigger (milliseconds)
     cooldownMs: 1000,
 

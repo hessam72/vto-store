@@ -167,6 +167,12 @@
       color: #FFA500;
     }
 
+    .gesture-status.thumb {
+      border-color: #00D9FF;
+      color: #00D9FF;
+      animation: pulse 1s infinite;
+    }
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -284,13 +290,14 @@
   <!-- Instructions -->
   <div id="instructions">
     <h3>📋 راهنمای استفاده</h3>
-    <p><strong>۱.</strong> دست خود را در مقابل دوربین قرار دهید</p>
-    <p><strong>۲.</strong> مشت کنید (🤜 Closed Fist)</p>
-    <p><strong>۳.</strong> ظرف ۳ ثانیه دست را باز کنید (✋ Open Palm)</p>
-    <p><strong>۴.</strong> محصول تعویض می‌شود!</p>
-    <p style="font-size: 12px; opacity: 0.7; margin-top: 10px;">
-      دست چپ = قبلی | دست راست = بعدی
+    <p><strong>روش ۱:</strong> مشت → باز کردن دست</p>
+    <p>🤜 مشت کنید → ✋ ظرف ۳ ثانیه باز کنید</p>
+    <p style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">
+      (دست چپ = قبلی | دست راست = بعدی)
     </p>
+    <p><strong>روش ۲:</strong> انگشت شست بالا/پایین</p>
+    <p>👍 نگه دارید ۱.۵ ثانیه = بعدی</p>
+    <p>👎 نگه دارید ۱.۵ ثانیه = قبلی</p>
   </div>
 
   <!-- Camera switch button -->
@@ -299,7 +306,7 @@
   <!-- Technology badge -->
   <div id="techBadge">
     GESTURE DETECTOR<br>
-    MediaPipe Fist→Palm
+    Fist→Palm + Thumbs
   </div>
 
   <!-- Main application (ES Module) -->

@@ -175,6 +175,18 @@ function updateGestureStatus(detectorState) {
       timerEl.textContent = `${(timeRemaining / 1000).toFixed(1)}s`;
       break;
 
+    case 'THUMB_UP_HOLDING':
+      statusText = '👍 نگه دارید برای بعدی...';
+      statusClass = 'thumb';
+      timerEl.textContent = `${(timeRemaining / 1000).toFixed(1)}s`;
+      break;
+
+    case 'THUMB_DOWN_HOLDING':
+      statusText = '👎 نگه دارید برای قبلی...';
+      statusClass = 'thumb';
+      timerEl.textContent = `${(timeRemaining / 1000).toFixed(1)}s`;
+      break;
+
     case 'PALM_DETECTED':
       statusText = '✋ تعویض محصول!';
       statusClass = 'palm';

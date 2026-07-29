@@ -113,6 +113,8 @@ export class DebugPanel {
       const stateColors = {
         'IDLE': '#666',
         'FIST_DETECTED': '#FF6B6B',
+        'THUMB_UP_HOLDING': '#00D9FF',
+        'THUMB_DOWN_HOLDING': '#00D9FF',
         'PALM_DETECTED': '#51CF66',
         'COOLDOWN': '#FFA500'
       };
@@ -128,6 +130,20 @@ export class DebugPanel {
 
     // Timer
     if (this.config.showTimer && timeRemaining > 0) {
+      // Calculate progress bar percentage
+      let progressPercent = 0;
+      let maxTime = 3000;
+
+      if (state === 'FIST_DETECTED') {
+        // Fist: countdown from 3000ms
+        maxTime = 3000;
+        progressPercent = (timeRemaining / maxTime) * 100;
+      } else if (state === 'THUMB_UP_HOLDING' || state === 'THUMB_DOWN_HOLDING') {
+        // Thumb: count up to 1500ms (invert progress)
+        maxTime = 1500;
+        progressPercent = ((maxTime - timeRemaining) / maxTime) * 100;
+      }
+
       html += `<div style="height: 1px; background: #333; margin: 8px 0;"></div>`;
       html += `<div style="margin-bottom: 8px;">
         <div style="color: #FFF; font-weight: bold;">TIME REMAINING:</div>
@@ -135,7 +151,7 @@ export class DebugPanel {
           ${(timeRemaining / 1000).toFixed(2)}s
         </div>
         <div style="width: 100%; height: 4px; background: #333; border-radius: 2px; margin-top: 5px;">
-          <div style="width: ${(timeRemaining / 3000) * 100}%; height: 100%; background: #FFD700; border-radius: 2px; transition: width 0.1s;"></div>
+          <div style="width: ${progressPercent}%; height: 100%; background: #FFD700; border-radius: 2px; transition: width 0.1s;"></div>
         </div>
       </div>`;
     }

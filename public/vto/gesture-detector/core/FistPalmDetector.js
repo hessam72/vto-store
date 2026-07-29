@@ -9,6 +9,7 @@ export class FistPalmDetector {
       minConfidence: 0.7,
       minPalmConfidence: 0.4, // Lower threshold for Open_Palm detection
       fistToPalmTimeoutMs: 3000,
+      thumbHoldDurationMs: 1500, // Hold thumb gesture for 1.5 seconds
       cooldownMs: 1000,
       screenDivisionRatio: 0.5,
       ...config
@@ -19,11 +20,14 @@ export class FistPalmDetector {
       IDLE: 'IDLE',
       FIST_DETECTED: 'FIST_DETECTED',
       PALM_DETECTED: 'PALM_DETECTED',
+      THUMB_UP_HOLDING: 'THUMB_UP_HOLDING',
+      THUMB_DOWN_HOLDING: 'THUMB_DOWN_HOLDING',
       COOLDOWN: 'COOLDOWN'
     };
 
     this.currentState = this.states.IDLE;
     this.fistDetectedTime = null;
+    this.thumbDetectedTime = null;
     this.cooldownTimeout = null;
     this.lastHandPosition = { x: 0, y: 0 };
 
@@ -90,6 +94,14 @@ export class FistPalmDetector {
           this.transitionTo(this.states.FIST_DETECTED);
           this.fistDetectedTime = now;
           console.log('🤜 Fist detected - waiting for palm...');
+        } else if (isValidGesture && category === 'Thumb_Up') {
+          this.transitionTo(this.states.THUMB_UP_HOLDING);
+          this.thumbDetectedTime = now;
+          console.log('👍 Thumb up detected - hold for 1.5s...');
+        } else if (isValidGesture && category === 'Thumb_Down') {
+          this.transitionTo(this.states.THUMB_DOWN_HOLDING);
+          this.thumbDetectedTime = now;
+          console.log('👎 Thumb down detected - hold for 1.5s...');
         }
         break;
 
@@ -99,7 +111,7 @@ export class FistPalmDetector {
         if (category === 'Open_Palm' && confidence >= this.config.minPalmConfidence) {
           // Successful sequence: Fist → Palm (lower confidence threshold for palm)
           this.transitionTo(this.states.PALM_DETECTED);
-          this.triggerSwap();
+          this.triggerSwap('fist-palm');
         } else if (elapsed > this.config.fistToPalmTimeoutMs) {
           // Timeout: reset to IDLE
           console.log('⏱️ Fist-to-palm timeout - resetting');
@@ -112,6 +124,48 @@ export class FistPalmDetector {
           this.fistDetectedTime = null;
         }
         // Stay in FIST_DETECTED if: Closed_Fist, None, or low-confidence gesture
+        break;
+
+      case this.states.THUMB_UP_HOLDING:
+        const thumbUpElapsed = now - this.thumbDetectedTime;
+
+        if (isValidGesture && category === 'Thumb_Up') {
+          if (thumbUpElapsed >= this.config.thumbHoldDurationMs) {
+            // Held long enough: trigger next
+            console.log('👍 Thumb up held - NEXT!');
+            this.triggerSwap('next');
+            this.transitionTo(this.states.COOLDOWN);
+            this.startCooldown();
+            this.thumbDetectedTime = null;
+          }
+          // Continue holding
+        } else {
+          // Released too early or different gesture
+          console.log('❌ Thumb up released too early');
+          this.transitionTo(this.states.IDLE);
+          this.thumbDetectedTime = null;
+        }
+        break;
+
+      case this.states.THUMB_DOWN_HOLDING:
+        const thumbDownElapsed = now - this.thumbDetectedTime;
+
+        if (isValidGesture && category === 'Thumb_Down') {
+          if (thumbDownElapsed >= this.config.thumbHoldDurationMs) {
+            // Held long enough: trigger previous
+            console.log('👎 Thumb down held - PREVIOUS!');
+            this.triggerSwap('previous');
+            this.transitionTo(this.states.COOLDOWN);
+            this.startCooldown();
+            this.thumbDetectedTime = null;
+          }
+          // Continue holding
+        } else {
+          // Released too early or different gesture
+          console.log('❌ Thumb down released too early');
+          this.transitionTo(this.states.IDLE);
+          this.thumbDetectedTime = null;
+        }
         break;
 
       case this.states.PALM_DETECTED:
@@ -129,12 +183,18 @@ export class FistPalmDetector {
   /**
    * Trigger swap action
    */
-  triggerSwap() {
-    console.log('✋ Palm detected - SWAP TRIGGERED!');
+  triggerSwap(type = 'fist-palm') {
+    let direction;
 
-    // Determine direction based on hand position
-    // Left half of screen = previous, right half = next
-    const direction = this.lastHandPosition.x < this.config.screenDivisionRatio ? 'previous' : 'next';
+    if (type === 'fist-palm') {
+      // Fist→Palm: determine direction based on hand position
+      // Left half of screen = previous, right half = next
+      direction = this.lastHandPosition.x < this.config.screenDivisionRatio ? 'previous' : 'next';
+      console.log(`✋ Palm detected - SWAP TRIGGERED! (${direction})`);
+    } else {
+      // Thumb gestures: explicit direction
+      direction = type; // 'next' or 'previous'
+    }
 
     if (this.onSwapTriggered) {
       this.onSwapTriggered(direction);
@@ -181,6 +241,12 @@ export class FistPalmDetector {
       const elapsed = performance.now() - this.fistDetectedTime;
       const remaining = Math.max(0, this.config.fistToPalmTimeoutMs - elapsed);
       return remaining;
+    } else if ((this.currentState === this.states.THUMB_UP_HOLDING ||
+                this.currentState === this.states.THUMB_DOWN_HOLDING) &&
+               this.thumbDetectedTime) {
+      const elapsed = performance.now() - this.thumbDetectedTime;
+      const remaining = Math.max(0, this.config.thumbHoldDurationMs - elapsed);
+      return remaining;
     }
     return 0;
   }
@@ -196,6 +262,7 @@ export class FistPalmDetector {
 
     this.currentState = this.states.IDLE;
     this.fistDetectedTime = null;
+    this.thumbDetectedTime = null;
     console.log('🔄 FistPalmDetector reset');
   }
 
