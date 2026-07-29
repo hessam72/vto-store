@@ -152,58 +152,6 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    /* Gesture Status UI */
-    #gestureStatusContainer {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 30;
-      pointer-events: none;
-    }
-
-    .gesture-status {
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 20px 40px;
-      border-radius: 50px;
-      font-size: 18px;
-      font-weight: bold;
-      text-align: center;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      backdrop-filter: blur(10px);
-      min-width: 280px;
-      transition: all 0.3s ease;
-    }
-
-    .gesture-status.thumb_up_holding {
-      border-color: #00D9FF;
-      color: #00D9FF;
-      animation: pulse 0.6s infinite;
-    }
-
-    .gesture-status.thumb_down_holding {
-      border-color: #FF6B6B;
-      color: #FF6B6B;
-      animation: pulse 0.6s infinite;
-    }
-
-    .gesture-status.cooldown {
-      border-color: #FFA500;
-      color: #FFA500;
-    }
-
-    .gesture-status.idle {
-      opacity: 0.5;
-      color: #999;
-      border-color: #333;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.8; transform: scale(1.05); }
-    }
   </style>
 </head>
 <body>
@@ -231,14 +179,8 @@
     <p>دست خود را در مقابل دوربین قرار دهید</p>
     <p>انگشتر روی انگشت حلقه شما نمایش داده می‌شود</p>
     <p style="font-size: 14px; opacity: 0.8; margin-top: 15px;">
-      👍 انگشت شست بالا: 1.5 ثانیه = محصول بعدی<br>
-      👎 انگشت شست پایین: 1.5 ثانیه = محصول قبلی
+      این نسخه از هوش مصنوعی MediaPipe برای تشخیص دست و منطق WebARRocks برای جایگذاری انگشتر استفاده می‌کند
     </p>
-  </div>
-
-  <!-- Gesture Status -->
-  <div id="gestureStatusContainer">
-    <div id="gestureStatus" class="gesture-status idle">👋 منتظر حرکت...</div>
   </div>
 
   <!-- Camera switch button -->
@@ -246,8 +188,8 @@
 
   <!-- Technology badge -->
   <div id="techBadge">
-    HYBRID MODE + GESTURES<br>
-    MediaPipe GestureRecognizer
+    HYBRID MODE<br>
+    MediaPipe + WebARRocks
   </div>
 
   <!-- Main application (ES Module) -->

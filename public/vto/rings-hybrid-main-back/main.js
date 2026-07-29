@@ -7,9 +7,7 @@ import { RingConfig } from './config.js';
 import { MediaPipeTracker } from './core/MediaPipeTracker.js';
 import { RingPositioner } from './core/RingPositioner.js';
 import { ThreeRingScene } from './core/ThreeRingScene.js';
-import { ThumbGestureDetector } from './core/ThumbGestureDetector.js';
 import { DebugPanel } from './debug/DebugPanel.js';
-import { GestureDebugPanel } from './debug/GestureDebugPanel.js';
 
 // Application state
 const app = {
@@ -17,9 +15,6 @@ const app = {
   positioner: null,
   threeScene: null,
   debugPanel: null,
-  gestureDebugPanel: null,
-  gestureDetector: null,
-  currentModelIndex: 0,
   isInstructionsHidden: false,
   isLoading: true
 };
@@ -52,25 +47,6 @@ async function init() {
     // Initialize ring positioner
     console.log('📐 Creating ring positioner...');
     app.positioner = new RingPositioner(RingConfig);
-
-    // Initialize gesture detector
-    console.log('👆 Initializing gesture detector...');
-    app.gestureDetector = new ThumbGestureDetector(RingConfig.gesture);
-
-    app.gestureDetector.onSwapTriggered = (direction) => {
-      handleSwap(direction);
-    };
-
-    app.gestureDetector.onStateChange = (stateInfo) => {
-      updateGestureStatus(stateInfo.to);
-    };
-
-    // Initialize gesture debug panel
-    console.log('🎛️ Initializing gesture debug panel...');
-    app.gestureDebugPanel = new GestureDebugPanel({
-      enabled: true,
-      panelPosition: 'top-left'
-    });
 
     // Initialize MediaPipe tracker
     console.log('👋 Initializing MediaPipe tracker...');
@@ -144,16 +120,6 @@ function handleTrackingResults(results) {
     canvasHeight
   };
 
-  // Process gestures
-  if (app.gestureDetector && results.gestures) {
-    const gestureState = app.gestureDetector.process(results);
-
-    // Update gesture debug panel
-    if (app.gestureDebugPanel) {
-      app.gestureDebugPanel.update(gestureState);
-    }
-  }
-
   // Match the render camera to the physical webcam BEFORE solving, so the pose
   // is computed with the same projection that will be used to draw it.
   app.positioner.solver.updateCamera(app.threeScene.camera, view);
@@ -167,44 +133,6 @@ function handleTrackingResults(results) {
   if (transform.visible && !app.isInstructionsHidden) {
     hideInstructions();
   }
-}
-
-/**
- * Handle product swap via gesture
- */
-async function handleSwap(direction) {
-  if (direction === 'next') {
-    app.currentModelIndex = (app.currentModelIndex + 1) % RingConfig.products.items.length;
-  } else if (direction === 'previous') {
-    app.currentModelIndex = (app.currentModelIndex - 1 + RingConfig.products.items.length) % RingConfig.products.items.length;
-  }
-
-  const modelURL = RingConfig.products.items[app.currentModelIndex];
-  console.log(`🔄 Swapping ring: ${direction} → Model ${app.currentModelIndex + 1}/${RingConfig.products.items.length}`);
-
-  try {
-    await app.threeScene.reloadModel(modelURL);
-  } catch (error) {
-    console.error('Error loading model:', error);
-  }
-}
-
-/**
- * Update gesture status display
- */
-function updateGestureStatus(state) {
-  const statusEl = document.getElementById('gestureStatus');
-  if (!statusEl) return;
-
-  const messages = {
-    'IDLE': '👋 منتظر حرکت...',
-    'THUMB_UP_HOLDING': '👍 نگه دارید = بعدی',
-    'THUMB_DOWN_HOLDING': '👎 نگه دارید = قبلی',
-    'COOLDOWN': '⏳ صبر کنید...'
-  };
-
-  statusEl.textContent = messages[state] || state;
-  statusEl.className = `gesture-status ${state.toLowerCase().replace(/_/g, '-')}`;
 }
 
 /**
@@ -258,12 +186,6 @@ window.addEventListener('beforeunload', () => {
   }
   if (app.debugPanel) {
     app.debugPanel.destroy();
-  }
-  if (app.gestureDebugPanel) {
-    app.gestureDebugPanel.destroy();
-  }
-  if (app.gestureDetector) {
-    app.gestureDetector.destroy();
   }
 });
 

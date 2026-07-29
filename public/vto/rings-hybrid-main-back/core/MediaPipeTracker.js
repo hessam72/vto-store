@@ -1,16 +1,16 @@
 /**
  * MediaPipe Hand Tracker Wrapper
- * Handles MediaPipe Gesture Recognizer initialization and tracking
+ * Handles MediaPipe Hand Landmarker initialization and tracking
  */
 
-import { FilesetResolver, GestureRecognizer } from '@mediapipe/tasks-vision';
+import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
 export class MediaPipeTracker {
   constructor(config = {}) {
     this.videoElement = null;
     this.canvasElement = null;
     this.ctx = null;
-    this.gestureRecognizer = null;
+    this.handLandmarker = null;
     this.stream = null;
     this.rafId = null;
     this.isRunning = false;
@@ -54,11 +54,11 @@ export class MediaPipeTracker {
       );
       console.log('  ✅ MediaPipe FilesetResolver loaded');
 
-      // Create gesture recognizer
-      console.log('  📌 Creating Gesture Recognizer (downloading model ~10MB)...');
-      this.gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+      // Create hand landmarker
+      console.log('  📌 Creating Hand Landmarker (downloading model ~5MB)...');
+      this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',
@@ -68,7 +68,7 @@ export class MediaPipeTracker {
         minTrackingConfidence: this.config.minTrackingConfidence
       });
 
-      console.log('  ✅ MediaPipe Gesture Recognizer created successfully');
+      console.log('  ✅ MediaPipe Hand Landmarker created successfully');
 
       // Setup camera
       console.log('  📌 Setting up camera...');
@@ -132,12 +132,12 @@ export class MediaPipeTracker {
       if (!this.isRunning) return;
 
       // Only run inference when the camera has actually produced a new frame.
-      // recognizeForVideo requires strictly increasing timestamps, and re-running
+      // detectForVideo requires strictly increasing timestamps, and re-running
       // it on a repeated frame is a wasted GPU pass on every rAF tick that
       // outpaces the camera's frame rate.
       if (this.videoElement.currentTime !== this.lastVideoTime) {
         this.lastVideoTime = this.videoElement.currentTime;
-        this.lastResults = this.gestureRecognizer.recognizeForVideo(
+        this.lastResults = this.handLandmarker.detectForVideo(
           this.videoElement,
           performance.now()
         );
@@ -150,10 +150,7 @@ export class MediaPipeTracker {
         }
       }
 
-      if (this.lastResults) {
-        const processedResults = this.processResults(this.lastResults);
-        this.onResults(processedResults);
-      }
+      if (this.lastResults) this.onResults(this.lastResults);
 
       this.rafId = requestAnimationFrame(detectHands);
     };
@@ -204,42 +201,6 @@ export class MediaPipeTracker {
   }
 
   /**
-   * Process gesture recognition results
-   * Transforms gesture property names while preserving landmarks structure for RingPositioner
-   */
-  processResults(results) {
-    // Keep landmarks nested structure for RingPositioner compatibility
-    const processedResults = {
-      landmarks: results.landmarks || [],  // Keep nested array structure
-      timestamp: performance.now()
-    };
-
-    // Transform gestures: categoryName → category, score → confidence
-    if (results.gestures && results.gestures.length > 0) {
-      const handGestures = results.gestures[0];
-      processedResults.gestures = handGestures.map(g => ({
-        category: g.categoryName,
-        confidence: g.score
-      }));
-    } else {
-      processedResults.gestures = [];
-    }
-
-    // Transform handedness: categoryName → category, score → confidence
-    if (results.handedness && results.handedness.length > 0) {
-      const handHandedness = results.handedness[0];
-      processedResults.handedness = handHandedness.map(h => ({
-        category: h.categoryName,
-        confidence: h.score
-      }));
-    } else {
-      processedResults.handedness = [];
-    }
-
-    return processedResults;
-  }
-
-  /**
    * Draw landmarks on canvas (debug visualization)
    */
   drawLandmarks(results) {
@@ -270,17 +231,6 @@ export class MediaPipeTracker {
       this.ctx.beginPath();
       this.ctx.arc(ringMCP.x * width, ringMCP.y * height, 8, 0, 2 * Math.PI);
       this.ctx.fill();
-
-      // Draw detected gesture if available
-      if (results.gestures && results.gestures.length > 0) {
-        const gestures = results.gestures[0];
-        if (gestures.length > 0) {
-          const topGesture = gestures[0];
-          this.ctx.fillStyle = '#00FF00';
-          this.ctx.font = '16px Arial';
-          this.ctx.fillText(`${topGesture.categoryName} (${(topGesture.score * 100).toFixed(0)}%)`, 10, 30);
-        }
-      }
     });
   }
 
@@ -316,9 +266,9 @@ export class MediaPipeTracker {
     this.stop();
     this.stopCamera();
 
-    if (this.gestureRecognizer) {
-      this.gestureRecognizer.close();
-      this.gestureRecognizer = null;
+    if (this.handLandmarker) {
+      this.handLandmarker.close();
+      this.handLandmarker = null;
     }
 
     console.log('MediaPipe tracker destroyed');

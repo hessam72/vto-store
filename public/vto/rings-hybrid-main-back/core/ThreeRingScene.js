@@ -187,65 +187,6 @@ export class ThreeRingScene {
   }
 
   /**
-   * Reload ring model (for gesture-based product swapping)
-   */
-  async reloadModel(modelURL) {
-    return new Promise((resolve, reject) => {
-      new GLTFLoader().load(
-        modelURL,
-        (gltf) => {
-          // Dispose old mesh
-          if (this.ringMesh) {
-            this.ringMesh.traverse((child) => {
-              if (child.geometry) child.geometry.dispose();
-              if (child.material) {
-                if (Array.isArray(child.material)) {
-                  child.material.forEach(m => m.dispose());
-                } else {
-                  child.material.dispose();
-                }
-              }
-            });
-          }
-
-          // Create new mesh
-          this.ringMesh = gltf.scene;
-
-          const box = new THREE.Box3().setFromObject(this.ringMesh);
-          this.modelExtents = box.getSize(new THREE.Vector3());
-
-          if (this.config.debug.meshMaterial) {
-            this.ringMesh.traverse((child) => {
-              if (child.isMesh) child.material = new THREE.MeshNormalMaterial();
-            });
-          }
-
-          // Clear pivot and add new mesh
-          if (this.ringPivot) {
-            this.ringPivot.clear();
-            this.ringPivot.add(this.ringMesh);
-          }
-
-          this.applyHoleAxis(this.config.ring.holeAxis);
-
-          console.log(`💍 Ring model reloaded: ${modelURL}`);
-          resolve(this.ringPivot);
-        },
-        (progress) => {
-          if (progress.total > 0) {
-            const percent = ((progress.loaded / progress.total) * 100).toFixed(0);
-            console.log(`Loading ring model: ${percent}%`);
-          }
-        },
-        (error) => {
-          console.error('Error loading ring model:', error);
-          reject(error);
-        }
-      );
-    });
-  }
-
-  /**
    * Rotate the model so its hole runs along +Y, which is the finger axis in the
    * solver's frame. A GLB authored with the hole on X or Z otherwise renders
    * standing across the finger instead of encircling it.

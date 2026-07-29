@@ -11,17 +11,6 @@
 export const RingConfig = {
   modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
 
-  // Product models for gesture swapping
-  products: {
-    items: [
-      '/models/rings/default.glb',
-      '/models/rings/default-1.glb',
-      '/models/rings/default-2.glb',
-      '/models/rings/default-3.glb'
-    ],
-    currentIndex: 0
-  },
-
   camera: {
     // Assumed vertical field of view of the webcam, in degrees.
     // Screen alignment and apparent size are independent of this value (the
@@ -108,12 +97,5 @@ export const RingConfig = {
     marker: false,
     logPositions: false,
     panelEnabled: false
-  },
-
-  // Gesture detection thresholds
-  gesture: {
-    minConfidence: 0.7,
-    thumbHoldDurationMs: 1500,
-    cooldownMs: 1000
   }
 };
