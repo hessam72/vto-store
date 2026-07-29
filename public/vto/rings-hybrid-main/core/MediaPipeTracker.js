@@ -1,16 +1,27 @@
 /**
  * MediaPipe Hand Tracker Wrapper
- * Handles MediaPipe Hand Landmarker initialization and tracking
+ *
+ * Runs one vision task over the camera and hands the raw result to onResults.
+ * The task is either HandLandmarker or GestureRecognizer: the latter emits the
+ * same landmarks / worldLandmarks / handedness the ring solver consumes, and
+ * adds a classified gesture, so gesture control costs no extra inference.
  */
 
-import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import { FilesetResolver, HandLandmarker, GestureRecognizer } from '@mediapipe/tasks-vision';
+
+const MODEL_URLS = {
+  handLandmarker:
+    'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+  gestureRecognizer:
+    'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task'
+};
 
 export class MediaPipeTracker {
   constructor(config = {}) {
     this.videoElement = null;
     this.canvasElement = null;
     this.ctx = null;
-    this.handLandmarker = null;
+    this.detector = null;
     this.stream = null;
     this.rafId = null;
     this.isRunning = false;
@@ -26,6 +37,7 @@ export class MediaPipeTracker {
       facingMode: 'user',  // 'user' or 'environment'
       videoWidth: 1280,
       videoHeight: 720,
+      useGestureRecognizer: true,
       // Pin the release: the wasm fileset and the JS bundle must be the same
       // version, and the importmap used to float on `@latest`.
       version: '0.10.35',
@@ -54,11 +66,15 @@ export class MediaPipeTracker {
       );
       console.log('  ✅ MediaPipe FilesetResolver loaded');
 
-      // Create hand landmarker
-      console.log('  📌 Creating Hand Landmarker (downloading model ~5MB)...');
-      this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+      // Both tasks take the same options; only the class and the bundle differ.
+      const useGestures = this.config.useGestureRecognizer;
+      const Task = useGestures ? GestureRecognizer : HandLandmarker;
+      const modelAssetPath = useGestures ? MODEL_URLS.gestureRecognizer : MODEL_URLS.handLandmarker;
+
+      console.log(`  📌 Creating ${useGestures ? 'Gesture Recognizer' : 'Hand Landmarker'} (downloading model ~5MB)...`);
+      this.detector = await Task.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+          modelAssetPath,
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',
@@ -68,7 +84,7 @@ export class MediaPipeTracker {
         minTrackingConfidence: this.config.minTrackingConfidence
       });
 
-      console.log('  ✅ MediaPipe Hand Landmarker created successfully');
+      console.log('  ✅ MediaPipe detector created successfully');
 
       // Setup camera
       console.log('  📌 Setting up camera...');
@@ -137,10 +153,10 @@ export class MediaPipeTracker {
       // outpaces the camera's frame rate.
       if (this.videoElement.currentTime !== this.lastVideoTime) {
         this.lastVideoTime = this.videoElement.currentTime;
-        this.lastResults = this.handLandmarker.detectForVideo(
-          this.videoElement,
-          performance.now()
-        );
+        const timestamp = performance.now();
+        this.lastResults = this.config.useGestureRecognizer
+          ? this.detector.recognizeForVideo(this.videoElement, timestamp)
+          : this.detector.detectForVideo(this.videoElement, timestamp);
 
         // The video element itself is what the user sees; this canvas is a
         // transparent overlay for the landmark debug drawing only.
@@ -266,9 +282,9 @@ export class MediaPipeTracker {
     this.stop();
     this.stopCamera();
 
-    if (this.handLandmarker) {
-      this.handLandmarker.close();
-      this.handLandmarker = null;
+    if (this.detector) {
+      this.detector.close();
+      this.detector = null;
     }
 
     console.log('MediaPipe tracker destroyed');
