@@ -2,14 +2,15 @@
  * Ring VTO Configuration
  *
  * Everything here is metric. Lengths are millimetres where a human would think
- * in millimetres (ring offsets) and metres in the solver. There is deliberately
- * no "global scale" or "depth multiplier": those two knobs were coupled — depth
- * and world scale moved together — so no combination of them was ever correct.
- * Scale now comes from the hand's own measured size.
+ * in millimetres (offsets, absolute sizes) and metres in the solver. There is
+ * deliberately no "global scale" or "depth multiplier": those two knobs were
+ * coupled — depth and world scale moved together — so no combination of them was
+ * ever correct. Scale comes from the hand's own measured size.
  */
 
 export const RingConfig = {
   modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
+  envMapURL: '/models/envmaps/hotel_room_1k.hdr',
 
   camera: {
     // Assumed vertical field of view of the webcam, in degrees.
@@ -28,32 +29,47 @@ export const RingConfig = {
     flipHandedness: false
   },
 
-  ring: {
+  // Finger anatomy — consumed by RingAnchor.
+  anchor: {
     // Where the ring sits along the proximal phalanx: 0 = MCP joint (knuckle),
     // 1 = PIP joint. A worn ring sits just above the knuckle.
     anchorAlongPhalanx: 0.45,
 
-    // Offset in millimetres in the finger frame:
-    // X across the finger, Y along it toward the tip, Z out of the palm.
-    offsetMm: [0, 0, 0],
+    // Finger width is measured from the hand: the index→pinky MCP row spans
+    // three inter-finger gaps, and this calibrates a gap to a finger width.
+    // Raise it if the ring reads slightly small on your hand.
+    fingerWidthCoeff: 0.72
+  },
 
-    // Which axis the ring's hole runs along in the GLB. The solver's +Y is the
-    // finger axis, so the model is rotated to match. 'auto' takes the narrowest
-    // bounding-box axis, which for a ring is always the hole; override with
-    // 'x' / 'y' / 'z' if a model is shaped unusually enough to fool that.
-    holeAxis: 'auto',
+  product: {
+    // Which axis the ring's bore runs along in the GLB. The solver's +Y is the
+    // finger axis, so the model is rotated to match.
+    boreAxis: 'auto',
+    // A ring is a flat torus, so the bore is its narrowest extent — true even
+    // with a gem, which grows a radial extent and never the narrowest one.
+    boreAxisPolicy: 'narrowest',
 
     // Rotation about the finger axis, in degrees — where the gem ends up.
     rollDeg: 0,
 
-    // Finger width is measured from the hand: the index→pinky MCP row spans
-    // three inter-finger gaps, and this calibrates a gap to a finger width.
-    // Raise it if the ring reads slightly small on your hand.
-    fingerWidthCoeff: 0.72,
+    // Fine placement in the finger frame: X across, Y along toward the tip,
+    // Z out of the palm.
+    offsetMm: [0, 0, 0],
 
-    // Ring outer diameter as a multiple of the finger width. A band adds a
-    // couple of millimetres of metal around the finger.
-    outerDiameterRatio: 1.25
+    sizing: {
+      // A ring must fit the finger, so it scales with the measured hand.
+      mode: 'fit',
+      // Clearance on the finger: the ring's HOLE is fitted to fingerWidth x this.
+      // Because the hole is measured from the geometry rather than the bounding
+      // box, band thickness no longer affects the fit.
+      boreDiameterRatio: 1.05,
+
+      // Manual size override on top of the derived fit. 1.0 = use the
+      // measurement. This is an escape hatch for a model or a wearer the
+      // automatic fit reads wrong, NOT the way to size a product — if you find
+      // yourself leaving it far from 1.0, the measurement is what needs fixing.
+      scaleMultiplier: 1.0
+    }
   },
 
   mediaPipe: {
@@ -72,11 +88,8 @@ export const RingConfig = {
   // Depth-only cylinder along the finger, so the far side of the band is hidden.
   occluder: {
     enabled: true,
-    // Multiples of the measured finger width.
-    radiusRatio: 0.5,
-    lengthRatio: 3.0,
-    // 1 = round, lower = flatter. Fingers are wider than they are deep.
-    flattenCoeff: 0.75,
+    lengthRatio: 3.0,   // multiples of finger width
+    proximalBias: 0,    // centred on the ring
     debug: false
   },
 

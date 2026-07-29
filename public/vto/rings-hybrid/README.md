@@ -40,24 +40,28 @@ the proximal phalanx (13→14), Z the palm normal, X completing the frame. Never
 from projected pixels, which mix in perspective and flip Y.
 
 Scale comes from the hand: the index→pinky MCP row spans three inter-finger
-gaps, giving a measured finger width in metres. The GLB is normalized from its
-own bounding box and fitted to that width, so it holds its size as the hand moves
-nearer or further.
+gaps, giving a measured finger width in metres. The GLB's own **hole** is measured
+from its geometry and fitted to that width, so the ring holds its size as the hand
+moves nearer or further, and band thickness does not affect the fit.
 
 ## Files
 
 ```
 config.js                  metric configuration, no scale/depth knobs
-main.js                    wiring and render loop
-core/
-  MediaPipeTracker.js      camera + HandLandmarker, frame-gated inference
-  HandPoseSolver.js        the conversion above; no scene knowledge
-  RingPositioner.js        mm offsets in finger space, smoothing, hysteresis
-  ThreeRingScene.js        renderer, GLB fitting, depth-only finger occluder
-utils/
-  OneEuroFilter.js         speed-adaptive smoothing (scalar, Vector3, quaternion)
-debug/
-  DebugPanel.js            lil-gui panel + solved depth/finger-width readout
+main.js                    finger anatomy + debug schema; wiring is shared
+core/RingAnchor.js         anchor lerp 13→14, finger basis, finger width
+```
+
+Everything else is `../shared/vto-core/`, shared with the wrist app:
+
+```
+HandSolver.js          camera model, metric depth, back-projection, basis
+ProductPositioner.js   mm offsets, One Euro smoothing, hysteresis
+VTOScene.js            renderer, canvas sizing, GLB fitting, occluder
+MediaPipeTracker.js    camera + HandLandmarker, frame-gated inference
+OneEuroFilter.js       speed-adaptive smoothing (scalar, Vector3, quaternion)
+DebugPanel.js          lil-gui panel + solved readout
+bootstrap.js           app wiring and render loop
 ```
 
 ## Conventions
@@ -65,22 +69,46 @@ debug/
 - **Units:** metres everywhere in the scene; millimetres only for the ring
   offsets a human tunes. Camera at the origin looking down −Z.
 - **Finger frame:** X across the finger, Y along it toward the tip, Z out of the
-  palm. `ring.offsetMm` is expressed in this frame, so it means the same thing at
+  palm. `product.offsetMm` is expressed in this frame, so it means the same thing at
   any hand orientation or distance.
 - **Model orientation:** +Y is the finger axis, so a ring GLB is correct when its
-  hole runs along +Y. Rather than carrying a per-model quaternion, the hole axis
-  is detected at load from the narrowest bounding-box extent — a ring is a flat
-  torus, so its narrow axis is always the hole, gem or no gem — and the model is
-  rotated to match. `ring.holeAxis` overrides the detection; `ring.rollDeg` turns
-  the ring about the finger to place the gem.
+  bore runs along +Y. Rather than carrying a per-model quaternion, the bore is
+  measured from the geometry at load — vertices projected about each candidate
+  axis, scored on hole size × how completely material surrounds the centre — and
+  the model is rotated to match. `product.boreAxis` overrides it;
+  `product.rollDeg` turns the ring about the finger to place the gem.
+- **Sizing fits the hole, not the outside.** A bounding box cannot see a hole, and
+  fitting the outer diameter leaves the bore narrower than the finger by twice the
+  band thickness. `boreDiameterRatio` is clearance on the finger (~1.05), so band
+  thickness no longer affects the fit. The panel's "Fitted outer" readout must
+  always exceed the measured finger width — the fitted *hole* is
+  `width x ratio` by algebra and so can never reveal a bad measurement.
 - **Mirroring:** the video is CSS-mirrored (selfie view) and the solver mirrors
   the 3D to match. The mirror is applied to the finished quaternion, not to the
   basis vectors — negating a basis vector would make the matrix a reflection
   (det = −1) and `setFromRotationMatrix` would return garbage.
 - **Screen mapping:** the video, the landmark overlay and the WebGL canvas all
   cover the viewport under the same `object-fit: cover` crop, and
-  `HandPoseSolver.updateCamera()` derives the render camera's FOV from that same
+  `HandSolver.updateCamera()` derives the render camera's FOV from that same
   crop. If these three ever disagree, the 3D drifts off the hand.
+
+### Manual scale multiplier
+
+`sizing.scaleMultiplier` (panel: **Scale multiplier**, 0.25–4.0) scales the
+finished result, on top of whichever mode produced it. `1.0` uses the measurement
+and is a no-op.
+
+This is an **escape hatch, not a sizing method.** It is deliberately separate from
+`boreDiameterRatio`, which means "clearance on the limb" and keeps the hole at
+`limbWidth x ratio`; overloading that to double as a size fudge would make a knob
+whose name says one thing and does another, which is the trap this pipeline was
+rebuilt to escape. On a watch the multiplier also defeats the point of `absolute`
+mode — a 42 mm case no longer renders at 42 mm.
+
+So if it ends up far from 1.0, that is a measurement on the model worth reporting
+rather than a setting to keep. The console `Fit |` line and the "Fitted outer"
+readout both mark a non-default value, so an override can never be mistaken for a
+bug later.
 
 ## Smoothing
 
@@ -116,5 +144,6 @@ localhost or HTTPS. Press **D** to toggle the debug panel.
 ## Dependencies
 
 Three.js r167 and `@mediapipe/tasks-vision` 0.10.35, both pinned in the importmap
-in `index.html`. The MediaPipe wasm fileset URL in `MediaPipeTracker.js` must
-stay on the same version as the JS bundle.
+in `index.html`. The MediaPipe wasm fileset URL in
+`../shared/vto-core/MediaPipeTracker.js` must stay on the same version as the JS
+bundle.

@@ -3,8 +3,10 @@
 ## Overview
 
 The method used to place 3D jewellery on a live camera feed with MediaPipe hand
-tracking and Three.js. Proven in `public/vto/rings-hybrid/` (ring VTO, July 2026)
-and written to generalize to wrist, neck and ear products.
+tracking and Three.js. Proven in `public/vto/rings-hybrid/` (ring VTO) and
+`public/vto/wrist-hybrid/` (watches and bracelets), July 2026, sharing
+`public/vto/shared/vto-core/`. Written to generalize further to neck and ear
+products.
 
 The core problem is turning MediaPipe's 2D landmarks into a 3D pose that holds up
 as the user moves. This document records the solution, the derivation behind it,
@@ -12,8 +14,9 @@ and the failure modes it replaced — the previous approach failed in ways that
 looked like tuning problems but were structural, and cost a lot of time before
 being diagnosed.
 
-**Related:** `public/vto/rings-hybrid/README.md` documents the ring
-implementation specifically. This document is the method.
+**Related:** `public/vto/rings-hybrid/README.md` and
+`public/vto/wrist-hybrid/README.md` document those implementations specifically.
+This document is the method.
 
 ---
 
@@ -151,19 +154,49 @@ depth readout moves, the pipeline is wrong somewhere.
 
 ---
 
-## Sizing: Measure the Anatomy
+## Sizing: Two Modes, and Using the Wrong One Is a Product Bug
 
-Never hardcode object size. Derive it from the hand and fit the model to it:
+Never hardcode object size, but do not assume every product is sized the same way
+either. There are two modes, and they are opposites:
+
+**Fit-driven** — the product wraps the wearer, so it scales with the measured
+anatomy. Rings and bracelets: the wearer's finger or wrist sets the size.
 
 ```js
 // The index→pinky MCP row spans three inter-finger gaps.
 fingerWidth = |W[5] − W[17]| / 3 × coefficient;   // coefficient ≈ 0.72
-scale = (fingerWidth × outerDiameterRatio) / modelBoundingBoxDiameter;
+scale = (fingerWidth × clearanceRatio) / modelInnerDiameter;   // ratio ≈ 1.05
 ```
 
+**Fit the hole, not the outside.** This is the one that bites. A bounding box
+cannot see a hole: for a torus, *both* extents perpendicular to the bore are the
+OUTER diameter, so a bbox-derived fit sizes the outside of the band and leaves the
+hole narrower than the limb by twice the band thickness. On a ring with a 2 mm
+band the error hides; on a bracelet with an 8 mm band the hole comes out 13 mm
+too small, the product sits inside the arm, and the occluder — a cylinder of
+exactly limb width — swallows it. The symptom reads as three separate bugs
+(invisible, too small, wrong) from one line of measurement.
+
+**Absolute** — the product has a fixed real-world size that is itself the thing
+being shopped for. A watch case is 38/40/42/44mm, and that number is the point:
+
+```js
+scale = (caseDiameterMm × 0.001) / modelMaxDiameter;
+```
+
+Fitting a watch case to the wrist would render every watch identically on every
+arm and defeat the entire purpose of trying one on. Conversely, giving a ring an
+absolute size ignores the wearer's finger. Pick per product category.
+
+Absolute sizing is a one-liner *only because the pipeline is metric* — this is the
+concrete payoff of everything above. Verified: a 42mm case renders at 42.00mm on
+45/53/65mm wrists, with a bit-identical scale factor.
+
 The model's own dimensions must be measured at load, not assumed — GLB authoring
-units vary wildly between tools. Measure the bounding box once and derive
-everything from it.
+units vary wildly between tools. Measure from the **geometry**, not the bounding
+box (see the next section), except for absolute sizing: the radial distance from
+the bore axis to a watch case is its height above the wrist, not its diameter, so
+the case's own size is the larger bbox extent perpendicular to the bore.
 
 ---
 
@@ -174,21 +207,74 @@ A GLB is only correct when its axes match the solver's frame (in the ring case,
 that breaks on the next asset and is unusable in a GUI — four coupled components
 that must stay normalized.
 
-Detect it from the geometry instead. **A ring is a flat torus: two bounding-box
-extents are the diameter, and the narrowest is the band width, which runs along
-the hole.** So the narrow axis *is* the hole axis. This survives a gem, because a
-gem grows a radial extent and never the narrowest one. Rotate the model onto the
-target axis at load; expose a manual override for unusual geometry, and a **roll
-in degrees** about the primary axis for rotational placement.
+Detect it from the geometry instead. One pass over the vertices at load answers
+both the orientation and the fit, and neither can be had from a bounding box.
 
-Same reasoning transfers: a watch case is flattest along the wrist normal; a
-bracelet's narrow axis is its band width.
+For each candidate axis, project every vertex onto the perpendicular plane and
+take radial distances from the axis:
 
-For the same reason, derive the fitting diameter from the two extents
-**perpendicular** to the hole, taking the smaller — `max()` over all three axes
-lets a tall gem inflate it and undersize the band.
+```js
+// Sample the SURFACE by area, not the vertices. Then, per angular sector:
+innerRadius = median(sectorMinima);      // the hole — what the fit needs
+outerRadius = median(sectorMaxima);
+coverage    = occupiedSectors / 16;       // does material surround the centre?
+score       = (innerRadius / outerRadius) × coverage;
+```
 
----
+**Sample the surface by area, never the vertices.** Two separate errors otherwise,
+and both under-size the product. Vertex counts are wildly uneven — engraving,
+stones and bezels carry most of a jewellery mesh while the plain inner surface,
+the part that touches the limb, can be a fraction of a percent — so any
+per-vertex statistic is dominated by the outside. And a sparsely tessellated
+inner surface has no vertex at all in most angular sectors, so the hole goes
+unseen exactly where it matters. Area weighting fixes both: one big plain
+triangle yields many samples, a thousand tiny engraving triangles yield as many
+as their area deserves.
+
+Then take **one value per angular sector** rather than a percentile over samples,
+so sector statistics do not re-introduce a density weighting. Medians across
+sectors, so a clasp bar crossing the bore or a gem occupying a few sectors is
+discarded.
+
+**Both factors are needed.** Hole size alone is not enough: a torus seen *edge-on*
+also has empty space in the middle of its projection — two blobs either side — so
+it scores just as well about the wrong axis. Only the true bore has material all
+the way *around* the centre. Measured on synthetic models, the combined score is
+0.35–0.93 for the true bore against 0.09–0.16 for every wrong axis: a clean
+decision, not a marginal one.
+
+**Find the bore's centre by searching, not by seeding.** A clasp, a charm or a
+solitaire sits off to one side and drags the bounding-box centre off the bore,
+after which the hole is measured about the wrong axis and reads as nothing. The
+coordinate median is no safer once samples are area-weighted, because a large gem
+can carry more surface area than the whole band. Any seed-and-refine scheme
+inherits the bias, so run a coarse grid over the section and hill-climb from the
+best cell.
+
+**Gate the search on enclosure.** Hole radius alone is an unbounded objective:
+travel far enough from the model and every sample is distant, so "the hole" grows
+without limit and the search escapes to infinity. Only points with coverage above
+~0.85 — material in most directions — are candidates at all. That makes the
+problem well posed and is the same signal that rejects an open watch.
+
+Use the found centre to place the pivot too, or the product orbits the limb
+instead of encircling it.
+
+**Fall back when the shape is not a loop.** An open watch — a case plus two strap
+stubs, which is how most watch GLBs are authored — has no bore to find and is not
+centred on the wrist axis. Its coverage score is low, which correctly reads as
+"inconclusive", and a per-product bounding-box policy decides instead:
+
+- `narrowest` — a ring or closed bracelet is a flat torus, so the bore is its
+  narrowest extent.
+- `longest` — an open watch is elongated along the bore, since the strap runs up
+  and down the arm.
+
+Log which path decided, with the scores. When a model does come out wrong, that
+line says immediately whether the geometry was annular at all.
+
+Expose a manual axis override for unusual geometry, and a **roll in degrees** about
+the primary axis for rotational placement.
 
 ## Smoothing: One Euro, Not Fixed Alpha
 
@@ -312,15 +398,51 @@ The solver is product-agnostic. A new category supplies four things:
 
 | | Ring | Watch | Bracelet |
 |---|---|---|---|
-| **Anchor landmarks** | Ring MCP→PIP (13→14) | Wrist (0), offset toward the forearm | Wrist (0) |
-| **Primary axis** | Finger axis | Forearm axis (palm centre → wrist, extended) | Forearm axis |
-| **Reference size** | `\|W[5]−W[17]\|/3 × 0.72` | Wrist width from `\|W[5]−W[17]\|` × coefficient | As watch |
-| **Occluder** | Cylinder along the finger | Flattened cylinder along the forearm | As watch |
+| **Anchor** | lerp(13→14) at 0.45 | Wrist (0) + 35mm up the forearm | Wrist (0) + 18mm |
+| **Primary axis** | Finger axis (13→14) | Forearm axis (palm centre → wrist, extended) | As watch |
+| **Normal** | Palm normal | Palm normal **negated** (face on the back) | As watch |
+| **Reference size** | `\|W[5]−W[17]\|/3 × 0.72` | `\|W[5]−W[17]\| × 0.70`, depth × 0.72 | As watch |
+| **Sizing mode** | Fit | **Absolute** (case mm) | Fit |
+| **Bore policy** | `narrowest` | `longest` | `narrowest` |
+| **Occluder** | Round cylinder | Elliptical, along the forearm, biased proximally | As watch |
+| **Hysteresis** | 3 frames | 5 frames | 5 frames |
 
 Steps 1–6, the smoothing, the mapping contract and the canvas sizing are
-unchanged. Note the wrist is at the **edge** of MediaPipe's tracked region, so
-forearm direction must be extrapolated from the palm and degrades as the hand
-leaves frame — budget for extra hysteresis on wrist-worn products.
+unchanged. Implemented in `public/vto/rings-hybrid/` and
+`public/vto/wrist-hybrid/`, sharing `public/vto/shared/vto-core/`.
+
+### The wrist is harder than the finger
+
+MediaPipe has **no forearm landmark** — landmark 0 is the wrist crease at the base
+of the palm, and nothing lies beyond it. The forearm axis must be extrapolated
+from `palm centre → wrist`, which is exact only when the wrist is straight.
+
+Of the wrist's three degrees of freedom, two corrupt that axis (flexion ±70°,
+deviation ±20°) and one does not: pronation rotates the radius over the ulna and
+the hand rides the radius, so **roll about the arm is reported faithfully however
+the wrist is bent**. Roll is what decides which way a watch face points, so the
+failure mode is a tilt rather than a spin.
+
+Measured against a synthetic hand on a known forearm, at a 35mm watch offset:
+
+| Wrist flexion | Axis error | Anchor displacement |
+|---|---|---|
+| 0° | 0.4° | 0.0 mm |
+| 15° | 15.0° | 9.1 mm |
+| 30° | 30.0° | 18.1 mm |
+| 45° | 45.0° | 26.8 mm |
+| 60° | 60.0° | 35.0 mm |
+
+Error tracks flexion nearly 1:1 — fine to ~15°, visibly wrong past 30°. If that
+proves too costly, MediaPipe Pose Landmarker supplies a true elbow→wrist vector
+for ~16MB on top of the hand model's 7.5MB plus a second inference (which can run
+every 3rd frame — a forearm moves slowly). Keep the axis behind a single function
+so the swap is local.
+
+Also budget extra detection hysteresis on wrist products: the wrist sits at the
+edge of the hand's bounding box, so tracking drops out more often than on a
+finger. And note that tracking needs the **hand** in frame — a forearm alone with
+the hand out of shot loses tracking entirely.
 
 ---
 
@@ -367,5 +489,12 @@ Symptoms observed during development, with causes, since several are misleading:
 | Object flipped vertically | Image Y (down) used directly as Three.js Y (up) |
 | Occluder stops working, or hides everything | `transparent: true`, or proxy sized by constants |
 | Object blinks on dropped frames | No detection hysteresis |
-| Ring stands across the finger | GLB hole axis not aligned to the solver's primary axis |
-| Band looks undersized | Fitting diameter taken as `max()` over all three extents (gem inflates it) |
+| Ring stands across the finger | GLB bore axis not aligned to the solver's primary axis |
+| Watch stands on end | Bore policy fallback set to `narrowest` for an open watch — use `longest` |
+| Every watch looks the same size on every wrist | Absolute-sized product put through the fit-driven path |
+| Product invisible, "inside" the limb | Fit derived from the bounding box, so the hole ended up narrower than the limb and the occluder swallowed it |
+| Product too small, band thickness matters | Same cause — fit the measured hole, not the outer diameter |
+| Product too small on a detailed model only | Measuring vertices rather than sampling the surface by area: dense outer decoration outvotes a sparse inner surface |
+| Fit changes when the same model is re-exported denser | Same cause — the measure must be density-independent |
+| Product orbits the limb instead of encircling it | Pivot centred on the bounding box rather than on the measured bore |
+| Watch tilts off the arm when the wrist bends | Hand-only forearm axis; inherent, see the flexion table |
