@@ -35,7 +35,7 @@ const BASE = {
     minHandPresenceConfidence: 0.6,
     minTrackingConfidence: 0.6,
     facingMode: 'user',
-    debugDrawLandmarks: true,
+    debugDrawLandmarks: false,
     // Pinned: the wasm fileset must match the JS bundle in index.html.
     version: '0.10.35'
   },
@@ -62,7 +62,7 @@ const BASE = {
   debug: {
     displayLandmarks: true,
     meshMaterial: false,
-    marker: true,
+    marker: false,
     logPositions: false,
     panelEnabled: true
   }
