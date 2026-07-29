@@ -36,6 +36,9 @@ const BASE = {
     minTrackingConfidence: 0.6,
     facingMode: 'user',
     debugDrawLandmarks: true,
+    // Extrapolated forearm/arm lines past the wrist, same style as the hand
+    // skeleton — visual check for the axis WristAnchor.forearmAxis() computes.
+    debugDrawForearm: true,
     // Pinned: the wasm fileset must match the JS bundle in index.html.
     version: '0.10.35'
   },

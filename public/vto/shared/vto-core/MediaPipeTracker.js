@@ -231,7 +231,63 @@ export class MediaPipeTracker {
       this.ctx.beginPath();
       this.ctx.arc(ringMCP.x * width, ringMCP.y * height, 8, 0, 2 * Math.PI);
       this.ctx.fill();
+
+      if (this.config.debugDrawForearm) {
+        this.drawForearm(handLandmarks, width, height);
+      }
     });
+  }
+
+  /**
+   * Extrapolate forearm/arm debug lines past the wrist landmark, in the same
+   * palmCentre -> wrist direction WristAnchor.forearmAxis() uses (there is no
+   * landmark beyond the wrist crease to draw instead). Purely proportional to
+   * hand size in frame, same as the skeleton lines above — not metric.
+   */
+  drawForearm(landmarks, width, height) {
+    const MCP_ROW = [5, 9, 13, 17]; // index, middle, ring, pinky MCP
+    let px = 0, py = 0;
+    for (const i of MCP_ROW) { px += landmarks[i].x; py += landmarks[i].y; }
+    px = (px / MCP_ROW.length) * width;
+    py = (py / MCP_ROW.length) * height;
+
+    const wx = landmarks[0].x * width;
+    const wy = landmarks[0].y * height;
+
+    let dx = wx - px;
+    let dy = wy - py;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+
+    const forearmEnd = { x: wx + dx * len * 1.5, y: wy + dy * len * 1.5 };
+    const armEnd = { x: forearmEnd.x + dx * len * 2.5, y: forearmEnd.y + dy * len * 2.5 };
+
+    this.ctx.lineWidth = 2;
+
+    this.ctx.strokeStyle = '#00FFFF'; // forearm
+    this.ctx.beginPath();
+    this.ctx.moveTo(wx, wy);
+    this.ctx.lineTo(forearmEnd.x, forearmEnd.y);
+    this.ctx.stroke();
+
+    this.ctx.strokeStyle = '#FF00FF'; // arm
+    this.ctx.setLineDash([6, 4]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(forearmEnd.x, forearmEnd.y);
+    this.ctx.lineTo(armEnd.x, armEnd.y);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.ctx.fillStyle = '#00FFFF';
+    this.ctx.beginPath();
+    this.ctx.arc(forearmEnd.x, forearmEnd.y, 6, 0, 2 * Math.PI);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = '#FF00FF';
+    this.ctx.beginPath();
+    this.ctx.arc(armEnd.x, armEnd.y, 6, 0, 2 * Math.PI);
+    this.ctx.fill();
   }
 
   /**
