@@ -45,7 +45,6 @@ const BASE = {
     minHandPresenceConfidence: 0.6,
     minTrackingConfidence: 0.6,
     facingMode: 'user',
-    debugDrawLandmarks: true,
     // Extrapolated forearm/arm lines past the wrist, same style as the hand
     // skeleton — visual check for the axis WristAnchor.forearmAxis() computes.
     debugDrawForearm: true,
@@ -53,6 +52,7 @@ const BASE = {
     // axis the solver actually uses.
     forearmRays: [5, 9],
     forearmUlnarBias: 1.0,
+    debugDrawLandmarks: false,
     // Pinned: the wasm fileset must match the JS bundle in index.html.
     version: '0.10.35'
   },
@@ -77,9 +77,9 @@ const BASE = {
   },
 
   debug: {
-    displayLandmarks: true,
+    displayLandmarks: false,
     meshMaterial: false,
-    marker: true,
+    marker: false,
     logPositions: false,
     panelEnabled: true
   }
