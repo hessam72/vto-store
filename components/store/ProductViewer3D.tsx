@@ -131,7 +131,8 @@ export default function ProductViewer3D({ glbPath }: ProductViewer3DProps) {
         <OrbitControls
           makeDefault
           target={[0, 0, 0]}
-          autoRotate={false}
+          autoRotate
+          autoRotateSpeed={2}
           enableDamping
           enablePan={false}
           enableZoom={true}
