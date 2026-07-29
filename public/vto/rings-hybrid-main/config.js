@@ -11,6 +11,41 @@
 export const RingConfig = {
   modelURL: window.VTO_MODEL_URL || '/models/rings/default.glb',
 
+  /**
+   * The catalogue the user switches through, live, without reloading the page.
+   * `modelURL` above is the legacy single-model entry point (the Next.js route
+   * injects window.VTO_MODEL_URL for the routed demos); when a products list is
+   * present it takes over, and an injected VTO_MODEL_URL only picks the entry
+   * the session starts on.
+   */
+  products: window.VTO_PRODUCTS || [
+    { id: 'default-1', name: 'انگشتر ۱', url: '/models/rings/default-1.glb' },
+    { id: 'default-2', name: 'انگشتر ۲', url: '/models/rings/default-2.glb' },
+    { id: 'default-3', name: 'انگشتر ۳', url: '/models/rings/default-3.glb' },
+    { id: 'default-4', name: 'انگشتر ۴', url: '/models/rings/default-4.glb' }
+  ],
+  initialProductIndex: 0,
+
+  /**
+   * Thumbs up / down product switching, via MediaPipe's canned gesture
+   * classifier. Closed_Fist and Open_Palm are deliberately not used: those are
+   * the poses a hand naturally passes through while a ring is being inspected,
+   * so binding them to a swap fires constantly.
+   */
+  gesture: {
+    enabled: true,
+
+    // Minimum classifier confidence for a gesture to count.
+    minConfidence: 0.7,
+
+    // How long the thumb must be held before the swap commits. Long enough that
+    // a thumb caught in passing does not switch the ring.
+    thumbHoldDurationMs: 1500,
+
+    // Lockout after a swap, so one gesture cannot fire twice.
+    cooldownMs: 1000
+  },
+
   camera: {
     // Assumed vertical field of view of the webcam, in degrees.
     // Screen alignment and apparent size are independent of this value (the
@@ -63,6 +98,14 @@ export const RingConfig = {
     minTrackingConfidence: 0.6,
     facingMode: 'user',
     debugDrawLandmarks: false,
+
+    // Run the GestureRecognizer task instead of the bare HandLandmarker. Its
+    // result is a superset — the same landmarks, worldLandmarks and handedness
+    // the pose solver reads, plus a classified gesture — so switching costs one
+    // model download rather than a second inference pass per frame.
+    // Set false to fall back to HandLandmarker; gesture switching then goes
+    // quiet and the buttons still work.
+    useGestureRecognizer: true,
 
     // Pinned deliberately. The importmap used to resolve `@latest`, which rolled
     // over to the 1.0.0 release; the wasm fileset must match the JS bundle.

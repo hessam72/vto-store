@@ -13,6 +13,34 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 const NEAR_M = 0.02;
 const FAR_M = 10;
 
+// Switching back to an already-seen ring should not refetch it. Cache holds the
+// decoded response, so a repeat load is a parse rather than a download.
+THREE.Cache.enabled = true;
+const gltfLoader = new GLTFLoader();
+
+/**
+ * Free everything a GLB subtree holds on the GPU.
+ *
+ * material.dispose() releases the program but not the images bound to it, so a
+ * catalogue cycled a few dozen times would leak every map it ever loaded. The
+ * material's own properties are walked to find them, which covers whichever of
+ * map / normalMap / roughnessMap / … a given GLB happens to use.
+ */
+function disposeSubtree(root) {
+  root.traverse((object) => {
+    object.geometry?.dispose();
+
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      if (!material) continue;
+      for (const value of Object.values(material)) {
+        if (value?.isTexture) value.dispose();
+      }
+      material.dispose();
+    }
+  });
+}
+
 /** The narrowest bounding-box axis of a ring is the one its hole runs along. */
 function detectHoleAxis({ x, y, z }) {
   if (x <= y && x <= z) return 'x';
@@ -43,6 +71,11 @@ export class ThreeRingScene {
     // re-derived without re-fetching the model.
     this.modelExtents = null;
     this.detectedHoleAxis = null;
+
+    // Bumped on every load. A load whose token is stale by the time it resolves
+    // lost a race to a later switch, and throws its result away rather than
+    // overwriting the ring the user actually asked for.
+    this._loadToken = 0;
 
     this._onResize = () => this.handleResize();
 
@@ -146,11 +179,31 @@ export class ThreeRingScene {
     this.scene.add(this.debugMarker);
   }
 
-  async loadRingModel() {
+  /**
+   * Load a ring, replacing whatever is currently worn.
+   *
+   * Safe to call repeatedly: the previous model is removed and disposed first,
+   * and updateRingTransform() already skips a null pivot, so the ring simply
+   * goes unrendered for the frames the load spans instead of flickering the old
+   * model at the new one's scale.
+   *
+   * @param {string} [url] - GLB to load. Defaults to the configured single model.
+   */
+  async loadRingModel(url = this.config.modelURL) {
+    const token = ++this._loadToken;
+    this.disposeRingModel();
+
     return new Promise((resolve, reject) => {
-      new GLTFLoader().load(
-        this.config.modelURL,
+      gltfLoader.load(
+        url,
         (gltf) => {
+          // A newer switch already started: this result is stale.
+          if (token !== this._loadToken) {
+            disposeSubtree(gltf.scene);
+            resolve(null);
+            return;
+          }
+
           // A pivot decouples the fitted scale from the model's own transform,
           // so the GLB can keep whatever root transform it was exported with.
           this.ringPivot = new THREE.Group();
@@ -169,7 +222,13 @@ export class ThreeRingScene {
           this.ringPivot.visible = false;
           this.scene.add(this.ringPivot);
 
+          // Mandatory on every load, not just the first: modelBaseDiameter is
+          // measured per model and drives the fit-to-finger scale, so a swap
+          // that skipped this would wear the new ring at the old one's size.
           this.applyHoleAxis(this.config.ring.holeAxis);
+
+          // Let a debug-panel override re-apply itself to the new mesh.
+          this._appliedHoleAxis = null;
 
           resolve(this.ringPivot);
         },
@@ -184,6 +243,22 @@ export class ThreeRingScene {
         }
       );
     });
+  }
+
+  /**
+   * Detach and free the worn ring. Without this a switch would orphan the old
+   * pivot inside the scene graph — still drawn, still holding GPU memory.
+   */
+  disposeRingModel() {
+    if (!this.ringPivot) return;
+
+    this.scene.remove(this.ringPivot);
+    disposeSubtree(this.ringPivot);
+
+    this.ringPivot = null;
+    this.ringMesh = null;
+    this.modelExtents = null;
+    this.modelBaseDiameter = 1;
   }
 
   /**
@@ -334,12 +409,10 @@ export class ThreeRingScene {
   destroy() {
     window.removeEventListener('resize', this._onResize);
 
-    this.scene.traverse((object) => {
-      object.geometry?.dispose();
-      const material = object.material;
-      if (Array.isArray(material)) material.forEach((m) => m.dispose());
-      else material?.dispose();
-    });
+    // Strands any load still in flight, so it cannot attach to a dead scene.
+    this._loadToken++;
+
+    disposeSubtree(this.scene);
 
     this.scene.environment?.dispose();
     this.renderer.dispose();
