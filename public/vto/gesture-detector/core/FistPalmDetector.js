@@ -1,0 +1,210 @@
+/**
+ * Fist-to-Palm Gesture Detector
+ * State machine: IDLE → FIST_DETECTED → PALM_DETECTED (trigger) → COOLDOWN → IDLE
+ */
+
+export class FistPalmDetector {
+  constructor(config = {}) {
+    this.config = {
+      minConfidence: 0.7,
+      minPalmConfidence: 0.4, // Lower threshold for Open_Palm detection
+      fistToPalmTimeoutMs: 3000,
+      cooldownMs: 1000,
+      screenDivisionRatio: 0.5,
+      ...config
+    };
+
+    // State machine states
+    this.states = {
+      IDLE: 'IDLE',
+      FIST_DETECTED: 'FIST_DETECTED',
+      PALM_DETECTED: 'PALM_DETECTED',
+      COOLDOWN: 'COOLDOWN'
+    };
+
+    this.currentState = this.states.IDLE;
+    this.fistDetectedTime = null;
+    this.cooldownTimeout = null;
+    this.lastHandPosition = { x: 0, y: 0 };
+
+    // Event callbacks
+    this.onSwapTriggered = null;
+    this.onStateChange = null;
+  }
+
+  /**
+   * Process gesture results from MediaPipe
+   */
+  process(results) {
+    const { gestures, landmarks } = results;
+
+    // Extract dominant gesture
+    const dominantGesture = this.getDominantGesture(gestures);
+
+    // Update hand position if landmarks available
+    if (landmarks && landmarks.length > 0) {
+      // Use wrist (landmark 0) as reference
+      this.lastHandPosition = {
+        x: landmarks[0].x,
+        y: landmarks[0].y
+      };
+    }
+
+    // State machine logic
+    this.updateStateMachine(dominantGesture);
+
+    return {
+      state: this.currentState,
+      gesture: dominantGesture,
+      timeRemaining: this.getTimeRemaining(),
+      handPosition: this.lastHandPosition
+    };
+  }
+
+  /**
+   * Get dominant gesture from results
+   */
+  getDominantGesture(gestures) {
+    if (!gestures || gestures.length === 0) {
+      return { category: 'None', confidence: 0 };
+    }
+
+    // Get gesture with highest confidence
+    const sorted = [...gestures].sort((a, b) => b.confidence - a.confidence);
+    return sorted[0];
+  }
+
+  /**
+   * State machine update
+   */
+  updateStateMachine(gesture) {
+    const { category, confidence } = gesture;
+    const now = performance.now();
+
+    // Check if gesture confidence meets threshold
+    const isValidGesture = confidence >= this.config.minConfidence;
+
+    switch (this.currentState) {
+      case this.states.IDLE:
+        if (isValidGesture && category === 'Closed_Fist') {
+          this.transitionTo(this.states.FIST_DETECTED);
+          this.fistDetectedTime = now;
+          console.log('🤜 Fist detected - waiting for palm...');
+        }
+        break;
+
+      case this.states.FIST_DETECTED:
+        const elapsed = now - this.fistDetectedTime;
+
+        if (category === 'Open_Palm' && confidence >= this.config.minPalmConfidence) {
+          // Successful sequence: Fist → Palm (lower confidence threshold for palm)
+          this.transitionTo(this.states.PALM_DETECTED);
+          this.triggerSwap();
+        } else if (elapsed > this.config.fistToPalmTimeoutMs) {
+          // Timeout: reset to IDLE
+          console.log('⏱️ Fist-to-palm timeout - resetting');
+          this.transitionTo(this.states.IDLE);
+          this.fistDetectedTime = null;
+        } else if (isValidGesture && category !== 'Closed_Fist' && category !== 'Open_Palm') {
+          // Different unwanted gesture detected (not None, not Closed_Fist, not Open_Palm): reset
+          console.log(`❌ Unwanted gesture "${category}" - resetting`);
+          this.transitionTo(this.states.IDLE);
+          this.fistDetectedTime = null;
+        }
+        // Stay in FIST_DETECTED if: Closed_Fist, None, or low-confidence gesture
+        break;
+
+      case this.states.PALM_DETECTED:
+        // Immediately transition to cooldown
+        this.transitionTo(this.states.COOLDOWN);
+        this.startCooldown();
+        break;
+
+      case this.states.COOLDOWN:
+        // Waiting for cooldown to expire (handled by timeout)
+        break;
+    }
+  }
+
+  /**
+   * Trigger swap action
+   */
+  triggerSwap() {
+    console.log('✋ Palm detected - SWAP TRIGGERED!');
+
+    // Determine direction based on hand position
+    // Left half of screen = previous, right half = next
+    const direction = this.lastHandPosition.x < this.config.screenDivisionRatio ? 'previous' : 'next';
+
+    if (this.onSwapTriggered) {
+      this.onSwapTriggered(direction);
+    }
+  }
+
+  /**
+   * Start cooldown period
+   */
+  startCooldown() {
+    if (this.cooldownTimeout) {
+      clearTimeout(this.cooldownTimeout);
+    }
+
+    this.cooldownTimeout = setTimeout(() => {
+      console.log('⏰ Cooldown expired - ready for next gesture');
+      this.transitionTo(this.states.IDLE);
+      this.fistDetectedTime = null;
+      this.cooldownTimeout = null;
+    }, this.config.cooldownMs);
+  }
+
+  /**
+   * Transition to new state
+   */
+  transitionTo(newState) {
+    const oldState = this.currentState;
+    this.currentState = newState;
+
+    if (this.onStateChange && oldState !== newState) {
+      this.onStateChange({
+        from: oldState,
+        to: newState,
+        timestamp: performance.now()
+      });
+    }
+  }
+
+  /**
+   * Get time remaining in current state
+   */
+  getTimeRemaining() {
+    if (this.currentState === this.states.FIST_DETECTED && this.fistDetectedTime) {
+      const elapsed = performance.now() - this.fistDetectedTime;
+      const remaining = Math.max(0, this.config.fistToPalmTimeoutMs - elapsed);
+      return remaining;
+    }
+    return 0;
+  }
+
+  /**
+   * Reset detector to IDLE
+   */
+  reset() {
+    if (this.cooldownTimeout) {
+      clearTimeout(this.cooldownTimeout);
+      this.cooldownTimeout = null;
+    }
+
+    this.currentState = this.states.IDLE;
+    this.fistDetectedTime = null;
+    console.log('🔄 FistPalmDetector reset');
+  }
+
+  /**
+   * Cleanup
+   */
+  destroy() {
+    this.reset();
+    this.onSwapTriggered = null;
+    this.onStateChange = null;
+  }
+}
