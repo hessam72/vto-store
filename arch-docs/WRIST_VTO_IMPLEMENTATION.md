@@ -204,7 +204,7 @@ produces a real product bug:
 - **Watch** — the case is a fixed product spec (38/40/42/44 mm) that is *itself*
   what the customer is choosing. Scaling the case to wrist size would render
   every watch the same on every arm, defeating the purpose of a try-on:
-  `sizing.mode: 'absolute'`, `diameterMm: 42`.
+  `sizing.mode: 'absolute'`, `diameterMm` (41.5 in the shipped preset).
 
 ```js
 // fit mode  (bracelet)
@@ -220,19 +220,26 @@ building the pinhole solve in real units rather than screen-space units.
 Verified: a 42 mm case renders at 42.00 mm on 45/53/65 mm wrists, with the scale
 factor bit-identical across all three (`wrist-scene.mjs`, section 1).
 
+> **The shipped watch preset does not currently get this guarantee.** It carries
+> `scaleMultiplier: 2.06`, which multiplies the result of the branch above, so a
+> 41.5 mm case renders at ~85 mm. That is a live flag, not a setting — see §7.
+
 Wrist dimensions come from the hand itself, reusing the same MCP-row measurement
 the ring implementation uses for finger width:
 
 ```js
-wristWidth = |W[INDEX_MCP] - W[PINKY_MCP]| × wristWidthCoeff   // coeff ≈ 0.70
+wristWidth = |W[INDEX_MCP] - W[PINKY_MCP]| × wristWidthCoeff
 wristDepth = wristWidth × wristDepthRatio                       // ratio ≈ 0.72
 ```
 
-`0.70` comes from adult anthropometry — palm breadth at the knuckles averages
-~79 mm against a ~55 mm wrist breadth. `0.72` accounts for the wrist being
-elliptical rather than round (front-to-back is shallower than side-to-side). Both
-are calibratable in the debug panel if a product reads systematically wide or
-narrow.
+`WristAnchor`'s own default coefficient is `0.70`, from adult anthropometry —
+palm breadth at the knuckles averages ~79 mm against a ~55 mm wrist breadth. The
+shipped wrist config overrides it to **0.81**, an on-camera calibration; keeping
+the anatomical value in the class and the calibrated value in the preset means
+the shared class is not carrying one setup's webcam numbers. `0.72` accounts for
+the wrist being elliptical rather than round (front-to-back is shallower than
+side-to-side). Both are calibratable in the debug panel if a product reads
+systematically wide or narrow.
 
 ## 5. Model measurement: finding the bore
 
@@ -392,6 +399,27 @@ On a watch, using it deliberately breaks the promise of absolute sizing — a
 escape hatch for a specific model or a specific wearer reading wrong, not a
 sizing method. A value that settles far from 1.0 is a signal that the underlying
 measurement (section 5) needs attention, not that the multiplier has "fixed" it.
+
+### The shipped watch preset's ×2.06
+
+The watch preset currently ships `scaleMultiplier: 2.06`, tuned on camera. It is
+recorded here so it is never mistaken for a bug, and so the reasoning above is
+not quietly contradicted by the config: at 2.06 a 41.5 mm case renders at ~85 mm,
+which means absolute mode is no longer delivering an absolute case size.
+
+By the rule above, a multiplier that far from 1.0 points at the measurement. The
+diagnostic is the load-time console line, whose `case` field is the
+`modelMaxDiameter` that absolute mode divides into:
+
+```
+Model oriented | ... | hole NNmm outer NNmm case NNmm
+```
+
+If that reads ~85 mm for a 41.5 mm case, the GLB is a **closed loop** — a full
+band rather than a case plus strap stubs — and the bounding-box measurement that
+absolute mode relies on is sizing the band, not the case. 85/41.5 = 2.05, close
+enough to the shipped multiplier to be the likely explanation. The fix would then
+belong in how a closed-loop watch is measured (§5), not in the multiplier.
 
 To make an active override impossible to miss later, it is echoed everywhere the
 fit is reported:

@@ -215,12 +215,40 @@ app.
 | | Watch | Bracelet |
 |---|---|---|
 | `anchorOffsetMm` | 35 | 18 |
-| `sizing.mode` | `absolute`, 42 mm case | `fit`, hole = 1.05 × wrist |
+| `sizing.mode` | `absolute`, 41.5 mm case | `fit`, hole = 1.05 × wrist |
 | `boreAxisPolicy` | `longest` | `narrowest` |
+| `sizing.scaleMultiplier` | **2.06** — see below | 1.0 |
 
 `smoothing.confidence.hysteresisFrames` is 5 for both, up from the ring's 3: the
 wrist sits at the edge of the hand's bounding box, so detection drops out more
 often than on a finger.
+
+`anchor.wristWidthCoeff` ships at **0.81**, an on-camera calibration.
+`WristAnchor`'s own default stays at the anatomical 0.70, so the class is not
+carrying one setup's webcam numbers.
+
+### About the watch's 2.06 multiplier
+
+It is recorded here so nobody later mistakes it for a bug. It ships because it is
+what looks right on camera, but it **cancels out `absolute` mode**: at 2.06 a
+41.5 mm case renders at ~85 mm, so `diameterMm` no longer means what it says.
+
+That normally indicates the model measured wrong rather than the case size being
+wrong. To check, read the load-time console line:
+
+```
+Model oriented | ... | hole NNmm outer NNmm case NNmm
+```
+
+`case` is `modelMaxDiameter`, the number `absolute` mode divides into. If it
+reports ~85 mm for a 41.5 mm case, the GLB is a **closed loop** and the bounding
+box is measuring the whole band rather than the case — 85/41.5 = 2.05, close
+enough to the multiplier to be worth pulling on. The fix would then be in how a
+closed-loop watch is measured, not in this number.
+
+Changing the shipped defaults also needs `SCHEMA_VERSION` in
+`../shared/vto-core/DebugPanel.js` bumped, or a browser that has already saved a
+panel preset keeps the old values and the config edit appears to do nothing.
 
 ## Checks that should hold
 

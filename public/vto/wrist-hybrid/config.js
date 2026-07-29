@@ -22,9 +22,12 @@ const BASE = {
   },
 
   anchor: {
-    // Wrist breadth as a fraction of the index→pinky MCP span. Adult palm
-    // breadth at the knuckles averages ~79mm against a ~55mm wrist breadth.
-    wristWidthCoeff: 0.70,
+    // Wrist breadth as a fraction of the index→pinky MCP span. The anatomical
+    // starting point is ~0.70 (adult palm breadth at the knuckles averages
+    // ~79mm against a ~55mm wrist breadth), which is what WristAnchor defaults
+    // to. 0.81 is a measured on-camera calibration and belongs here, in the
+    // shipped preset, rather than in the class.
+    wristWidthCoeff: 0.81,
     // The wrist is elliptical, not round.
     wristDepthRatio: 0.72,
 
@@ -109,10 +112,20 @@ export const WATCH_PRESET = {
       // 38/40/42/44mm is exactly what the customer is shopping for; scaling it to
       // wrist width would make every case look identical on every arm.
       mode: 'absolute',
-      diameterMm: 42,
-      // Manual override. Note it deliberately defeats the point of `absolute`:
-      // with anything but 1.0 a 42mm case no longer renders at 42mm.
-      scaleMultiplier: 1.0
+      diameterMm: 41.5,
+
+      // MEASURED ON CAMERA, AND A FLAG RATHER THAN A SETTING TO BE PROUD OF.
+      // Anything but 1.0 defeats the point of `absolute` mode: at 2.06 a 41.5mm
+      // case renders at ~85mm, so the case size no longer means what it says.
+      //
+      // If anyone wants to chase it, the load-time console line
+      //   Model oriented | ... | hole NNmm outer NNmm case NNmm
+      // reports what `case` (modelMaxDiameter) actually measured. If that reads
+      // ~85mm for a 41.5mm case, the GLB is a closed loop and the bbox is
+      // measuring the whole band rather than the case — 85/41.5 = 2.05, close
+      // enough to this multiplier to be worth a look. The fix would then be in
+      // how a closed-loop watch is measured, not in this number.
+      scaleMultiplier: 2.06
     }
   }
 };

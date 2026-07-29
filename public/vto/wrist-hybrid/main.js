@@ -35,6 +35,11 @@ startVTO({
       wristDepthRatio: config.anchor.wristDepthRatio,
       axisMinCutoff: config.anchor.axisMinCutoff,
       axisBeta: config.anchor.axisBeta,
+      // Must be restated here. VTOScene reads `debugParams.scaleMultiplier ??
+      // config...`, and the panel always carries COMMON_DEFAULTS' 1.0 — so
+      // without this line the config value is permanently shadowed and setting
+      // it appears to do nothing.
+      scaleMultiplier: config.product.sizing.scaleMultiplier,
       ...(isAbsolute
         ? { absoluteDiameterMm: config.product.sizing.diameterMm }
         : { boreDiameterRatio: config.product.sizing.boreDiameterRatio })
