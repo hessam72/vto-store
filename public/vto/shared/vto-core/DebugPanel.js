@@ -37,6 +37,9 @@ export const COMMON_DEFAULTS = {
   rotationMinCutoff: 1.5,
   rotationBeta: 0.35,
 
+  // Manual size override; 1.0 means "use the measured fit".
+  scaleMultiplier: 1.0,
+
   showMarker: true,
   showOccluder: false
 };
@@ -94,6 +97,10 @@ export class DebugPanel {
       this.add(folders.get(control.folder), control.key, ...(control.args || []))
         .name(control.name);
     }
+
+    // Wide range on purpose: the reason to reach for this is that something is
+    // badly off. The physical parameters above stay narrow.
+    this.add(placement, 'scaleMultiplier', 0.25, 4, 0.01).name('Scale multiplier');
 
     const smoothing = this.gui.addFolder('Smoothing (One Euro)');
     this.add(smoothing, 'positionMinCutoff', 0.1, 10, 0.1).name('Pos min cutoff (Hz)');

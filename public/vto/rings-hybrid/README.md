@@ -92,6 +92,24 @@ bootstrap.js           app wiring and render loop
   `HandSolver.updateCamera()` derives the render camera's FOV from that same
   crop. If these three ever disagree, the 3D drifts off the hand.
 
+### Manual scale multiplier
+
+`sizing.scaleMultiplier` (panel: **Scale multiplier**, 0.25–4.0) scales the
+finished result, on top of whichever mode produced it. `1.0` uses the measurement
+and is a no-op.
+
+This is an **escape hatch, not a sizing method.** It is deliberately separate from
+`boreDiameterRatio`, which means "clearance on the limb" and keeps the hole at
+`limbWidth x ratio`; overloading that to double as a size fudge would make a knob
+whose name says one thing and does another, which is the trap this pipeline was
+rebuilt to escape. On a watch the multiplier also defeats the point of `absolute`
+mode — a 42 mm case no longer renders at 42 mm.
+
+So if it ends up far from 1.0, that is a measurement on the model worth reporting
+rather than a setting to keep. The console `Fit |` line and the "Fitted outer"
+readout both mark a non-default value, so an override can never be mistaken for a
+bug later.
+
 ## Smoothing
 
 One Euro filter: `fc = minCutoff + beta · |ẋ|`. Low cutoff while the hand is

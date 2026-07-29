@@ -67,7 +67,10 @@ startVTO({
       ...(isAbsolute ? [] : [{
         key: 'fittedOuterMm',
         name: 'Fitted outer (mm)',
-        format: (t) => (t.fittedOuterM * 1000).toFixed(1)
+        format: (t) => (t.fittedOuterM * 1000).toFixed(1) +
+          // Say so when a hand override is in play, or the next puzzling
+          // size becomes a hunt for a bug that is really a saved slider.
+          (t.scaleMultiplier === 1 ? '' : ` (x${t.scaleMultiplier})`)
       }]),
       { key: 'handedness', name: 'Hand', format: (t) => t.handedness }
     ]

@@ -62,7 +62,13 @@ export const RingConfig = {
       // Clearance on the finger: the ring's HOLE is fitted to fingerWidth x this.
       // Because the hole is measured from the geometry rather than the bounding
       // box, band thickness no longer affects the fit.
-      boreDiameterRatio: 1.05
+      boreDiameterRatio: 1.05,
+
+      // Manual size override on top of the derived fit. 1.0 = use the
+      // measurement. This is an escape hatch for a model or a wearer the
+      // automatic fit reads wrong, NOT the way to size a product — if you find
+      // yourself leaving it far from 1.0, the measurement is what needs fixing.
+      scaleMultiplier: 1.0
     }
   },
 

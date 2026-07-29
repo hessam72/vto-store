@@ -47,7 +47,10 @@ startVTO({
       { key: 'fingerWidthMm', name: 'Finger width (mm)', format: (t) => (t.width * 1000).toFixed(1) },
       // Must exceed the finger width, or the ring is inside the finger and the
       // occluder eats it. Unlike the fitted hole, this reflects the model.
-      { key: 'fittedOuterMm', name: 'Fitted outer (mm)', format: (t) => (t.fittedOuterM * 1000).toFixed(1) },
+      { key: 'fittedOuterMm', name: 'Fitted outer (mm)', format: (t) => (t.fittedOuterM * 1000).toFixed(1) +
+          // Say so when a hand override is in play, or the next puzzling
+          // size becomes a hunt for a bug that is really a saved slider.
+          (t.scaleMultiplier === 1 ? '' : ` (x${t.scaleMultiplier})`) },
       { key: 'handedness', name: 'Hand', format: (t) => t.handedness }
     ]
   }

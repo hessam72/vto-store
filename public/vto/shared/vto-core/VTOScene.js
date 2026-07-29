@@ -659,6 +659,11 @@ export class VTOScene {
    * Absolute sizing is only possible because the whole pipeline is metric.
    */
   fitScale(width) {
+    return this.automaticScale(width) * this.scaleMultiplier();
+  }
+
+  /** The derived scale, before any manual override. */
+  automaticScale(width) {
     const { sizing } = this.config.product;
 
     if (sizing.mode === 'absolute') {
@@ -671,6 +676,22 @@ export class VTOScene {
     // band is — a 2mm ring band and a 15mm bangle both end up wearable.
     const ratio = this.debugParams?.boreDiameterRatio ?? sizing.boreDiameterRatio;
     return (width * ratio) / this.modelInnerDiameter;
+  }
+
+  /**
+   * Manual size override, applied on top of whichever mode produced the scale.
+   *
+   * Deliberately separate from `boreDiameterRatio`, which means "clearance on the
+   * limb" and keeps the hole at `limbWidth x ratio`. Overloading that to double
+   * as a size fudge would make a knob whose name says one thing and does another,
+   * which is the exact trap this pipeline was rebuilt to escape. This one is
+   * honestly unphysical: it scales the finished result and nothing else.
+   *
+   * On a watch it deliberately breaks the point of `absolute` mode — a 42mm case
+   * no longer renders at 42mm — so it is an escape hatch, not a sizing method.
+   */
+  scaleMultiplier() {
+    return this.debugParams?.scaleMultiplier ?? this.config.product.sizing.scaleMultiplier ?? 1;
   }
 
   /**
@@ -719,9 +740,11 @@ export class VTOScene {
       if (!this._loggedFit) {
         this._loggedFit = true;
         const mm = (metres) => (metres * 1000).toFixed(1);
+        const multiplier = this.scaleMultiplier();
         console.log(
           `Fit | limb ${mm(transform.width)}mm | model hole ${mm(this.modelInnerDiameter)} ` +
-          `outer ${mm(this.modelOuterDiameter)} (model units) | scale ${scale.toFixed(4)} ` +
+          `outer ${mm(this.modelOuterDiameter)} (model units) | scale ${scale.toFixed(4)}` +
+          (multiplier === 1 ? '' : ` (manual x${multiplier})`) + ' ' +
           `| rendered hole ${mm(this.modelInnerDiameter * scale)}mm ` +
           `outer ${mm(this.modelOuterDiameter * scale)}mm` +
           (this.config.product.sizing.mode === 'fit' && this.modelOuterDiameter * scale <= transform.width

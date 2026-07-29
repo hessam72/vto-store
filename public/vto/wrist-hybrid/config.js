@@ -95,7 +95,10 @@ export const WATCH_PRESET = {
       // 38/40/42/44mm is exactly what the customer is shopping for; scaling it to
       // wrist width would make every case look identical on every arm.
       mode: 'absolute',
-      diameterMm: 42
+      diameterMm: 42,
+      // Manual override. Note it deliberately defeats the point of `absolute`:
+      // with anything but 1.0 a 42mm case no longer renders at 42mm.
+      scaleMultiplier: 1.0
     }
   }
 };
@@ -121,7 +124,12 @@ export const BRACELET_PRESET = {
       // this. Was 1.15 against the OUTER diameter, which left the hole narrower
       // than the wrist by twice the band thickness — the bracelet sat inside the
       // arm and the occluder hid it.
-      boreDiameterRatio: 1.05
+      boreDiameterRatio: 1.05,
+
+      // Manual size override on top of the derived fit. 1.0 = use the
+      // measurement. An escape hatch for a model the automatic fit reads wrong,
+      // not the way to size a product.
+      scaleMultiplier: 1.0
     }
   }
 };
