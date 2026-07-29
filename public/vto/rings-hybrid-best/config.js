@@ -62,7 +62,7 @@ export const RingConfig = {
     minHandPresenceConfidence: 0.6,
     minTrackingConfidence: 0.6,
     facingMode: 'user',
-    debugDrawLandmarks: true,
+    debugDrawLandmarks: false,
 
     // Pinned deliberately. The importmap used to resolve `@latest`, which rolled
     // over to the 1.0.0 release; the wasm fileset must match the JS bundle.
@@ -92,10 +92,10 @@ export const RingConfig = {
   },
 
   debug: {
-    displayLandmarks: true,
+    displayLandmarks: false,
     meshMaterial: false,
-    marker: true,
+    marker: false,
     logPositions: false,
-    panelEnabled: true
+    panelEnabled: false
   }
 };
