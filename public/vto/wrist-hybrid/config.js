@@ -26,7 +26,14 @@ const BASE = {
     // breadth at the knuckles averages ~79mm against a ~55mm wrist breadth.
     wristWidthCoeff: 0.70,
     // The wrist is elliptical, not round.
-    wristDepthRatio: 0.72
+    wristDepthRatio: 0.72,
+
+    // Damping on the forearm DIRECTION only, ahead of the basis. Separate from
+    // smoothing.rotation, which cannot damp tilt without also making the watch
+    // face lag pronation. A forearm turns slowly, so a low cutoff is free.
+    axisSmoothing: true,
+    axisMinCutoff: 0.6,
+    axisBeta: 0.05
   },
 
   mediaPipe: {
@@ -39,6 +46,10 @@ const BASE = {
     // Extrapolated forearm/arm lines past the wrist, same style as the hand
     // skeleton — visual check for the axis WristAnchor.forearmAxis() computes.
     debugDrawForearm: true,
+    // Kept in step with anchor.axisRays / ulnarBiasCoeff so the line shows the
+    // axis the solver actually uses.
+    forearmRays: [5, 9],
+    forearmUlnarBias: 1.0,
     // Pinned: the wasm fileset must match the JS bundle in index.html.
     version: '0.10.35'
   },

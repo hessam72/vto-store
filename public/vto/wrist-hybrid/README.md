@@ -25,10 +25,14 @@ there is nothing beyond it. A watch sits 30–40 mm further up the forearm, so b
 the anchor and the axis are extrapolated off the end of the tracked skeleton:
 
 ```
-palmCentre  = mean(MCP row)
+ulnar       = W[9] - W[5]                       // index MCP → middle MCP
+palmCentre  = mean(W[5], W[9]) + ulnarBiasCoeff × ulnar
 forearmAxis = normalize(W[0] - palmCentre)      // palm → wrist, on up the arm
 anchor      = W[0] + forearmAxis × anchorOffsetMm
 ```
+
+Only the **rigid** metacarpals feed `palmCentre` — see "Fists" below for why, and
+for what the `ulnarBiasCoeff` term is doing.
 
 That extrapolation is exact only when the wrist is straight. Of the wrist's three
 degrees of freedom, two corrupt it and one does not:
@@ -66,6 +70,40 @@ Landmarker gives a true elbow→wrist vector, at ~16 MB on top of the hand model
 7.5 MB plus a second inference per frame (it can run every 3rd frame — a forearm
 moves slowly). `WristAnchor.forearmAxis()` is the single source of the axis, so
 that swap touches nothing else.
+
+## Fists: only the rigid metacarpals define the axis
+
+Closing the hand used to swing the product, with the forearm perfectly still. The
+axis came from the centroid of all four metacarpal heads, and the four rays are
+not equivalent:
+
+| Ray | CMC joint | Mobility |
+|---|---|---|
+| 2nd (index, LM 5) | trapezoid | rigid, <2° |
+| 3rd (middle, LM 9) | capitate | rigid, <2° |
+| 4th (ring, LM 13) | hamate | mobile, ~15° |
+| 5th (pinky, LM 17) | hamate | mobile, ~25–30° |
+
+Palm cupping **is** the motion of the mobile ulnar rays, so averaging all four
+dragged the centre as the hand shut. Measured (`wrist.mjs`): 0.76° of axis drift
+at 5° of cupping, 3.78° at 25°. Using only the rigid rays: 0.00° throughout.
+
+The rigid pair alone is not a drop-in swap — both sit on the *radial* side of the
+hand, so their midpoint lands about one inter-ray spacing thumb-ward of the true
+central axis and the anchor slides off the arm. `ulnarBiasCoeff` puts it back,
+in units of the index→middle span so it scales with hand size. At the default
+`1.0` it matches the old four-ray centroid on a resting hand to 0.04° / 0.02 mm.
+
+Set `anchor.axisRays: 'mcpRow'` to get the old rule back for comparison.
+
+### Axis smoothing
+
+Separate from `smoothing.rotation`, and deliberately so. The pose-level quaternion
+filter cannot damp tilt without also making the watch face lag pronation — the one
+wrist DOF the hand tracks faithfully. `axisMinCutoff` (0.6) and `axisBeta` (0.05)
+filter the axis *direction* before the basis is built, so only the tilt is damped.
+Both are in the panel under **Axis smoothing**. Verified to settle on the
+unfiltered axis, so it removes transients without biasing where the axis lands.
 
 ---
 
@@ -195,6 +233,10 @@ often than on a finger.
   single indicator the basis is right.
 - **Bend the wrist** — expect the tilt in the table above. Anything worse means
   something else is wrong.
+- **Open and close a fist with the forearm still** — the product, the cyan
+  forearm debug line and the occluder proxy should all hold their angle. The
+  debug line is drawn from the same `palmCentre` rule the solver uses, so if it
+  swings, the pose is swinging with it.
 - Setting vFOV to 40 or 80 changes the reported depth but not the alignment or the
   apparent size.
 

@@ -93,12 +93,15 @@ point and the direction to place it along have to be extrapolated past the end o
 what MediaPipe actually tracks:
 
 ```js
-palmCentre  = mean(W[INDEX_MCP], W[MIDDLE_MCP], W[RING_MCP], W[PINKY_MCP])
+ulnar       = W[MIDDLE_MCP] - W[INDEX_MCP]
+palmCentre  = mean(W[INDEX_MCP], W[MIDDLE_MCP]) + ulnarBiasCoeff × ulnar
 forearmAxis = normalize(W[WRIST] - palmCentre)        // palm → wrist, continuing up the arm
 anchor      = W[WRIST] + forearmAxis × anchorOffsetMm
 ```
 
-(`WristAnchor.forearmAxis()`, `public/vto/wrist-hybrid/core/WristAnchor.js`.)
+(`WristAnchor.palmCentre()` and `.forearmAxis()`,
+`public/vto/wrist-hybrid/core/WristAnchor.js`. See §3.1 for why `palmCentre` is
+built this way rather than from all four metacarpal heads.)
 
 This extrapolation is exact only when the wrist is straight — it assumes the
 forearm continues in the same direction the hand is pointing. The wrist has three
@@ -117,7 +120,56 @@ points, which is the thing a user looks at first. So the failure mode this
 limitation produces is a **tilt**, not a spin, and it is absent in the pose people
 naturally hold when checking a watch.
 
-### Measured error
+### 3.1 Which metacarpals define `palmCentre`
+
+Not a detail. The first version averaged all four metacarpal heads, and the
+product visibly swung whenever the hand opened and closed — with the forearm
+perfectly still. The four rays are not anatomically equivalent:
+
+| Ray | CMC joint | Mobility |
+|---|---|---|
+| 2nd (index, LM 5) | trapezoid | rigid, <2° |
+| 3rd (middle, LM 9) | capitate | rigid, <2° |
+| 4th (ring, LM 13) | hamate | mobile, ~15° |
+| 5th (pinky, LM 17) | hamate | mobile, ~25–30° |
+
+Palm cupping as a fist closes **is** the motion of the mobile ulnar rays.
+Averaging all four therefore drags `palmCentre` as the hand shuts, which rotates
+the axis and tilts the product. Measured on a synthetic hand (`wrist.mjs` §8),
+against cupping angle:
+
+| Cupping | Four-ray axis error | Rigid-ray axis error |
+|---|---|---|
+| 5° | 0.76° | 0.00° |
+| 15° | 2.28° | 0.00° |
+| 25° | 3.78° | 0.00° |
+
+The rigid pair alone is not a drop-in replacement, though: both rays sit on the
+**radial** side of the hand, so their midpoint lands about one inter-ray spacing
+thumb-ward of the hand's true central axis, and the anchor slides off the arm.
+Hence the `ulnarBiasCoeff` term — an anatomical constant expressed in units of
+the index→middle span, so it scales with hand size. At the default `1.0` it
+reproduces the old four-ray centroid on a resting hand to **0.04° / 0.02 mm**
+while being immune to cupping by construction.
+
+`anchor.axisRays: 'mcpRow'` restores the four-ray rule for comparison.
+
+### 3.2 Axis smoothing
+
+MediaPipe noise still spikes during articulation. That is damped by a One Euro
+`Vector3Filter` on the axis **direction**, applied inside `WristAnchor.solve()`
+before the basis is built — not by the positioner's pose-level `QuaternionFilter`,
+which cannot separate the two rotations that matter here. Damping the whole
+quaternion hard enough to steady the tilt would also make the watch face lag
+pronation, and pronation is the one wrist DOF the hand tracks faithfully.
+
+Defaults `axisMinCutoff: 0.6`, `axisBeta: 0.05` — low, because a forearm turns
+slowly. Verified (`wrist.mjs` §9) to settle on the *unfiltered* axis to 0.000°,
+so it damps transients without biasing where the axis ends up.
+`ProductPositioner.resetFilters()` calls `anchor.reset()` so a hand swap does not
+smooth across two different arms.
+
+### Measured error from wrist flexion
 
 Quantified against a synthetic hand rigidly attached to a known forearm (test
 harness `wrist.mjs`, section 3), at the watch preset's 35 mm anchor offset:
@@ -398,8 +450,10 @@ The implementation is covered by a headless-Chromium test harness
 requiring a live camera for most checks:
 
 - **`wrist.mjs`** — anchor placement, forearm-axis correctness, the flexion error
-  table in §3, depth solve, mirroring/handedness on synthetic hand poses attached
-  to a known forearm.
+  table in §3, the cupping table in §3.1 (with the rigid rule held to 0.00° and
+  the old four-ray rule required to *show* its drift, or the test would prove
+  nothing), the axis filter's settling behaviour from §3.2, depth solve, and
+  mirroring/handedness on synthetic hand poses attached to a known forearm.
 - **`wrist-scene.mjs`** — sizing correctness (absolute case size invariant to
   wrist width; fit-mode hole tracks wrist width and is invariant to band
   thickness), bore-axis detection/fallback across synthetic torus, oval, charm,
@@ -423,5 +477,9 @@ MediaPipe model or a real device camera):
    regardless of wrist bend.
 4. **Bend the wrist** — expect tilt consistent with the §3 table; anything
    substantially worse indicates a regression elsewhere.
-5. "Fitted outer" readout exceeds the wrist-width readout at all times for a
+5. **Open and close a fist, forearm held still** — the product, the cyan forearm
+   debug line and the occluder proxy should all hold their angle. This is the
+   live check for §3.1; the debug line is drawn from the same `palmCentre` rule
+   the solver uses, so if it swings, the pose is swinging with it.
+6. "Fitted outer" readout exceeds the wrist-width readout at all times for a
    fit-mode product (bracelet).

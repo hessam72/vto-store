@@ -33,6 +33,8 @@ startVTO({
       anchorOffsetMm: config.anchor.anchorOffsetMm,
       wristWidthCoeff: config.anchor.wristWidthCoeff,
       wristDepthRatio: config.anchor.wristDepthRatio,
+      axisMinCutoff: config.anchor.axisMinCutoff,
+      axisBeta: config.anchor.axisBeta,
       ...(isAbsolute
         ? { absoluteDiameterMm: config.product.sizing.diameterMm }
         : { boreDiameterRatio: config.product.sizing.boreDiameterRatio })
@@ -56,7 +58,21 @@ startVTO({
         args: [0.4, 1.0, 0.01],
         name: 'Wrist depth / width'
       },
-      sizingControl
+      sizingControl,
+      // Tilt damping, independent of the pose filter in Smoothing. Lower cutoff
+      // = steadier through hand articulation, slower to follow a real arm turn.
+      {
+        folder: 'Axis smoothing',
+        key: 'axisMinCutoff',
+        args: [0.1, 4.0, 0.05],
+        name: 'Forearm axis cutoff'
+      },
+      {
+        folder: 'Axis smoothing',
+        key: 'axisBeta',
+        args: [0.0, 1.0, 0.01],
+        name: 'Forearm axis beta'
+      }
     ],
     readouts: [
       { key: 'depthCm', name: 'Depth (cm)', format: (t) => (t.depth * 100).toFixed(1) },

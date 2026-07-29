@@ -245,11 +245,19 @@ export class MediaPipeTracker {
    * hand size in frame, same as the skeleton lines above — not metric.
    */
   drawForearm(landmarks, width, height) {
-    const MCP_ROW = [5, 9, 13, 17]; // index, middle, ring, pinky MCP
+    // Must mirror WristAnchor.palmCentre(), or the line stops being evidence
+    // about the pose it is supposed to be showing.
+    const rays = this.config.forearmRays || [5, 9]; // rigid radial metacarpals
+    const bias = this.config.forearmUlnarBias ?? 1.0;
     let px = 0, py = 0;
-    for (const i of MCP_ROW) { px += landmarks[i].x; py += landmarks[i].y; }
-    px = (px / MCP_ROW.length) * width;
-    py = (py / MCP_ROW.length) * height;
+    for (const i of rays) { px += landmarks[i].x; py += landmarks[i].y; }
+    px /= rays.length;
+    py /= rays.length;
+
+    const first = landmarks[rays[0]];
+    const last = landmarks[rays[rays.length - 1]];
+    px = (px + bias * (last.x - first.x)) * width;
+    py = (py + bias * (last.y - first.y)) * height;
 
     const wx = landmarks[0].x * width;
     const wy = landmarks[0].y * height;

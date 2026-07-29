@@ -61,7 +61,7 @@ export class ProductPositioner {
     this.syncDebugParams();
 
     const frame = this.solver.prepare(results, view);
-    const pose = frame ? this.anchor.solve(frame, this.solver) : null;
+    const pose = frame ? this.anchor.solve(frame, this.solver, timestampMs) : null;
 
     if (!pose) {
       this.confidenceFrames = Math.max(0, this.confidenceFrames - 1);
@@ -149,6 +149,9 @@ export class ProductPositioner {
   resetFilters() {
     this.positionFilter.reset();
     this.rotationFilter.reset();
+    // An anchor may hold its own smoothing state (the wrist filters its forearm
+    // axis); leaving it running across a hand change would slerp between arms.
+    this.anchor.reset?.();
     this.confidenceFrames = 0;
     this.isStable = false;
   }

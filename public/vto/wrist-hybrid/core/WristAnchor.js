@@ -24,13 +24,43 @@
  * face points, i.e. the thing a user notices most, so the failure mode is a tilt
  * rather than a spin. See the README for measured error against flexion angle.
  *
+ * WHICH metacarpals define palmCentre matters, and it is not obvious. The four
+ * rays are not anatomically equivalent:
+ *
+ *   2nd (index, LM5)  trapezoid CMC  rigid, <2°
+ *   3rd (middle, LM9) capitate CMC   rigid, <2°
+ *   4th (ring, LM13)  hamate CMC     mobile, ~15°
+ *   5th (pinky, LM17) hamate CMC     mobile, ~25-30°
+ *
+ * Palm cupping as a fist closes IS the motion of the mobile ulnar rays. Averaging
+ * all four therefore drags palmCentre ulnar-and-proximal as the hand shuts, which
+ * rotates the axis and tilts the product — the bug where the bracelet swings when
+ * the hand opens and closes with the forearm perfectly still.
+ *
+ * But the two rigid rays alone are not a drop-in replacement: they sit on the
+ * RADIAL side of the hand, so their midpoint is about one inter-ray spacing
+ * thumb-ward of the hand's true central axis, and the anchor slides off the arm.
+ * The fix is to keep only rigid inputs and put the centre back where it belongs
+ * with an anatomical constant, expressed in units of the index->middle span so it
+ * scales with hand size:
+ *
+ *   ulnar      = MIDDLE_MCP - INDEX_MCP
+ *   palmCentre = mean(INDEX_MCP, MIDDLE_MCP) + ulnarBiasCoeff * ulnar
+ *
+ * At ulnarBiasCoeff = 1 this reproduces the four-ray centroid on a resting hand
+ * to well under a millimetre, while being immune to cupping by construction.
+ * `axisRays: 'mcpRow'` restores the old rule so the two can be compared rather
+ * than argued about.
+ *
  * The axis has a single source — forearmAxis() — so a MediaPipe Pose Landmarker
  * elbow->wrist vector can replace it later without touching anything else.
  */
 
 import * as THREE from 'three';
 import { HAND, MIN_DEPTH_M, MAX_DEPTH_M } from '../../shared/vto-core/HandSolver.js';
+import { Vector3Filter } from '../../shared/vto-core/OneEuroFilter.js';
 
+/** The old rule: every metacarpal head, two of them mobile. */
 const MCP_ROW = [HAND.INDEX_MCP, HAND.MIDDLE_MCP, HAND.RING_MCP, HAND.PINKY_MCP];
 
 export class WristAnchor {
@@ -44,12 +74,29 @@ export class WristAnchor {
       wristWidthCoeff: 0.70,
       // The wrist is elliptical, not round — depth as a fraction of breadth.
       wristDepthRatio: 0.72,
+      // 'radial'  — rigid 2nd/3rd metacarpals plus the ulnar bias below.
+      // 'mcpRow'  — the old four-ray centroid, kept for comparison only.
+      axisRays: 'radial',
+      // Multiples of the index->middle span, shifting the rigid midpoint back
+      // onto the hand's central axis. 1.0 matches the four-ray centroid at rest.
+      ulnarBiasCoeff: 1.0,
+      // Dedicated smoothing for the axis DIRECTION, applied before the basis is
+      // built. The positioner's single quaternion filter cannot separate tilt
+      // from roll: damping enough to kill articulation twitch would also make
+      // the watch face lag pronation, which is the DOF the hand tracks well.
+      // Filtering here damps only the tilt. A forearm rotates slowly, so a low
+      // cutoff costs nothing real.
+      axisSmoothing: true,
+      axisMinCutoff: 0.6,
+      axisBeta: 0.05,
       ...options
     };
 
+    this._axisFilter = new Vector3Filter(this.options.axisMinCutoff, this.options.axisBeta);
     this._primary = new THREE.Vector3();
     this._normal = new THREE.Vector3();
     this._palmCentre = new THREE.Vector3();
+    this._ulnar = new THREE.Vector3();
     this._position = new THREE.Vector3();
   }
 
@@ -58,14 +105,20 @@ export class WristAnchor {
     for (const key of Object.keys(this.options)) {
       if (partial[key] !== undefined) this.options[key] = partial[key];
     }
+    this._axisFilter.setParams(this.options.axisMinCutoff, this.options.axisBeta);
+  }
+
+  reset() {
+    this._axisFilter.reset();
   }
 
   /**
    * @param {Object} frame - Result of HandSolver.prepare().
    * @param {HandSolver} solver
+   * @param {number} [timestampMs] - Monotonic frame time, for the axis filter.
    * @returns {Object} { position, quaternion, primaryAxis, normal, width, thickness, depth, handedness }
    */
-  solve(frame, solver) {
+  solve(frame, solver, timestampMs) {
     const { landmarks, worldLandmarks, world, handedness, mirrorSign } = frame;
 
     // Depth of the wrist landmark itself. worldLandmarks are centred on the
@@ -77,6 +130,13 @@ export class WristAnchor {
     // Y runs up the arm. Built before the position, because buildBasis() mirrors
     // the axes in place and the offset must be applied in the mirrored frame.
     this.forearmAxis(world, this._primary);
+
+    // Damp the direction, not the whole pose. Normalized first so the filter
+    // sees a pure direction and its speed term stays in comparable units.
+    if (this.options.axisSmoothing && timestampMs !== undefined) {
+      this._primary.normalize();
+      this._primary.copy(this._axisFilter.filter(this._primary, timestampMs));
+    }
 
     // The watch face points out of the BACK of the wrist, so the normal is the
     // palm normal negated.
@@ -114,13 +174,31 @@ export class WristAnchor {
    * vector and everything else keeps working.
    */
   forearmAxis(world, target = this._primary) {
-    this._palmCentre.set(0, 0, 0);
-    for (const index of MCP_ROW) this._palmCentre.add(world[index]);
-    this._palmCentre.multiplyScalar(1 / MCP_ROW.length);
-
+    this.palmCentre(world, this._palmCentre);
     target.subVectors(world[HAND.WRIST], this._palmCentre);
     if (target.lengthSq() < 1e-10) target.set(0, 1, 0);
     return target;
+  }
+
+  /**
+   * The point on the palm the forearm axis is measured from. See the header for
+   * why this is not simply the centroid of the metacarpal heads.
+   */
+  palmCentre(world, target = this._palmCentre) {
+    if (this.options.axisRays === 'mcpRow') {
+      target.set(0, 0, 0);
+      for (const index of MCP_ROW) target.add(world[index]);
+      return target.multiplyScalar(1 / MCP_ROW.length);
+    }
+
+    const index = world[HAND.INDEX_MCP];
+    const middle = world[HAND.MIDDLE_MCP];
+    this._ulnar.subVectors(middle, index);
+    return target
+      .copy(index)
+      .add(middle)
+      .multiplyScalar(0.5)
+      .addScaledVector(this._ulnar, this.options.ulnarBiasCoeff);
   }
 
   /** Wrist breadth in metres, measured from the hand rather than assumed. */
