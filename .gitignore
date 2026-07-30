@@ -16,6 +16,7 @@ public/models
 # next.js
 /public/vto-backups
 /.next/
+/public/vto-backups
 /out/
 public/store-models
 public/hdr/Jew HDRI 2.exr
