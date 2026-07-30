@@ -54,6 +54,14 @@
  *
  * The axis has a single source — forearmAxis() — so a MediaPipe Pose Landmarker
  * elbow->wrist vector can replace it later without touching anything else.
+ *
+ * That later is now: setExternalAxis() accepts a true forearm direction (see
+ * ../../shared/vto-core/PoseTracker.js) and forearmAxis() blends toward it,
+ * which removes the flexion tilt entirely because a real elbow->wrist vector
+ * does not care how the wrist is bent. The hand-derived rule above is kept as
+ * the fallback for every frame pose cannot supply — pose is throttled, and it
+ * drops out whenever the elbow leaves the shot — and with `axisBlend: 0` or no
+ * external axis the behaviour is bit-for-bit what it was before.
  */
 
 import * as THREE from 'three';
@@ -89,6 +97,16 @@ export class WristAnchor {
       axisSmoothing: true,
       axisMinCutoff: 0.6,
       axisBeta: 0.05,
+      // How far to trust an external (Pose Landmarker) forearm axis when one is
+      // available: 1 uses it outright, 0 ignores it and reproduces the
+      // hand-only behaviour exactly. Scaled by the confidence the supplier
+      // reports, so this is a ceiling rather than a fixed mix.
+      axisBlend: 1.0,
+      // Frames of raw wrist span to take the median of. The span feeds both the
+      // fitted size and the occluder, and a single frame of landmark noise
+      // makes both breathe. A median leaves the average untouched, so it does
+      // not disturb wristWidthCoeff's calibration — 1 disables it.
+      widthMedianFrames: 5,
       ...options
     };
 
@@ -98,6 +116,18 @@ export class WristAnchor {
     this._palmCentre = new THREE.Vector3();
     this._ulnar = new THREE.Vector3();
     this._position = new THREE.Vector3();
+
+    // External axis, supplied per frame and consumed by forearmAxis().
+    this._externalAxis = new THREE.Vector3();
+    this._externalWeight = 0;
+
+    // The hand-derived axis, kept unblended so the divergence between the two
+    // can be reported. That angle IS the flexion error the hand-only approach
+    // makes, measured live on a real arm instead of on a synthetic hand.
+    this._handAxis = new THREE.Vector3();
+    this.axisDivergenceDeg = null;
+
+    this._widthHistory = [];
   }
 
   /** Copies only keys this anchor owns, so the shared debug params can be passed wholesale. */
@@ -110,6 +140,30 @@ export class WristAnchor {
 
   reset() {
     this._axisFilter.reset();
+    // Both of these are per-limb. Carrying either across a hand change would
+    // blend one arm's forearm direction, or one wrist's width, into the other.
+    this.clearExternalAxis();
+    this._widthHistory.length = 0;
+  }
+
+  /**
+   * Supply a true forearm direction for this frame, in the same unmirrored
+   * world space HandSolver uses, pointing wrist -> elbow.
+   *
+   * @param {THREE.Vector3} axis - Need not be normalized.
+   * @param {number} weight - Supplier's confidence in [0, 1].
+   */
+  setExternalAxis(axis, weight = 1) {
+    if (!axis || axis.lengthSq() < 1e-10 || !(weight > 0)) {
+      this.clearExternalAxis();
+      return;
+    }
+    this._externalAxis.copy(axis).normalize();
+    this._externalWeight = THREE.MathUtils.clamp(weight, 0, 1);
+  }
+
+  clearExternalAxis() {
+    this._externalWeight = 0;
   }
 
   /**
@@ -163,7 +217,10 @@ export class WristAnchor {
       thickness: width * this.options.wristDepthRatio,
       // Report the depth the product is actually at, not the wrist crease's.
       depth: -this._position.z,
-      handedness
+      handedness,
+      // null when no external axis was available this frame — which is itself
+      // the useful signal that the fallback is in use.
+      axisDivergenceDeg: this.axisDivergenceDeg
     };
   }
 
@@ -177,7 +234,30 @@ export class WristAnchor {
     this.palmCentre(world, this._palmCentre);
     target.subVectors(world[HAND.WRIST], this._palmCentre);
     if (target.lengthSq() < 1e-10) target.set(0, 1, 0);
-    return target;
+    target.normalize();
+
+    this._handAxis.copy(target);
+    this.axisDivergenceDeg = null;
+
+    const weight = this._externalWeight * THREE.MathUtils.clamp(this.options.axisBlend, 0, 1);
+    if (weight <= 0) return target;
+
+    // Report the disagreement before resolving it. With the external axis
+    // trusted this is the error the hand-only rule would have made.
+    const dot = THREE.MathUtils.clamp(this._handAxis.dot(this._externalAxis), -1, 1);
+    this.axisDivergenceDeg = THREE.MathUtils.radToDeg(Math.acos(dot));
+
+    // Near-antiparallel means one of the two is simply wrong, and interpolating
+    // would pass through a zero-length vector on the way. The hand rule is the
+    // one that can invert (a badly-tracked palm centre crossing the wrist), so
+    // the external axis wins outright rather than being averaged with nonsense.
+    if (dot < -0.9) return target.copy(this._externalAxis);
+
+    // Normalized lerp: for two unit vectors this follows the arc closely enough
+    // at these angles, and unlike slerp it needs no quaternion and degenerates
+    // gracefully. weight 0 leaves the hand axis exactly, weight 1 gives the
+    // external axis exactly.
+    return target.lerp(this._externalAxis, weight).normalize();
   }
 
   /**
@@ -201,9 +281,31 @@ export class WristAnchor {
       .addScaledVector(this._ulnar, this.options.ulnarBiasCoeff);
   }
 
-  /** Wrist breadth in metres, measured from the hand rather than assumed. */
+  /**
+   * Wrist breadth in metres, measured from the hand rather than assumed.
+   *
+   * The raw span is taken over a short median window. It feeds the fitted size
+   * and the occluder every frame, so per-frame landmark noise shows up directly
+   * as the product and its occluder breathing. A median is the right filter
+   * here rather than a low-pass: it rejects the odd bad frame outright and
+   * leaves the central value alone, so `wristWidthCoeff`'s on-camera
+   * calibration keeps meaning exactly what it meant before.
+   */
   wristWidth(world) {
     const span = world[HAND.INDEX_MCP].distanceTo(world[HAND.PINKY_MCP]);
-    return span * this.options.wristWidthCoeff;
+    return this.medianSpan(span) * this.options.wristWidthCoeff;
+  }
+
+  /** Median of the last `widthMedianFrames` raw spans, in metres. */
+  medianSpan(span) {
+    const window = Math.max(1, Math.round(this.options.widthMedianFrames));
+    if (window === 1) return span;
+
+    this._widthHistory.push(span);
+    while (this._widthHistory.length > window) this._widthHistory.shift();
+
+    const sorted = [...this._widthHistory].sort((a, b) => a - b);
+    const mid = sorted.length >> 1;
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
   }
 }

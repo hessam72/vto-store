@@ -16,7 +16,7 @@ import GUI from 'lil-gui';
 // whenever a shipped DEFAULT changes — a saved preset silently outranks a new
 // default, so the config edit looks like it did nothing. Saved presets from an
 // older schema are discarded rather than reinterpreted.
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export const COMMON_DEFAULTS = {
   // Camera model

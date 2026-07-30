@@ -16,6 +16,10 @@ export class MediaPipeTracker {
     this.isRunning = false;
     this.lastVideoTime = -1;
     this.lastResults = null;
+    // Pose-derived forearm endpoints for the debug overlay, supplied per frame
+    // by the bootstrap. Kept here rather than imported so this class stays
+    // independent of whether a pose model exists at all.
+    this.poseForearm2D = null;
 
     // Configuration
     this.config = {
@@ -295,6 +299,32 @@ export class MediaPipeTracker {
     this.ctx.fillStyle = '#FF00FF';
     this.ctx.beginPath();
     this.ctx.arc(armEnd.x, armEnd.y, 6, 0, 2 * Math.PI);
+    this.ctx.fill();
+
+    this.drawPoseForearm(width, height);
+  }
+
+  /**
+   * The TRUE forearm, wrist -> elbow, as measured by the pose model. Drawn in
+   * the same view as the cyan extrapolated line above so the two can be
+   * compared directly: with the wrist straight they lie on top of each other,
+   * and the angle that opens up as the wrist bends is exactly the error the
+   * hand-only axis makes. Set by the bootstrap; absent when pose has nothing.
+   */
+  drawPoseForearm(width, height) {
+    const forearm = this.poseForearm2D;
+    if (!forearm) return;
+
+    this.ctx.strokeStyle = '#FFFF00';
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.moveTo(forearm.wrist.x * width, forearm.wrist.y * height);
+    this.ctx.lineTo(forearm.elbow.x * width, forearm.elbow.y * height);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = '#FFFF00';
+    this.ctx.beginPath();
+    this.ctx.arc(forearm.elbow.x * width, forearm.elbow.y * height, 6, 0, 2 * Math.PI);
     this.ctx.fill();
   }
 

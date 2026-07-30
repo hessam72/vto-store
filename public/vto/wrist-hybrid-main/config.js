@@ -36,7 +36,40 @@ const BASE = {
     // face lag pronation. A forearm turns slowly, so a low cutoff is free.
     axisSmoothing: true,
     axisMinCutoff: 0.6,
-    axisBeta: 0.05
+    axisBeta: 0.05,
+
+    // How far to trust the Pose Landmarker forearm axis when it is available.
+    // 1.0 uses it, 0 falls back to the hand-extrapolated axis and reproduces
+    // the pre-pose behaviour exactly — the A/B switch for the whole feature.
+    axisBlend: 1.0,
+
+    // Median window on the raw wrist span. Removes the per-frame breathing of
+    // the fitted size and the occluder without moving the average, so
+    // wristWidthCoeff above keeps its meaning. 1 disables it.
+    widthMedianFrames: 5
+  },
+
+  // Second, throttled model supplying a TRUE forearm direction (elbow->wrist),
+  // which the hand model cannot: its landmark 0 is the wrist crease and there
+  // is nothing beyond it, so the hand-only axis tilts ~1:1 with wrist flexion.
+  // Direction only — position still comes from the hand's wrist landmark and
+  // roll from the palm normal, both of which the hand does better.
+  pose: {
+    enabled: true,
+    // lite is 5.5MB and plenty: elbow and wrist are the easiest landmarks it
+    // produces, and nothing here uses the other 29.
+    modelPath: '/tasks/pose_landmarker_lite.task',
+    // A forearm moves slowly, so a third of the frame rate is enough; the axis
+    // filter above covers the frames in between.
+    everyNFrames: 3,
+    // Below this the elbow is probably out of shot and the axis is invented,
+    // which is worse than falling back to the hand.
+    minVisibility: 0.5,
+    // Normalized image distance between pose's wrist and the hand's, past which
+    // they are taken to be different limbs. Also the sanity gate.
+    maxWristMismatch: 0.15,
+    // Must match the wasm fileset to the bundle in index.html, as for the hand.
+    version: '0.10.35'
   },
 
   mediaPipe: {
@@ -45,6 +78,13 @@ const BASE = {
     minHandPresenceConfidence: 0.6,
     minTrackingConfidence: 0.6,
     facingMode: 'user',
+    // Requested, not guaranteed — `ideal` degrades on a device that cannot do
+    // it. MediaPipe's landmark accuracy depends on the crop its palm detector
+    // hands to the landmark model, and that crop is only as good as the frame
+    // it came from, so a sharper capture tightens both the axis and the depth
+    // solve for free. Drop back to 1280x720 if a weak device loses frame rate.
+    videoWidth: 1920,
+    videoHeight: 1080,
     // Extrapolated forearm/arm lines past the wrist, same style as the hand
     // skeleton — visual check for the axis WristAnchor.forearmAxis() computes.
     debugDrawForearm: true,

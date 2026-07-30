@@ -7,6 +7,7 @@
  */
 
 import { MediaPipeTracker } from './MediaPipeTracker.js';
+import { PoseTracker } from './PoseTracker.js';
 import { ProductPositioner } from './ProductPositioner.js';
 import { VTOScene } from './VTOScene.js';
 import { DebugPanel } from './DebugPanel.js';
@@ -41,6 +42,7 @@ function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanv
 export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
   const app = {
     tracker: null,
+    poseTracker: null,
     positioner: null,
     scene: null,
     debugPanel: null,
@@ -68,6 +70,12 @@ export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
     await app.tracker.init(videoElement, canvasElement);
     app.tracker.start();
 
+    // Deliberately after the hand tracker is already running and NOT awaited:
+    // the pose model is another 5.5MB, and the try-on is fully usable on the
+    // hand-derived axis while it downloads. It simply starts improving the
+    // forearm angle once it arrives.
+    startPoseTracker(app, config);
+
     // Apply initial camera transforms
     applyBackCameraTransforms(app.tracker, videoElement, canvasElement, vtoCanvas);
 
@@ -76,6 +84,10 @@ export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
         await app.tracker.switchCamera();
         // Apply transforms after camera switch
         applyBackCameraTransforms(app.tracker, videoElement, canvasElement, vtoCanvas);
+        // The old camera's pose is about to be a stale view of a different
+        // framing; drop it rather than blend it into the first new frames.
+        app.poseTracker?.reset();
+        app.positioner.resetFilters();
       } catch (error) {
         console.error('Error switching camera:', error);
       }
@@ -106,11 +118,58 @@ export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
 
   window.addEventListener('beforeunload', () => {
     app.tracker?.destroy();
+    app.poseTracker?.destroy();
     app.scene?.destroy();
     app.debugPanel?.destroy();
   });
 
   return app;
+}
+
+/**
+ * Optional second model supplying a true forearm axis, for anchors that can use
+ * one. Skipped silently when the product's anchor has no notion of an external
+ * axis (a ring is defined by finger landmarks that are all present), so this
+ * costs the ring app nothing at all.
+ */
+function startPoseTracker(app, config) {
+  if (!config.pose?.enabled) return;
+  if (typeof app.positioner.anchor.setExternalAxis !== 'function') return;
+
+  app.poseTracker = new PoseTracker(config.pose);
+  app.poseTracker.init().catch((error) => {
+    // A failed pose model must not break the try-on: the anchor keeps using the
+    // hand-extrapolated axis exactly as it did before this existed.
+    console.warn('Pose tracker unavailable, keeping the hand-derived axis:', error);
+    app.poseTracker = null;
+  });
+}
+
+/**
+ * Feed this frame's forearm direction to the anchor, before the solve.
+ *
+ * Runs no pose inference while there is no hand: nothing is rendered in that
+ * case, so the GPU pass would be pure waste.
+ */
+function updateForearmAxis(app, results) {
+  const anchor = app.positioner.anchor;
+  if (typeof anchor.setExternalAxis !== 'function') return;
+
+  const handWrist = results?.landmarks?.[0]?.[0];
+  if (!app.poseTracker?.isReady || !handWrist) {
+    anchor.clearExternalAxis();
+    app.tracker.poseForearm2D = null;
+    return;
+  }
+
+  app.poseTracker.maybeDetect(app.tracker.videoElement, performance.now());
+
+  const weight = app.poseTracker.forearmAxis(handWrist);
+  if (weight > 0) anchor.setExternalAxis(app.poseTracker.axis, weight);
+  else anchor.clearExternalAxis();
+
+  // Debug overlay only; drawn beside the hand-extrapolated line for comparison.
+  app.tracker.poseForearm2D = app.poseTracker.forearm2D;
 }
 
 function handleResults(app, results) {
@@ -123,6 +182,9 @@ function handleResults(app, results) {
   // Match the render camera to the physical webcam BEFORE solving, so the pose
   // is computed with the same projection that will be used to draw it.
   app.positioner.solver.updateCamera(app.scene.camera, view);
+
+  // Must precede the solve — the anchor reads the external axis during it.
+  updateForearmAxis(app, results);
 
   const transform = app.positioner.calculate(results, view, performance.now());
 
