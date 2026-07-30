@@ -15,6 +15,7 @@ public/models
 3d-scene-shadow-reflections-demo
 # next.js
 /.next/
+/public/vto-backups
 /out/
 public/store-models
 public/hdr/Jew HDRI 2.exr
