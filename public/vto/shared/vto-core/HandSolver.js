@@ -40,9 +40,18 @@ export const HAND = {
   PINKY_MCP: 17
 };
 
+/** MediaPipe's hand model emits 21 landmarks. */
+export const HAND_LANDMARK_COUNT = 21;
+
 // Segments used to seed the depth estimate. Each is measured both in world
 // space (metres) and in image space (pixels); the ratio gives Z. Several are
 // used and the median taken, so one badly-tracked landmark cannot dominate.
+//
+// This is the ONE constant that is specific to a body part rather than to the
+// camera: everything else in this class is either pure intrinsics or works off
+// whatever landmarks it is handed. A different model (pose, face) overrides it
+// via the `depthReferencePairs` option along with `landmarkCount`, and the rest
+// of the file is reused as-is.
 const DEPTH_REFERENCE_PAIRS = [
   [HAND.INDEX_MCP, HAND.PINKY_MCP],
   [HAND.WRIST, HAND.INDEX_MCP],
@@ -90,17 +99,35 @@ export class HandSolver {
    * @param {number} options.vFOV - Assumed vertical field of view of the webcam, in degrees.
    * @param {boolean} options.mirror - True when the video is displayed mirrored (selfie view).
    * @param {boolean} options.flipHandedness - Correct MediaPipe's mirror assumption if it disagrees.
+   * @param {number} [options.landmarkCount] - How many landmarks the model emits.
+   *   Defaults to the hand's 21; pass 33 for MediaPipe Pose.
+   * @param {Array<number[]>} [options.depthReferencePairs] - Landmark index pairs
+   *   whose known 3D length seeds the depth estimate. Defaults to the hand's.
+   *   Pick pairs with a long baseline whose both ends are reliably visible.
+   * @param {number[]} [options.refineIndices] - Which landmarks the Gauss-Newton
+   *   refinement may use. Defaults to all of them, which is right for a hand.
+   *   A partially-framed body must restrict this to the landmarks actually in
+   *   shot, or it fits to invented ones.
    */
   constructor(options = {}) {
     this.options = {
       vFOV: 60,
       mirror: true,
       flipHandedness: false,
+      landmarkCount: HAND_LANDMARK_COUNT,
+      depthReferencePairs: DEPTH_REFERENCE_PAIRS,
+      refineIndices: null,
       ...options
     };
 
+    // Resolved once: the refinement runs every frame and must not allocate.
+    this._refineIndices = this.options.refineIndices
+      ?? Array.from({ length: this.options.landmarkCount }, (_, i) => i);
+
     // Scratch objects — the solver runs every frame, so nothing is allocated here.
-    this._world = Array.from({ length: 21 }, () => new THREE.Vector3());
+    this._world = Array.from(
+      { length: this.options.landmarkCount }, () => new THREE.Vector3()
+    );
     this._primary = new THREE.Vector3();
     this._normal = new THREE.Vector3();
     this._side = new THREE.Vector3();
@@ -163,9 +190,10 @@ export class HandSolver {
    * @returns {Object|null} null when there is nothing usable to solve.
    */
   prepare(results, view) {
+    const count = this.options.landmarkCount;
     const landmarks = results?.landmarks?.[0];
     const worldLandmarks = results?.worldLandmarks?.[0];
-    if (!landmarks || !worldLandmarks || landmarks.length < 21) return null;
+    if (!landmarks || !worldLandmarks || landmarks.length < count) return null;
 
     const { videoWidth, videoHeight } = view;
     if (!videoWidth || !videoHeight) return null;
@@ -177,7 +205,7 @@ export class HandSolver {
     // here: mirroring basis vectors would turn the rotation matrix into a
     // reflection (det = -1) and setFromRotationMatrix would return garbage. It
     // is applied to the finished quaternion instead, in buildBasis().
-    for (let i = 0; i < 21; i++) {
+    for (let i = 0; i < count; i++) {
       const w = worldLandmarks[i];
       this._world[i].set(w.x, -w.y, -w.z);
     }
@@ -301,7 +329,7 @@ export class HandSolver {
   estimateDepthWeakPerspective(landmarks, worldLandmarks, fPx, videoWidth, videoHeight) {
     const estimates = [];
 
-    for (const [a, b] of DEPTH_REFERENCE_PAIRS) {
+    for (const [a, b] of this.options.depthReferencePairs) {
       const wa = worldLandmarks[a];
       const wb = worldLandmarks[b];
       const la = landmarks[a];
@@ -328,10 +356,16 @@ export class HandSolver {
   }
 
   /**
-   * Refine the hand-centre translation by minimizing reprojection error over all
-   * 21 landmarks — pose estimation with known 3D points and known intrinsics,
-   * i.e. the translation half of PnP (the rotation is already given by
-   * worldLandmarks).
+   * Refine the object-centre translation by minimizing reprojection error over
+   * the refinement landmark set — pose estimation with known 3D points and known
+   * intrinsics, i.e. the translation half of PnP (the rotation is already given
+   * by worldLandmarks).
+   *
+   * The set matters once the model is not a hand. Every landmark is weighted
+   * equally here, so including landmarks the model is extrapolating rather than
+   * seeing drags the solve. A hand is always wholly in frame and uses all 21;
+   * a body at head-and-shoulders framing has invented legs, and must pass
+   * `refineIndices` to keep them out of the sum.
    *
    * This matters because the weak-perspective estimate treats a segment's two
    * ends as being at the same depth. When the hand tilts toward the camera they
@@ -353,15 +387,16 @@ export class HandSolver {
     let X = 0;
     let Y = 0;
     let Z = initialDepth;
+    const indices = this._refineIndices;
     {
       let uSum = 0;
       let vSum = 0;
-      for (let i = 0; i < 21; i++) {
+      for (const i of indices) {
         uSum += landmarks[i].x * videoWidth - cx;
         vSum += landmarks[i].y * videoHeight - cy;
       }
-      X = (uSum / 21) * Z / fPx;
-      Y = (vSum / 21) * Z / fPx;
+      X = (uSum / indices.length) * Z / fPx;
+      Y = (vSum / indices.length) * Z / fPx;
     }
 
     for (let iteration = 0; iteration < 6; iteration++) {
@@ -369,7 +404,7 @@ export class HandSolver {
       let h00 = 0, h01 = 0, h02 = 0, h11 = 0, h12 = 0, h22 = 0;
       let g0 = 0, g1 = 0, g2 = 0;
 
-      for (let i = 0; i < 21; i++) {
+      for (const i of indices) {
         const w = worldLandmarks[i];
         const depth = Z + w.z;
         if (depth < MIN_DEPTH_M) return null;
