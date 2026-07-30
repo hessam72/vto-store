@@ -37,6 +37,16 @@
  *
  * Whatever `upSource` says, `across` is measured and `up` is derived — never
  * the other way round.
+ *
+ * Position is the other place a shared assumption breaks under rotation: each
+ * shoulder sits at its own depth, and those two depths diverge the moment the
+ * torso yaws (one shoulder nearer the camera than the other). Averaging the
+ * shoulders' 2D positions and back-projecting with a single shared depth
+ * silently assumes they're at the same depth — true only face-on — and the
+ * lateral error that assumption produces is exactly a necklace that drifts off
+ * the neck while turning. Back-projecting each shoulder with its OWN depth and
+ * averaging the two resulting 3D points removes that bias at its source,
+ * rather than covering for it with a different reference point.
  */
 
 import * as THREE from 'three';
@@ -45,6 +55,10 @@ import { POSE } from '../../shared/vto-core/PoseLandmarkerTracker.js';
 import { Vector3Filter } from '../../shared/vto-core/OneEuroFilter.js';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
+// `across` when the torso is square to the camera: person's left shoulder
+// appears at the viewer's +X, right at -X, so right-minus-left points -X.
+// rotationGain measures deviation from this reference and scales it.
+const REFERENCE_ACROSS = new THREE.Vector3(-1, 0, 0);
 
 export class NeckAnchor {
   constructor(options = {}) {
@@ -82,6 +96,16 @@ export class NeckAnchor {
       axisMinCutoff: 0.5,
       axisBeta: 0.04,
 
+      // Escape hatch, not a substitute for the geometry above: scales how far
+      // the (smoothed) shoulder line has turned from facing the camera
+      // straight-on, amplifying roll and yaw TOGETHER in their measured ratio
+      // rather than as two separately hand-tuned axes. 1.0 is a no-op. Same
+      // spirit as a watch's scaleMultiplier — reach for it if retuned
+      // smoothing still reads as "moves less than the real motion", which
+      // would mean MediaPipe's own depth estimate for the shoulders is
+      // conservative, not that the tracking is lagging.
+      rotationGain: 1.0,
+
       // Median window on the raw shoulder span. It drives both the fitted size
       // and the occluder, so single-frame noise shows up as both breathing. A
       // median leaves the average alone, so neckWidthCoeff keeps its meaning.
@@ -95,8 +119,12 @@ export class NeckAnchor {
     this._up = new THREE.Vector3();
     this._normal = new THREE.Vector3();
     this._position = new THREE.Vector3();
+    this._leftPos = new THREE.Vector3();
+    this._rightPos = new THREE.Vector3();
     this._shoulderMid = new THREE.Vector3();
     this._scratch = new THREE.Vector3();
+    this._gainQuat = new THREE.Quaternion();
+    this._gainAxis = new THREE.Vector3();
 
     this._widthHistory = [];
   }
@@ -134,15 +162,16 @@ export class NeckAnchor {
     if (shoulderVisibility < this.options.shoulderVisibility) return null;
 
     // Pose world landmarks are centred on the HIP MIDPOINT, not on the tracked
-    // part, so frame.depth is the depth of the hips. The shoulders sit at their
-    // own z offset from that — the same correction WristAnchor makes for the
-    // wrist crease, and it matters more here because at bust framing the hips
-    // are extrapolated rather than seen.
-    const shoulderZ = (
-      worldLandmarks[POSE.LEFT_SHOULDER].z + worldLandmarks[POSE.RIGHT_SHOULDER].z
-    ) / 2;
-    const shoulderDepth = THREE.MathUtils.clamp(
-      frame.depth + shoulderZ, MIN_DEPTH_M, MAX_DEPTH_M
+    // part, so frame.depth is the depth of the hips. Each shoulder sits at its
+    // OWN z offset from that — the same correction WristAnchor makes for the
+    // wrist crease, done per-shoulder rather than averaged (see the header:
+    // averaging first and projecting once is where the lateral drift came
+    // from).
+    const leftDepth = THREE.MathUtils.clamp(
+      frame.depth + worldLandmarks[POSE.LEFT_SHOULDER].z, MIN_DEPTH_M, MAX_DEPTH_M
+    );
+    const rightDepth = THREE.MathUtils.clamp(
+      frame.depth + worldLandmarks[POSE.RIGHT_SHOULDER].z, MIN_DEPTH_M, MAX_DEPTH_M
     );
 
     // THE measurement. Everything else is derived from it.
@@ -156,6 +185,10 @@ export class NeckAnchor {
     if (this.options.axisSmoothing && timestampMs !== undefined) {
       this._across.copy(this._axisFilter.filter(this._across, timestampMs)).normalize();
     }
+
+    // Applied after smoothing: amplifying a noisy signal amplifies the noise
+    // along with it, where amplifying an already-denoised one does not.
+    this.applyRotationGain(this._across);
 
     this.torsoUp(world, landmarks, this._up);
 
@@ -173,14 +206,16 @@ export class NeckAnchor {
     // buildBasis re-orthogonalizes and applies the mirror to the quaternion.
     const quaternion = solver.buildBasis(this._up, this._normal, mirrorSign);
 
-    // Back-project the shoulder midpoint, then walk down the chest and out from
-    // it in the mirrored frame. Metric offsets, so they mean the same thing at
-    // any distance or body angle.
-    solver.backProject(
-      (leftShoulder.x + rightShoulder.x) / 2,
-      (leftShoulder.y + rightShoulder.y) / 2,
-      shoulderDepth, frame, this._position
-    );
+    // Back-project EACH shoulder at its own depth, then average the two 3D
+    // points — not the 2D points at one shared depth. See the header for why
+    // that distinction is the fix for the neck-turning drift.
+    solver.backProject(leftShoulder.x, leftShoulder.y, leftDepth, frame, this._leftPos);
+    solver.backProject(rightShoulder.x, rightShoulder.y, rightDepth, frame, this._rightPos);
+    this._position.addVectors(this._leftPos, this._rightPos).multiplyScalar(0.5);
+
+    // Walk down the chest and out from the shoulder midpoint in the mirrored
+    // frame. Metric offsets, so they mean the same thing at any distance or
+    // body angle.
     this._position
       .addScaledVector(this._up, -this.options.anchorDropMm * 0.001)
       .addScaledVector(this._normal, this.options.chestStandoffMm * 0.001);
@@ -200,6 +235,35 @@ export class NeckAnchor {
       handedness: 'torso',
       shoulderVisibility
     };
+  }
+
+  /**
+   * Scale `target`'s deviation from `REFERENCE_ACROSS` (the shoulder line when
+   * square to the camera) by `rotationGain`, in place.
+   *
+   * Works in angle-axis space rather than scaling roll and yaw as separate
+   * numbers: `setFromUnitVectors` gives the single rotation that carries the
+   * reference to the measurement, scaling ITS ANGLE preserves whatever mix of
+   * roll and yaw that rotation actually contains, and reapplying it to the
+   * reference is the inverse of the measurement step — so gain 1.0 is
+   * mathematically a no-op, not just numerically close to one.
+   */
+  applyRotationGain(target) {
+    const gain = this.options.rotationGain;
+    if (gain === 1) return target;
+
+    this._gainQuat.setFromUnitVectors(REFERENCE_ACROSS, target);
+    const angle = 2 * Math.acos(THREE.MathUtils.clamp(this._gainQuat.w, -1, 1));
+    // No meaningful deviation to scale — also guards the axis extraction below,
+    // whose length goes to zero exactly as this angle does.
+    if (angle < 1e-6) return target;
+
+    const axisLenSq = this._gainQuat.x ** 2 + this._gainQuat.y ** 2 + this._gainQuat.z ** 2;
+    this._gainAxis.set(this._gainQuat.x, this._gainQuat.y, this._gainQuat.z)
+      .multiplyScalar(1 / Math.sqrt(axisLenSq));
+
+    this._gainQuat.setFromAxisAngle(this._gainAxis, angle * gain);
+    return target.copy(REFERENCE_ACROSS).applyQuaternion(this._gainQuat);
   }
 
   /**

@@ -40,12 +40,23 @@ const BASE = {
     shoulderVisibility: 0.5,
 
     // Damping on the shoulder DIRECTION only, ahead of the basis. Separate from
-    // smoothing.rotation, which cannot damp shoulder jitter without also making
-    // the necklace lag a real body turn. A torso turns slowly, so a low cutoff
-    // is nearly free.
+    // smoothing.rotation below.
+    //
+    // Raised from the wrist's forearm-axis values (0.5Hz/0.04) that this
+    // started from: those were tuned for a wrist bending a few degrees, not a
+    // torso making a large, deliberate turn, and the lower numbers read as
+    // "the necklace moves less than I actually did" while the turn is in
+    // progress (it still reaches the right angle once you stop — this is lag,
+    // not a wrong answer). A torso is heavy and can't snap, so it's safe to
+    // trust the raw signal more.
     axisSmoothing: true,
-    axisMinCutoff: 0.5,
-    axisBeta: 0.04,
+    axisMinCutoff: 1.2,
+    axisBeta: 0.15,
+
+    // Escape hatch if under-rotation persists after the retuning above — see
+    // the option's own doc comment in NeckAnchor.js. 1.0 is a no-op; that
+    // means responsiveness alone was the problem and no gain is needed.
+    rotationGain: 1.0,
 
     widthMedianFrames: 5
   },
@@ -87,7 +98,12 @@ const BASE = {
 
   smoothing: {
     position: { enabled: true, minCutoff: 1.0, beta: 0.007 },
-    rotation: { enabled: true, minCutoff: 1.5, beta: 0.35 },
+    // Raised from the wrist's 1.5Hz/0.35: this filter runs on the FINAL
+    // quaternion, in series with the shoulder-axis filter above, and the two
+    // compounded were the other half of the "moves less than I actually did"
+    // lag. Loosened here since the axis filter already does the real jitter
+    // rejection; this pass only needs to catch what that one doesn't.
+    rotation: { enabled: true, minCutoff: 2.5, beta: 0.6 },
     // Higher than the wrist's 5: a torso is large and slow, so a few dropped
     // frames are far more likely to be a detection blink than real motion.
     confidence: { hysteresisFrames: 6 }
@@ -107,8 +123,11 @@ export const NECKLACE_PRESET = {
   modelURL: window.VTO_MODEL_URL || '/models/necklace/black-panther.glb',
   anchor: {
     ...BASE.anchor,
-    // A pendant hangs down the sternum from the shoulder line.
-    anchorDropMm: 45,
+    // Just below the shoulder line, at the base of the neck — was 45mm, which
+    // put the anchor down on the chest rather than at the neck, and every mm
+    // here is on top of however much the GLB's own chain already drops the
+    // pendant. Let the model's own geometry provide most of the hang.
+    anchorDropMm: 15,
     // And stands off the body so it rests on the chest rather than inside it.
     chestStandoffMm: 20
   },

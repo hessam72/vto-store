@@ -63,6 +63,7 @@ startVTO({
       upSource: config.anchor.upSource,
       axisMinCutoff: config.anchor.axisMinCutoff,
       axisBeta: config.anchor.axisBeta,
+      rotationGain: config.anchor.rotationGain,
       widthMedianFrames: config.anchor.widthMedianFrames,
       // Must be restated here. VTOScene reads `debugParams.scaleMultiplier ??
       // config...`, and the panel always carries COMMON_DEFAULTS' 1.0 — so
@@ -129,6 +130,16 @@ startVTO({
         key: 'axisBeta',
         args: [0.0, 1.0, 0.01],
         name: 'Shoulder axis beta'
+      },
+      // Escape hatch, not a first resort — see NeckAnchor.applyRotationGain.
+      // Reach for this only if bend/turn still under-shoots at 1.0 after the
+      // two filters above are opened up; that would mean MediaPipe's own
+      // shoulder-depth estimate is conservative, not that the tracking lags.
+      {
+        folder: 'Torso basis',
+        key: 'rotationGain',
+        args: [0.5, 2.5, 0.05],
+        name: 'Rotation gain'
       }
     ],
     readouts: [
