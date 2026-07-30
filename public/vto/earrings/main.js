@@ -19,6 +19,10 @@ const _settings = {
   // temporal anti aliasing. Number of samples. 0 -> disabled:
   taaLevel: 3,
 
+  // true -> force every mesh to polished chrome, discarding the GLB's own PBR
+  // materials. See set_shinyMetal().
+  forceShinyMetal: false,
+
   // occluder parameters:
   earsOccluderCylinderRadius: 2,
   earsOccluderCylinderHeight: 0.5, // height of the cylinder, so depth in fact
@@ -69,7 +73,7 @@ function start(){
     set_lighting();
 
     if (_settings.GLTFModelURL){
-      load_GLTF(_settings.GLTFModelURL, true, true);
+      load_GLTF(_settings.GLTFModelURL);
     }
 
     set_occluders();
@@ -138,17 +142,43 @@ function set_lighting(){
 }
 
 
-function load_GLTF(modelURL, isRight, isLeft){
+function load_GLTF(modelURL){
   new THREE.GLTFLoader().load(modelURL, function(gltf){
     const model = gltf.scene;
     model.scale.multiplyScalar(100); // because the model is exported in meters. convert it to cm
-    set_shinyMetal(model);
+
+    if (_settings.forceShinyMetal){
+      set_shinyMetal(model);
+    }
+
+    // A pair of earrings is a MIRROR pair, so the left ear cannot be a plain
+    // clone of the right one — that gives both ears the same handedness, which
+    // is visibly wrong for anything asymmetric (a hook, a drop with a clasp).
+    // The page-wide CSS mirror does not hide it: it flips both ears equally,
+    // so it cannot fix the relationship BETWEEN them.
+    //
+    // create_earringLeftFromEarringRight() mirrors the geometry and reverses
+    // the face winding so the normals still point outwards. It builds its
+    // mirror matrix from each mesh's matrixWorld, which forces the order here:
+    //   - matrixWorld has to be current, and a freshly loaded GLTF node's is not;
+    //   - the model has to still be DETACHED, so "mirror about world x=0" means
+    //     "mirror the earring about its own origin". Once it is parented to
+    //     earringRight, matrixWorld carries the ear's ~11cm offset and the
+    //     mirror plane is no longer the one we want.
+    model.updateMatrixWorld(true);
+    const modelLeft = WebARRocksFaceEarrings3DHelper.create_earringLeftFromEarringRight(model);
+
     _three.earringRight.add(model);
-    _three.earringLeft.add(model.clone()); 
+    _three.earringLeft.add(modelLeft);
   });
 }
 
 
+// Opt-in, and off by default: this overwrites whatever the GLB's author set up.
+// A jewellery catalogue is exactly the case where that hurts — gemstones,
+// pearls, enamel and rose-vs-white gold all collapse into the same chrome
+// mirror. Turn it on for a model that ships with untextured placeholder
+// materials and only looks like metal because of this override.
 function set_shinyMetal(model){
   model.traverse(function(threeStuff){
     if (!threeStuff.isMesh){
@@ -157,7 +187,6 @@ function set_shinyMetal(model){
     const mat = threeStuff.material;
     mat.roughness = 0.0;
     mat.metalness = 1.0;
-    mat.refractionRatio = 1.0;
   });
 }
 
