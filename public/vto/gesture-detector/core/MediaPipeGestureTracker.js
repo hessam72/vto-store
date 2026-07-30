@@ -50,7 +50,7 @@ export class MediaPipeGestureTracker {
       console.log('📌 Creating Gesture Recognizer...');
       this.gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
+          modelAssetPath: '/tasks/gesture_recognizer.task',
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',

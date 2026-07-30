@@ -11,9 +11,9 @@ import { FilesetResolver, HandLandmarker, GestureRecognizer } from '@mediapipe/t
 
 const MODEL_URLS = {
   handLandmarker:
-    'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+    '/tasks/hand_landmarker.task',
   gestureRecognizer:
-    'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task'
+    '/tasks/gesture_recognizer.task'
 };
 
 export class MediaPipeTracker {
