@@ -12,25 +12,6 @@ import { VTOScene } from './VTOScene.js';
 import { DebugPanel } from './DebugPanel.js';
 
 /**
- * Apply camera-specific transforms for back camera mirroring fix
- */
-function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanvas) {
-  const isBackCamera = tracker.config.facingMode === 'environment';
-
-  if (isBackCamera) {
-    // Back camera: no mirror
-    videoElement.style.transform = 'scale(1)';
-    canvasElement.style.transform = 'scale(1)';
-    vtoCanvas.style.transform = 'scaleX(-1)';
-  } else {
-    // Front camera: mirror everything
-    videoElement.style.transform = 'scaleX(-1)';
-    canvasElement.style.transform = 'scaleX(-1)';
-    vtoCanvas.style.transform = 'none';
-  }
-}
-
-/**
  * @param {Object} spec
  * @param {Object} spec.config - The product config.
  * @param {Object} spec.anchor - RingAnchor / WristAnchor instance.
@@ -68,14 +49,9 @@ export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
     await app.tracker.init(videoElement, canvasElement);
     app.tracker.start();
 
-    // Apply initial camera transforms
-    applyBackCameraTransforms(app.tracker, videoElement, canvasElement, vtoCanvas);
-
     changeCameraBtn?.addEventListener('click', async () => {
       try {
         await app.tracker.switchCamera();
-        // Apply transforms after camera switch
-        applyBackCameraTransforms(app.tracker, videoElement, canvasElement, vtoCanvas);
       } catch (error) {
         console.error('Error switching camera:', error);
       }
