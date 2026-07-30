@@ -14,6 +14,7 @@ public/models
 /coverage
 3d-scene-shadow-reflections-demo
 # next.js
+/public/vto-backups
 /.next/
 /out/
 public/store-models
