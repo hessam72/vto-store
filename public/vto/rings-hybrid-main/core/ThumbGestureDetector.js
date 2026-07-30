@@ -28,8 +28,8 @@ const NO_GESTURE = { category: 'None', confidence: 0 };
 export class ThumbGestureDetector {
   constructor(config = {}) {
     this.config = {
-      minConfidence: 0.7,
-      thumbHoldDurationMs: 1500,
+      minConfidence: 0.5,
+      thumbHoldDurationMs: 1100,
       cooldownMs: 1000,
       ...config
     };
