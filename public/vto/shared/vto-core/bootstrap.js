@@ -16,7 +16,7 @@ import { DebugPanel } from './DebugPanel.js';
  */
 function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanvas) {
   const isBackCamera = tracker.config.facingMode === 'environment';
-
+  
   if (isBackCamera) {
     // Back camera: no mirror
     videoElement.style.transform = 'scale(1)';
