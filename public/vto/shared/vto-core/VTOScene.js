@@ -625,8 +625,18 @@ export class VTOScene {
   addOccluder() {
     if (!this.config.occluder.enabled) return;
 
-    // Unit cylinder (radius 0.5, height 1) along Y — the primary axis.
-    const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 1, true);
+    // Both shapes are unit-sized (radius 0.5, height 1) along Y — the primary
+    // axis — and scaled per frame from the measured anatomy.
+    //
+    //   'cylinder' — a limb: a wrist, a finger. Open-ended, because the ends are
+    //                never seen and capping them would occlude past the limb.
+    //   'capsule'  — a neck: closed at the top so the chain cannot show through
+    //                where the neck meets the jaw, which an open tube leaves
+    //                wide open.
+    const shape = this.config.occluder.shape ?? 'cylinder';
+    const geometry = shape === 'capsule'
+      ? new THREE.CapsuleGeometry(0.5, 1, 8, 24)
+      : new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 1, true);
 
     const debug = this.config.occluder.debug;
     const material = new THREE.MeshBasicMaterial({
@@ -642,7 +652,7 @@ export class VTOScene {
     this.occluderMesh.visible = false;
 
     this.scene.add(this.occluderMesh);
-    console.log('Occluder added (opaque, depth-only)');
+    console.log(`Occluder added (${shape}, opaque, depth-only)`);
   }
 
   /**

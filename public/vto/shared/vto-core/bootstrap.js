@@ -37,9 +37,15 @@ function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanv
  * @param {Object} spec.anchor - RingAnchor / WristAnchor instance.
  * @param {Object} spec.panel  - { title, storageKey, defaults, extra, readouts }.
  * @param {string} spec.label  - Name used in the startup logs.
+ * @param {Function} [spec.tracker] - Tracker class owning the camera and the
+ *   frame loop. Defaults to the hand landmarker; a torso-anchored product
+ *   passes PoseLandmarkerTracker instead. The two are interchangeable here:
+ *   same lifecycle, and both emit `{ landmarks[], worldLandmarks[] }`.
  * @returns {Promise<Object>} the app state, for debugging from the console.
  */
-export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
+export async function startVTO({
+  config, anchor, panel, label = 'VTO', tracker: TrackerClass = MediaPipeTracker
+}) {
   const app = {
     tracker: null,
     poseTracker: null,
@@ -63,7 +69,7 @@ export async function startVTO({ config, anchor, panel, label = 'VTO' }) {
 
     app.positioner = new ProductPositioner(config, anchor);
 
-    app.tracker = new MediaPipeTracker({
+    app.tracker = new TrackerClass({
       ...config.mediaPipe,
       onResults: (results) => handleResults(app, results)
     });

@@ -28,11 +28,11 @@ export class ProductPositioner {
     this.anchor = anchor;
     this.debugParams = null; // Set by DebugPanel
 
-    this.solver = new HandSolver({
-      vFOV: config.camera.vFOV,
-      mirror: config.camera.mirror,
-      flipHandedness: config.camera.flipHandedness
-    });
+    // Spread rather than pick: a non-hand product also passes `landmarkCount`,
+    // `depthReferencePairs` and `refineIndices` through here. Spreading is safe
+    // precisely because absent keys stay absent — listing them explicitly would
+    // pass `undefined` and clobber the solver's own defaults.
+    this.solver = new HandSolver({ ...config.camera });
 
     const { position, rotation } = config.smoothing;
     this.positionFilter = new Vector3Filter(position.minCutoff, position.beta);
