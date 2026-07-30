@@ -117,7 +117,10 @@ export class ProductPositioner {
       width: pose.width,
       thickness: pose.thickness,
       depth: pose.depth,
-      handedness: pose.handedness
+      handedness: pose.handedness,
+      // Anchor-specific diagnostics pass straight through; undefined for anchors
+      // that do not produce them.
+      axisDivergenceDeg: pose.axisDivergenceDeg
     };
   }
 
