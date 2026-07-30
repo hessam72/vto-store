@@ -506,9 +506,17 @@ const HandTrackerThreeHelper = (function(){
     const w2 = that.get_viewWidth() / 2.0;
     const h2 = that.get_viewHeight() / 2.0;
 
+    // Check camera mode for coordinate transformation
+    // Front camera (selfie): negate X (mirrored view)
+    // Back camera: don't negate X (normal view)
+    const isSelfieCam = (typeof ChangeCameraHelper !== 'undefined' && ChangeCameraHelper.get_isSelfieCam)
+      ? ChangeCameraHelper.get_isSelfieCam()
+      : true; // default to selfie cam
+
     _poseEstimation.poseLandmarksIndices.forEach(function(ind, i){
       const imgPointPx = imgPointsPx[i];
-      imgPointPx[0] = - ( 1.0 / _spec.cameraZoom ) * landmarks[ind][0] * w2,  // X in pixels
+      const xSign = isSelfieCam ? -1 : 1; // Only negate X for front camera
+      imgPointPx[0] = xSign * ( 1.0 / _spec.cameraZoom ) * landmarks[ind][0] * w2,  // X in pixels
       imgPointPx[1] = - ( 1.0 / _spec.cameraZoom ) * landmarks[ind][1] * h2;  // Y in pixels
     });
 

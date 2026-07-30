@@ -64,7 +64,7 @@ const ChangeCameraHelper = (function(){
           facingMode: (_isSelfieCam) ? 'environment' : 'user'
         }).then(function(){
           _isSelfieCam = !_isSelfieCam;
-          
+
           // mirror canvas using CSS in selfie cam mode:
           that.set_mirroring(_isSelfieCam);
           console.log('INFO in change_camera(): Camera flipped successfully');
@@ -74,6 +74,11 @@ const ChangeCameraHelper = (function(){
           reject(err);
         });
       }); //end returned promise
+    },
+
+
+    get_isSelfieCam: function() {
+      return _isSelfieCam;
     }
   } // end that
   return that;
