@@ -132,9 +132,6 @@ function main(){
     DOMChangeCameraButton: document.getElementById('changeCamera')
   })
 
-  // Set initial mirroring for front camera (selfie cam)
-  ChangeCameraHelper.set_mirroring(true);
-
   // initialize Helper:
   HandTrackerThreeHelper.init({
     landmarksStabilizerSpec: _settings.stabilizerOptions,

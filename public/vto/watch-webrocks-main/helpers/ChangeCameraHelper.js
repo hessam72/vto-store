@@ -41,20 +41,9 @@ const ChangeCameraHelper = (function(){
 
 
     set_mirroring: function(isMirror){
-      // Front camera (selfie): mirror both canvases
-      // Back camera: no mirror on video canvas, mirror VTO canvas only
-      const handTrackerCanvas = _spec.canvases[0]; // First canvas (video)
-      const VTOCanvas = _spec.canvases[1]; // Second canvas (VTO)
-
-      if (isMirror) {
-        // Front camera: mirror both
-        handTrackerCanvas.style.transform = 'translate(-50%, 0%) rotateY(180deg)';
-        VTOCanvas.style.transform = 'translate(-50%, 0%) rotateY(180deg)';
-      } else {
-        // Back camera: no mirror on video, mirror on VTO
-        handTrackerCanvas.style.transform = 'translate(-50%, 0%) rotateY(0deg)';
-        VTOCanvas.style.transform = 'translate(-50%, 0%) rotateY(180deg)';
-      }
+      _spec.canvases.forEach(function(canvas){
+        canvas.style.transform = (isMirror) ? 'translate(-50%, 0%) rotateY(180deg)' : 'translate(-50%, 0%) rotateY(0deg)';
+      });
     },
 
 
