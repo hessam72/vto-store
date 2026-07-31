@@ -12,12 +12,23 @@ import { ProductPositioner } from './ProductPositioner.js';
 import { VTOScene } from './VTOScene.js';
 import { DebugPanel } from './DebugPanel.js';
 
+// Below this, MediaPipe is guessing at where the shoulders are rather than
+// seeing them, and the necklace is being placed on an inferred torso. High
+// enough to catch a user drifting out of frame, low enough not to nag through
+// an ordinary body turn.
+const SHOULDER_CONFIDENCE_FLOOR = 0.6;
+
 /**
- * Apply camera-specific transforms for back camera mirroring fix
+ * Apply camera-specific transforms for back camera mirroring fix.
+ *
+ * Also re-declares the screenshot layers, because which layer is mirrored is
+ * exactly what changes here. Compositing with a stale set produces an image
+ * that is flipped relative to what the user was looking at when they pressed
+ * the shutter.
  */
 function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanvas) {
   const isBackCamera = tracker.config.facingMode === 'environment';
-  
+
   if (isBackCamera) {
     // Back camera: no mirror
     videoElement.style.transform = 'scale(1)';
@@ -29,6 +40,16 @@ function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanv
     canvasElement.style.transform = 'scaleX(-1)';
     vtoCanvas.style.transform = 'none';
   }
+
+  window.vtoUI?.registerCapture({
+    mode: 'viewport',
+    // Back to front. The landmark overlay is deliberately left out: it is a
+    // debug drawing, not something a shopper wants in a saved photo.
+    layers: [
+      { el: videoElement, mirrored: !isBackCamera },
+      { el: vtoCanvas, mirrored: isBackCamera }
+    ]
+  });
 }
 
 /**
@@ -51,8 +72,7 @@ export async function startVTO({
     poseTracker: null,
     positioner: null,
     scene: null,
-    debugPanel: null,
-    isInstructionsHidden: false
+    debugPanel: null
   };
 
   try {
@@ -64,6 +84,7 @@ export async function startVTO({
     const changeCameraBtn = document.getElementById('changeCamera');
 
     app.scene = new VTOScene(vtoCanvas, config);
+    window.vtoUI?.setBootStage('در حال بارگذاری محصول…', 'مدل سه‌بعدی در حال آماده‌سازی است');
     await app.scene.loadModel();
     app.scene.addOccluder();
 
@@ -73,6 +94,7 @@ export async function startVTO({
       ...config.mediaPipe,
       onResults: (results) => handleResults(app, results)
     });
+    window.vtoUI?.setBootStage('در حال راه‌اندازی دوربین…', 'لطفاً اجازه دسترسی به دوربین را تأیید کنید');
     await app.tracker.init(videoElement, canvasElement);
     app.tracker.start();
 
@@ -85,7 +107,7 @@ export async function startVTO({
     // Apply initial camera transforms
     applyBackCameraTransforms(app.tracker, videoElement, canvasElement, vtoCanvas);
 
-    changeCameraBtn?.addEventListener('click', async () => {
+    const switchCamera = async () => {
       try {
         await app.tracker.switchCamera();
         // Apply transforms after camera switch
@@ -96,8 +118,11 @@ export async function startVTO({
         app.positioner.resetFilters();
       } catch (error) {
         console.error('Error switching camera:', error);
+        window.vtoUI?.toast('تعویض دوربین انجام نشد');
       }
-    });
+    };
+
+    changeCameraBtn?.addEventListener('click', switchCamera);
 
     if (config.debug.panelEnabled) {
       app.debugPanel = new DebugPanel(panel);
@@ -114,12 +139,19 @@ export async function startVTO({
     }
 
     startRenderLoop(app);
-    hideElement('loading');
+    window.vtoUI?.hideBoot();
 
     console.log(`${label} ready`);
   } catch (error) {
-    console.error('Initialization error:', error);
-    alert('خطا در بارگذاری برنامه. لطفاً صفحه را رفرش کنید.');
+    // The shared UI turns the error into something a shopper can act on —
+    // a denied camera permission and a failed model download need different
+    // instructions, and neither is served by a browser alert().
+    if (window.vtoUI) {
+      window.vtoUI.showErrorFor(error);
+    } else {
+      console.error('Initialization error:', error);
+      alert('خطا در بارگذاری برنامه. لطفاً صفحه را رفرش کنید.');
+    }
   }
 
   window.addEventListener('beforeunload', () => {
@@ -208,10 +240,35 @@ function handleResults(app, results) {
       : transform);
   }
 
-  if (transform.visible && !app.isInstructionsHidden) {
-    app.isInstructionsHidden = true;
-    hideElement('instructions');
+  updateTrackingHint(transform);
+}
+
+/**
+ * Turn the solve into one line of guidance.
+ *
+ * `visible` is the honest signal for "the product is on screen". For a torso
+ * product the shoulder confidence is what degrades first as the user drifts
+ * out of frame, so a weak reading is called out while the product is still
+ * drawn — that is the moment the advice is actually useful, rather than after
+ * it has already disappeared. setTracking() ignores repeats, so this is safe
+ * to call every frame.
+ */
+function updateTrackingHint(transform) {
+  const ui = window.vtoUI;
+  if (!ui) return;
+
+  if (!transform.visible) {
+    ui.setTracking('none');
+    return;
   }
+
+  const shoulders = transform.shoulderVisibility;
+  if (shoulders !== undefined && shoulders < SHOULDER_CONFIDENCE_FLOOR) {
+    ui.setTracking('poor', 'شانه‌های خود را کامل در کادر دوربین قرار دهید');
+    return;
+  }
+
+  ui.setTracking('good');
 }
 
 function startRenderLoop(app) {
@@ -220,11 +277,4 @@ function startRenderLoop(app) {
     requestAnimationFrame(animate);
   }
   animate();
-}
-
-function hideElement(id) {
-  const element = document.getElementById(id);
-  if (!element) return;
-  element.style.opacity = '0';
-  setTimeout(() => element.parentNode?.removeChild(element), 500);
 }

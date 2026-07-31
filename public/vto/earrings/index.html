@@ -1,12 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="fa" dir="rtl">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="content-language" content="en-EN" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0907">
 
-    <title>WebAR.rocks.face 3D earrings demo</title>
-    
+    <title>امتحان مجازی گوشواره</title>
+
+    <!-- SHARED VTO DESIGN SYSTEM (tokens must come first) -->
+    <link rel="stylesheet" href="../shared/vto-tokens.css">
+    <link rel="stylesheet" href="../shared/vto-ui.css">
+
     <!-- INCLUDE WebAR.rocks.face MAIN SCRIPT -->
     <script src="./dist/WebARRocksFace.js"></script>
 
@@ -44,16 +48,12 @@
     <!-- INCLUDE DEMO SCRIPT -->
     <script src="./main.js"></script>
 
-    <!-- VTO UI ENHANCEMENTS -->
-    <link rel="stylesheet" href="../shared/vto-ui.css">
-    <script src="../shared/vto-ui.js"></script>
-
     <style type="text/css">
-      body {
-        background-color: #333;
-        margin: 0;
-        overflow: hidden;
-      }
+      /*
+       * Both canvases share one mapping to the screen, and both are mirrored
+       * by the same CSS transform — so the capture compositor treats them as
+       * two mirrored layers of identical size (see main.js).
+       */
       #WebARRocksFaceCanvas, #threeCanvas {
         position: fixed;
         width: 100vw;
@@ -65,41 +65,33 @@
         transform: rotateY(180deg) translate(50%);
       }
       #WebARRocksFaceCanvas {
-        z-index: 0;
+        z-index: var(--vto-z-video);
       }
       #threeCanvas {
-        z-index: 1;
-        /*background-color: rgba(255, 0, 0, 0.5);*/
-      }
-      #backBtn {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 100;
-        background: #0000004f;
-        color: gold;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 16px;
-        cursor: pointer;
-        backdrop-filter: blur(10px);
-        transition: background 0.3s;
-      }
-      #backBtn:hover {
-        background: #00000080;
+        z-index: var(--vto-z-3d);
       }
     </style>
   </head>
-  <body>
-    <!-- Back button -->
-    <button id="backBtn" onclick="window.location.href='/store'">← فروشگاه</button>
-
+  <body class="vto-app" data-category="earrings" data-back-url="/store">
     <!-- canvas where the earring will be displayed: -->
     <canvas width="600" height="600" id='threeCanvas'></canvas>
 
     <!-- canvas where the video will be displayed: -->
     <canvas width="600" height="600" id='WebARRocksFaceCanvas'></canvas>
+
+    <!--
+      In the markup rather than injected by vto-ui.js, so it paints on the
+      first frame instead of after the neural net has downloaded.
+    -->
+    <div class="vto-boot" id="vto-boot">
+      <div class="vto-boot-mark">
+        <svg class="vto-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.2a2.5 2.5 0 0 1 5 0v3.1M14.5 8.8l4 5.4-4 6.3-4-6.3z"/></svg>
+      </div>
+      <p class="vto-boot-title">در حال آماده‌سازی دوربین…</p>
+      <p class="vto-boot-tip">لطفاً اجازه دسترسی به دوربین را تأیید کنید</p>
+    </div>
+
+    <!-- SHARED VTO UI KIT -->
+    <script src="../shared/vto-ui.js"></script>
   </body>
 </html>
- 
