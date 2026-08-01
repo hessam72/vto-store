@@ -94,10 +94,11 @@ valid.
 
 ```bash
 npm run dev
-# http://localhost:3000/vto/rings-hybrid/index.html
+# http://localhost:3000/vto/rings              → through the route handler
+# http://localhost:3000/vto/rings/index.html   → straight from public/
 ```
 
-Served straight from `public/`; the two-segment path bypasses the
+The second path is served straight from `public/` and bypasses the
 `app/vto/[category]` route handler, so `window.VTO_MODEL_URL` is not injected and
 `config.js` falls back to `/models/rings/default.glb`. Camera access needs
 localhost or HTTPS. Press **D** to toggle the debug panel.

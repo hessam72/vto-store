@@ -5,13 +5,13 @@ metric pinhole solve turns them into a Three.js pose.
 
 > The general method and its derivation are in
 > [`arch-docs/MEDIAPIPE_VTO_SYSTEM.md`](../../../arch-docs/MEDIAPIPE_VTO_SYSTEM.md).
-> This app shares its solver with `../rings-hybrid` via `../shared/vto-core`;
+> This app shares its solver with `../rings` via `../shared/vto-core`;
 > what follows is wrist-specific.
 
 ```bash
 npm run dev
-# http://localhost:3000/vto/wrist-hybrid/index.html            → watch
-# http://localhost:3000/vto/wrist-hybrid/index.html?product=bracelet
+# http://localhost:3000/vto/watch                       → watch
+# http://localhost:3000/vto/watch?product=bracelet      → bracelet
 ```
 
 Camera access needs localhost or HTTPS. Press **D** for the debug panel.
