@@ -20,12 +20,16 @@ const app = {
   products: [],
   productIndex: 0,
   isSwitching: false,
-  isInstructionsHidden: false,
   isLoading: true
 };
 
 /**
- * Apply camera-specific transforms for back camera mirroring fix
+ * Apply camera-specific transforms for back camera mirroring fix.
+ *
+ * Also re-declares the screenshot layers, because which layer is mirrored is
+ * exactly what changes here. Compositing with a stale set produces an image
+ * that is flipped relative to what the user was looking at when they pressed
+ * the shutter.
  */
 function applyBackCameraTransforms(videoElement, canvasElement, vtoCanvas) {
   const isBackCamera = app.tracker.config.facingMode === 'environment';
@@ -41,6 +45,16 @@ function applyBackCameraTransforms(videoElement, canvasElement, vtoCanvas) {
     canvasElement.style.transform = 'scaleX(-1)';
     vtoCanvas.style.transform = 'none';
   }
+
+  window.vtoUI?.registerCapture({
+    mode: 'viewport',
+    // Back to front. The landmark overlay is deliberately left out: it is a
+    // debug drawing, not something a shopper wants in a saved photo.
+    layers: [
+      { el: videoElement, mirrored: !isBackCamera },
+      { el: vtoCanvas, mirrored: isBackCamera }
+    ]
+  });
 }
 
 /**
@@ -68,6 +82,7 @@ async function init() {
 
     // Load ring model
     console.log('📦 Loading ring model...');
+    window.vtoUI?.setBootStage('در حال بارگذاری محصول…', 'مدل سه‌بعدی در حال آماده‌سازی است');
     await app.threeScene.loadRingModel(app.products[app.productIndex].url);
 
     // Add soft occluder
@@ -95,6 +110,7 @@ async function init() {
       onResults: handleTrackingResults
     });
 
+    window.vtoUI?.setBootStage('در حال راه‌اندازی دوربین…', 'لطفاً اجازه دسترسی به دوربین را تأیید کنید');
     await app.tracker.init(videoElement, canvasElement);
 
     // Apply initial camera transforms
@@ -104,14 +120,16 @@ async function init() {
     console.log('▶️ Starting hand tracking...');
     app.tracker.start();
 
-    // Setup camera switch button
-    changeCameraBtn.addEventListener('click', async () => {
+    // Setup camera switch button. The button itself is rendered by the shared
+    // UI kit into the top bar, keeping this id.
+    changeCameraBtn?.addEventListener('click', async () => {
       try {
         await app.tracker.switchCamera();
         // Apply transforms after camera switch
         applyBackCameraTransforms(videoElement, canvasElement, vtoCanvas);
       } catch (error) {
         console.error('Error switching camera:', error);
+        window.vtoUI?.toast('تعویض دوربین انجام نشد');
       }
     });
 
@@ -155,8 +173,15 @@ async function init() {
 
     console.log('✅ Hybrid Ring VTO Ready!');
   } catch (error) {
-    console.error('❌ Initialization Error:', error);
-    alert('خطا در بارگذاری برنامه. لطفاً صفحه را رفرش کنید.');
+    // The shared UI turns the error into something a shopper can act on —
+    // a denied camera permission and a failed model download need different
+    // instructions, and neither is served by a browser alert().
+    if (window.vtoUI) {
+      window.vtoUI.showErrorFor(error);
+    } else {
+      console.error('❌ Initialization Error:', error);
+      alert('خطا در بارگذاری برنامه. لطفاً صفحه را رفرش کنید.');
+    }
   }
 }
 
@@ -186,10 +211,9 @@ function handleTrackingResults(results) {
     updateGestureStatus(app.detector.process(results));
   }
 
-  // Hide instructions when hand detected
-  if (transform.visible && !app.isInstructionsHidden) {
-    hideInstructions();
-  }
+  // Drives the tracking hint, and dismisses the onboarding sheet the moment
+  // the ring is actually on the hand.
+  window.vtoUI?.setTracking(transform.visible ? 'good' : 'none');
 }
 
 /**
@@ -350,31 +374,11 @@ function startRenderLoop() {
 }
 
 /**
- * Hide loading screen
+ * Hide the boot screen
  */
 function hideLoading() {
-  const loadingEl = document.getElementById('loading');
-  if (loadingEl) {
-    loadingEl.style.opacity = '0';
-    setTimeout(() => {
-      loadingEl.parentNode?.removeChild(loadingEl);
-    }, 500);
-  }
+  window.vtoUI?.hideBoot();
   app.isLoading = false;
-}
-
-/**
- * Hide instructions
- */
-function hideInstructions() {
-  const instructionsEl = document.getElementById('instructions');
-  if (instructionsEl && !app.isInstructionsHidden) {
-    instructionsEl.style.opacity = '0';
-    app.isInstructionsHidden = true;
-    setTimeout(() => {
-      instructionsEl.parentNode?.removeChild(instructionsEl);
-    }, 500);
-  }
 }
 
 /**

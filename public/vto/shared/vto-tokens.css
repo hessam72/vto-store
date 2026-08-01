@@ -1,0 +1,115 @@
+/**
+ * VTO design tokens — the single source of truth for all four try-on apps.
+ *
+ * Load this BEFORE vto-ui.css. The apps carry no colour, radius, blur or
+ * z-index literals of their own; everything below is what they are allowed to
+ * reference. A value that is not here does not belong in an app stylesheet.
+ */
+
+/* Self-hosted so the try-on is not blocked on fonts.googleapis.com, which is
+   both render-blocking and unreliable for the audience this ships to. */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./fonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./fonts/Vazirmatn-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./fonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---- Brand ------------------------------------------------------------ */
+  --vto-gold-300: #e8cf7a;
+  --vto-gold-500: #d4af37;
+  --vto-gold-700: #a8842a;
+  --vto-gold-rgb: 212, 175, 55;
+
+  /* ---- Surfaces --------------------------------------------------------- */
+  /* One scale, deepening with elevation. Every panel picks one of these three
+     rather than inventing its own rgba(0,0,0,.x). */
+  --vto-surface-1: rgba(18, 16, 12, 0.55);  /* bars, chips, buttons */
+  --vto-surface-2: rgba(14, 13, 10, 0.72);  /* cards, sheets */
+  --vto-surface-3: rgba(10, 9, 7, 0.88);    /* modals */
+  --vto-scrim: rgba(0, 0, 0, 0.72);         /* behind modals */
+  --vto-boot-bg: linear-gradient(160deg, #14120d 0%, #0a0907 60%, #100e0a 100%);
+
+  --vto-hairline: rgba(var(--vto-gold-rgb), 0.22);
+  --vto-hairline-strong: rgba(var(--vto-gold-rgb), 0.45);
+  --vto-hairline-neutral: rgba(245, 241, 232, 0.12);
+
+  /* ---- Text ------------------------------------------------------------- */
+  --vto-fg: #f5f1e8;
+  --vto-fg-muted: rgba(245, 241, 232, 0.68);
+  --vto-fg-faint: rgba(245, 241, 232, 0.45);
+  --vto-fg-on-gold: #1a1509;
+
+  /* ---- Semantic --------------------------------------------------------- */
+  --vto-ok: #5fd39a;
+  --vto-warn: #e8b45f;
+  --vto-err: #e8736b;
+
+  /* ---- Elevation, blur, shape ------------------------------------------- */
+  --vto-blur: blur(24px) saturate(160%);
+  --vto-blur-sm: blur(12px) saturate(140%);
+  --vto-shadow-1: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --vto-shadow-2: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 32px rgba(var(--vto-gold-rgb), 0.08);
+  --vto-glow: 0 0 24px rgba(var(--vto-gold-rgb), 0.35);
+
+  --vto-r-sm: 12px;
+  --vto-r-md: 18px;
+  --vto-r-lg: 24px;
+  --vto-r-pill: 999px;
+
+  /* ---- Motion ----------------------------------------------------------- */
+  --vto-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --vto-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vto-dur: 0.25s;
+  --vto-dur-slow: 0.45s;
+
+  /* ---- Layout ----------------------------------------------------------- */
+  --vto-gutter: 16px;
+  /* Every fixed element measures from these, so nothing lands under a notch or
+     a home indicator. Requires `viewport-fit=cover` on the viewport meta. */
+  --vto-safe-t: calc(env(safe-area-inset-top, 0px) + var(--vto-gutter));
+  --vto-safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--vto-gutter));
+  --vto-safe-r: calc(env(safe-area-inset-right, 0px) + var(--vto-gutter));
+  --vto-safe-l: calc(env(safe-area-inset-left, 0px) + var(--vto-gutter));
+  --vto-tap: 44px; /* minimum touch target */
+
+  /* ---- Type ------------------------------------------------------------- */
+  --vto-font: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+  --vto-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---- Stacking --------------------------------------------------------- */
+  /* Replaces the ad-hoc 10/20/50/90/100/1000/1001 that the four apps each
+     picked independently. Layers 0-2 belong to the render stack and are set in
+     the app stylesheets; everything above is chrome. */
+  --vto-z-video: 0;
+  --vto-z-overlay: 1;
+  --vto-z-3d: 2;
+  --vto-z-hud: 20;
+  --vto-z-sheet: 40;
+  --vto-z-modal: 60;
+  --vto-z-boot: 80;
+  --vto-z-toast: 90;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --vto-dur: 0.001s;
+    --vto-dur-slow: 0.001s;
+  }
+}

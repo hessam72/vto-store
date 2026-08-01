@@ -50,7 +50,8 @@ function start(){
     taaLevel: _settings.taaLevel,
     canvasFace: _canvases.face,
     canvasThree: _canvases.three,
-    debugOccluder: _settings.debugOccluder
+    debugOccluder: _settings.debugOccluder,
+    callbackTrack: track_face
     //,videoURL: '../../../../testVideos/1032526922-hd.mov'
   }).then(function(three){
     
@@ -81,9 +82,36 @@ function start(){
     if (check_isAppleCrap()){
       WebARRocksFaceEarrings3DHelper.resize(_canvases.three.width, _canvases.three.height - 0.001);
     }
+
+    // Both canvases are the same size and carry the same CSS mirror, so the
+    // screenshot is composited at their own resolution rather than at the
+    // viewport's — no cover crop to reproduce, and no downscale.
+    window.vtoUI?.registerCapture({
+      mode: 'native',
+      layers: [
+        { el: _canvases.face, mirrored: true },
+        { el: _canvases.three, mirrored: true }
+      ]
+    });
+
+    window.vtoUI?.hideBoot();
   }).catch(function(err){
+    // The helper rejects with a plain string for its own failures and with a
+    // DOMException when getUserMedia is what went wrong; the UI needs the
+    // original to tell a denied camera apart from a missing one.
+    if (window.vtoUI){
+      window.vtoUI.showErrorFor(err instanceof Error ? err : new Error(String(err)));
+      return;
+    }
     throw new Error(err);
   });
+}
+
+
+// Runs once per tracked frame. setTracking() ignores repeated states, so this
+// only touches the DOM when the face actually enters or leaves the frame.
+function track_face(detectState){
+  window.vtoUI?.setTracking(detectState.isDetected ? 'good' : 'none');
 }
 
 
