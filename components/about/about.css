@@ -1,0 +1,1001 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   About page — self-contained stylesheet.
+
+   PORTING NOTE
+   Every rule below is scoped under `.about-root` and every value comes from
+   custom properties declared on `.about-root` itself. Nothing here reads a
+   token from the host application's global CSS, and nothing here leaks out of
+   the page. To reuse this page in another Next.js app, copy:
+
+     components/about/      (this folder, unchanged)
+     public/images/about/   (the image slots)
+
+   …then add `app/about/page.tsx` rendering <AboutPage />. No Tailwind, no
+   theme config, no icon library, no animation library required.
+
+   Fonts prefer the host's next/font variables when they exist and fall back to
+   system faces when they don't — see the --ab-font-* block below.
+
+   Layout is written with logical properties (padding-inline, inset-inline,
+   text-align: start …) so one stylesheet serves both the RTL Persian and the
+   LTR English rendering with no mirrored overrides.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.about-root {
+  /* ── Ink field ─────────────────────────────────────────────────────── */
+  --ab-ink-950: #05080e;
+  --ab-ink-900: #0a1120;
+  --ab-ink-800: #101a2c;
+  --ab-ink-700: #172236;
+  --ab-ink-600: #1f2d45;
+
+  /* ── Gold ──────────────────────────────────────────────────────────── */
+  --ab-gold: #c29d68;
+  --ab-gold-soft: #d8bc93;
+  --ab-gold-bright: #e8d2ae;
+  --ab-gold-edge: #f7ebd6;
+  --ab-gold-deep: #8a6a40;
+
+  /* ── Lines & surfaces ──────────────────────────────────────────────── */
+  --ab-hairline: rgb(255 255 255 / 12%);
+  --ab-gold-line: rgb(194 157 104 / 30%);
+  --ab-gold-line-hi: rgb(194 157 104 / 62%);
+  --ab-glass: linear-gradient(158deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 2%));
+  --ab-shadow: inset 0 1px 0 0 rgb(255 255 255 / 10%),
+               0 20px 45px -22px rgb(0 0 0 / 75%);
+
+  /* ── Text ──────────────────────────────────────────────────────────── */
+  --ab-text: #f3f0ea;
+  --ab-text-dim: rgb(243 240 234 / 66%);
+  --ab-text-faint: rgb(243 240 234 / 38%);
+
+  /* ── Motion ────────────────────────────────────────────────────────── */
+  --ab-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Rhythm ────────────────────────────────────────────────────────── */
+  --ab-max: 68rem;
+  --ab-radius: 1.75rem;
+  /* Drives both the header's own height and how far the hero backdrop is
+     pulled up behind it — the two must not drift apart. */
+  --ab-header-h: 4rem;
+
+  /* ── Type stacks ───────────────────────────────────────────────────────
+     Persian by default. `var(--x, fallback)` means the host app's next/font
+     variable wins when present, and a system face is used when it isn't. */
+  --ab-font: var(--font-vazirmatn, "Vazirmatn"), "Segoe UI", system-ui, sans-serif;
+  --ab-font-display: var(--font-vazirmatn, "Vazirmatn"), "Segoe UI", system-ui, sans-serif;
+  --ab-font-eyebrow: var(--font-vazirmatn, "Vazirmatn"), system-ui, sans-serif;
+  --ab-display-weight: 800;
+  --ab-leading: 2.05;
+  --ab-eyebrow-track: 0.22em;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow-x: clip;
+  color: var(--ab-text);
+  font-family: var(--ab-font);
+  font-feature-settings: "ss01", "ss02";
+  /* Not background-attachment: fixed — that repaints the whole viewport on
+     every scroll frame on mobile. Letting the gradient span the element means
+     navy at the top of the page melting to near-black at the bottom, which is
+     the intended read anyway. */
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgb(31 45 69 / 85%), transparent 60%),
+    linear-gradient(180deg, #172236 0%, #0f1a2c 38%, #0a1120 68%, #05080e 100%);
+}
+
+/* Latin typography — an elegant serif for display, Inter for running text. */
+.about-root[lang="en"] {
+  --ab-font: var(--font-inter, "Inter"), system-ui, sans-serif;
+  --ab-font-display: var(--font-cormorant, "Cormorant Garamond"), Georgia, "Times New Roman", serif;
+  --ab-font-eyebrow: var(--font-cinzel, "Cinzel"), Georgia, serif;
+  --ab-display-weight: 600;
+  --ab-leading: 1.8;
+  --ab-eyebrow-track: 0.32em;
+  font-feature-settings: normal;
+}
+
+.about-root *,
+.about-root *::before,
+.about-root *::after {
+  box-sizing: border-box;
+}
+
+/* Element reset, wrapped in :where() so it contributes ZERO specificity.
+   A plain `.about-root blockquote` selector (0,1,1) would out-rank the
+   component classes below (0,1,0) and silently defeat things like
+   `.about-quote { margin-inline: auto }`. */
+:where(.about-root) :where(p, h1, h2, h3, ul, li, figure, blockquote) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(.about-root) :where(ul) {
+  list-style: none;
+}
+
+/* Language cross-fade. The content dims for one beat while the dictionary is
+   swapped, so the change reads as deliberate rather than as a hard cut. */
+.about-shell {
+  transition: opacity 0.18s var(--ab-ease);
+}
+.about-root[data-ab-fading] .about-shell {
+  opacity: 0.18;
+}
+
+/* ─────────────────────────────────────────────
+   Skip link
+───────────────────────────────────────────── */
+.about-skip {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.about-skip:focus-visible {
+  inline-size: auto;
+  block-size: auto;
+  overflow: visible;
+  clip-path: none;
+  inset-block-start: 1rem;
+  inset-inline-start: 1rem;
+  z-index: 200;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: var(--ab-gold);
+  color: var(--ab-ink-950);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.about-root :focus-visible {
+  outline: 2px solid rgb(232 210 174 / 90%);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────
+   Header — slim sticky bar
+───────────────────────────────────────────── */
+.about-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 100;
+  transition: background 0.45s var(--ab-ease), border-color 0.45s var(--ab-ease),
+    backdrop-filter 0.45s var(--ab-ease);
+  border-block-end: 1px solid transparent;
+}
+.about-header[data-ab-stuck] {
+  background: linear-gradient(180deg, rgb(10 17 32 / 88%), rgb(10 17 32 / 72%));
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border-block-end-color: var(--ab-gold-line);
+}
+
+/* Physical left/right, not flex order — immune to the document's direction,
+   so the brand stays on the left and the controls on the right in both
+   languages. */
+.about-header-inner {
+  position: relative;
+  max-inline-size: var(--ab-max);
+  margin-inline: auto;
+  block-size: var(--ab-header-h);
+  padding-inline: 1rem;
+}
+.about-brand {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+.about-brand img {
+  block-size: 2rem;
+  inline-size: auto;
+  object-fit: contain;
+}
+.about-wordmark {
+  font-family: var(--ab-font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.about-header-actions {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+@media (min-width: 640px) {
+  .about-root { --ab-header-h: 4.75rem; }
+  .about-header-inner {
+    padding-inline: 1.5rem;
+  }
+  .about-brand { left: 1.5rem; }
+  .about-header-actions { right: 1.5rem; }
+  .about-brand img { block-size: 2.4rem; }
+  .about-wordmark { font-size: 1.05rem; }
+}
+
+/* Back-to-home — icon only on phones, icon + label from sm up. */
+.about-home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--ab-hairline);
+  /* Dark backing, matching the language pill: over the hero the header floats
+     on the photograph, and a hairline border alone vanishes against a light
+     frame. */
+  background: rgb(5 8 14 / 48%);
+  color: var(--ab-text-dim);
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: color 0.3s var(--ab-ease), border-color 0.3s var(--ab-ease),
+    background 0.3s var(--ab-ease);
+}
+.about-home-link:hover {
+  color: var(--ab-gold-bright);
+  border-color: var(--ab-gold-line-hi);
+  background: rgb(194 157 104 / 8%);
+}
+.about-home-link svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+}
+/* The arrow points "back", which is a different physical direction per script. */
+.about-root[dir="rtl"] .about-home-link svg { transform: scaleX(-1); }
+.about-home-label { display: none; }
+@media (min-width: 640px) {
+  .about-home-label { display: inline; }
+}
+
+/* ─────────────────────────────────────────────
+   Language toggle
+───────────────────────────────────────────── */
+.about-lang {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--ab-gold-line);
+  background: rgb(5 8 14 / 55%);
+}
+.about-lang button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  color: var(--ab-text-faint);
+  transition: color 0.3s var(--ab-ease), background 0.3s var(--ab-ease),
+    box-shadow 0.3s var(--ab-ease);
+}
+.about-lang button:hover {
+  color: var(--ab-gold-soft);
+}
+.about-lang button[aria-pressed="true"] {
+  color: var(--ab-ink-950);
+  background: linear-gradient(180deg, var(--ab-gold-edge), var(--ab-gold));
+  box-shadow: 0 2px 10px -2px rgb(194 157 104 / 60%);
+}
+
+/* ─────────────────────────────────────────────
+   Section shell
+───────────────────────────────────────────── */
+.about-section {
+  padding-inline: 0.75rem;
+  padding-block: 0.6rem;
+  scroll-margin-block-start: 5rem;
+}
+@media (min-width: 640px) {
+  .about-section {
+    padding-inline: 1.25rem;
+    padding-block: 1rem;
+  }
+}
+
+/* An inset slab with a gold hairline along its top edge — brightest at the
+   centre, fading to nothing at the corners — plus a soft gold bloom behind
+   the heading. This is what makes sections read as separate without breaking
+   the single dark-and-gold palette. */
+.about-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  max-inline-size: var(--ab-max);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  padding-block: 3.5rem;
+  border-radius: var(--ab-radius);
+  border: 1px solid var(--ab-gold-line);
+  box-shadow: inset 0 1px 0 rgb(247 235 214 / 12%),
+    0 24px 60px -30px rgb(0 0 0 / 85%);
+}
+@media (min-width: 640px) {
+  .about-panel {
+    padding-inline: 2.5rem;
+    padding-block: 5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .about-panel {
+    padding-inline: 3.5rem;
+  }
+}
+
+.about-panel::before {
+  content: "";
+  position: absolute;
+  inset-inline: 12%;
+  inset-block-start: 0;
+  block-size: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ab-gold-line-hi) 35%,
+    rgb(247 235 214 / 55%) 50%,
+    var(--ab-gold-line-hi) 65%,
+    transparent
+  );
+}
+.about-panel::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 240px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(60% 100% at 50% 0%, rgb(194 157 104 / 12%), transparent 70%);
+}
+
+.about-panel[data-tone="a"] {
+  background: linear-gradient(168deg, #0a1a37 0%, #111b2c 55%, #080d16 100%);
+}
+.about-panel[data-tone="b"] {
+  background: linear-gradient(168deg, #121c2e 0%, #111b2c 55%, #080d16 100%);
+}
+
+/* ─────────────────────────────────────────────
+   Headings & eyebrows
+───────────────────────────────────────────── */
+.about-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--ab-font-eyebrow);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: var(--ab-eyebrow-track);
+  text-transform: uppercase;
+  color: var(--ab-gold-soft);
+}
+.about-root[dir="rtl"] .about-eyebrow {
+  text-transform: none;
+}
+.about-eyebrow::before,
+.about-eyebrow::after {
+  content: "";
+  inline-size: 1.6rem;
+  block-size: 1px;
+  flex: none;
+}
+.about-eyebrow::before {
+  background: linear-gradient(90deg, transparent, var(--ab-gold-line-hi));
+}
+.about-eyebrow::after {
+  background: linear-gradient(90deg, var(--ab-gold-line-hi), transparent);
+}
+
+.about-h {
+  font-family: var(--ab-font-display);
+  font-weight: var(--ab-display-weight);
+  color: #fff;
+  line-height: 1.4;
+  text-wrap: balance;
+  white-space: pre-line; /* honours the \n inside heading segments */
+}
+.about-h1 {
+  font-size: clamp(1.85rem, 6.5vw, 3.6rem);
+  line-height: 1.28;
+}
+.about-h2 {
+  font-size: clamp(1.45rem, 4.6vw, 2.5rem);
+}
+.about-root[lang="en"] .about-h1 { line-height: 1.12; }
+.about-root[lang="en"] .about-h2 { line-height: 1.2; }
+
+/* The signature effect: a strictly vertical gold gradient on key words. A
+   diagonal one across a single word inside a sentence renders unevenly on
+   mobile Safari. `paint-order` puts the bright stroke behind the fill so it
+   reads as a raised edge rather than an outline. */
+.about-gold {
+  background: linear-gradient(180deg, #f7ebd6 0%, #e0c393 34%, #c29d68 58%, #9b7746 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* -webkit-text-stroke: 0.6px rgb(247 235 214 / 45%); */
+  paint-order: stroke fill;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 55%))
+    drop-shadow(0 0 16px rgb(194 157 104 / 26%));
+}
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .about-gold {
+    -webkit-text-fill-color: var(--ab-gold);
+    color: var(--ab-gold);
+  }
+}
+
+.about-p {
+  font-size: 0.95rem;
+  line-height: var(--ab-leading);
+  color: var(--ab-text-dim);
+  text-align: start;
+}
+@media (min-width: 640px) {
+  .about-p { font-size: 1.02rem; }
+}
+
+.about-lead {
+  font-size: 1rem;
+  line-height: var(--ab-leading);
+  color: rgb(243 240 234 / 78%);
+}
+@media (min-width: 640px) {
+  .about-lead { font-size: 1.12rem; }
+}
+
+/* Centred heading stack used by every section. */
+.about-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  max-inline-size: 46rem;
+  margin-inline: auto;
+}
+.about-head .about-p { text-align: center; }
+
+.about-divider {
+  inline-size: min(14rem, 60%);
+  block-size: 1px;
+  border: 0;
+  margin-inline: auto;
+  background: linear-gradient(90deg, transparent, var(--ab-gold-deep), transparent);
+}
+
+/* ─────────────────────────────────────────────
+   Images
+───────────────────────────────────────────── */
+.about-figure {
+  position: relative;
+  inline-size: 100%;
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid var(--ab-gold-line);
+  background: rgb(16 26 44 / 60%);
+}
+.about-figure[data-ratio="wide"] { aspect-ratio: 16 / 9; }
+.about-figure[data-ratio="card"] { aspect-ratio: 4 / 3; }
+.about-figure[data-ratio="tall"] { aspect-ratio: 4 / 3; }
+@media (min-width: 768px) {
+  .about-figure[data-ratio="tall"] { aspect-ratio: 3 / 4; }
+}
+/* Fills its positioned parent instead of holding an aspect ratio — the hero
+   backdrop, whose height is set by the copy it sits behind. */
+.about-figure[data-ratio="fill"] {
+  position: absolute;
+  inset: 0;
+  block-size: 100%;
+}
+
+/* Borderless variant — the image melts into the page on every edge instead of
+   sitting in a frame. Used by the hero and the vision band. */
+.about-figure[data-blend] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.about-figure[data-blend] .about-img,
+.about-figure[data-blend] .about-img-fallback {
+  -webkit-mask-image: radial-gradient(
+    115% 95% at 50% 42%, #000 42%, rgb(0 0 0 / 0.55) 66%, transparent 84%);
+  mask-image: radial-gradient(
+    115% 95% at 50% 42%, #000 42%, rgb(0 0 0 / 0.55) 66%, transparent 84%);
+}
+/* The mask reaches the placeholder too, so an empty hero feathers into the
+   page exactly like the photograph will — the glyph and label sit at the
+   centre, where the mask is fully opaque, so both stay legible.
+   The fill also fades to transparent rather than to a flat dark colour: the
+   mask alone still leaves a hard edge across the top of a large 16:9 slot,
+   because that edge sits inside the mask's opaque core. */
+.about-figure[data-blend] .about-img-fallback {
+  background: radial-gradient(
+    72% 66% at 50% 45%,
+    rgb(31 45 69 / 62%),
+    rgb(23 34 54 / 26%) 52%,
+    transparent 82%
+  );
+}
+
+/* Backdrop variant — frameless, and feathered on every edge with a wider,
+   gentler mask than the framed blend above, because it spans the full page
+   width and must not show a seam anywhere along it. */
+.about-figure[data-backdrop] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+/* A purely vertical fade, not the radial used by framed figures: this image
+   runs edge to edge, so its left/right sides meet the viewport and need no
+   feathering — only the bottom, where the hero dissolves into the first
+   panel. One mask layer keeps this working everywhere (multi-layer masks need
+   mask-composite, which Chrome only shipped in 120). */
+.about-figure[data-backdrop] .about-img,
+.about-figure[data-backdrop] .about-img-fallback {
+  -webkit-mask-image: linear-gradient(
+    180deg, #000 0%, #000 52%, rgb(0 0 0 / 0.5) 78%, transparent 100%);
+  mask-image: linear-gradient(
+    180deg, #000 0%, #000 52%, rgb(0 0 0 / 0.5) 78%, transparent 100%);
+}
+
+/* Pulls any source image down into the ink palette before a single overlay is
+   applied. This is what makes legibility independent of the photograph — a
+   blown-out white frame lands around mid-grey here, and the scrim and text
+   well then take it the rest of the way. */
+.about-figure[data-backdrop] .about-img {
+  filter: brightness(0.6) saturate(0.85) contrast(1.04);
+}
+/* The empty-slot placeholder drops to the bottom of the backdrop and dims —
+   centred, it would sit directly behind the headline. */
+.about-figure[data-backdrop] .about-img-fallback {
+  justify-content: flex-end;
+  padding-block-end: 2.75rem;
+  opacity: 0.5;
+  background: radial-gradient(
+    85% 75% at 50% 45%,
+    rgb(31 45 69 / 52%),
+    rgb(23 34 54 / 20%) 55%,
+    transparent 82%
+  );
+}
+
+.about-img {
+  object-fit: cover;
+}
+
+/* Shown in place of the image while the file does not exist yet, so the page
+   reads as intentional before any photography is uploaded. */
+.about-img-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1rem;
+  text-align: center;
+  background: radial-gradient(70% 60% at 50% 45%, rgb(31 45 69 / 60%), rgb(10 17 32 / 75%));
+}
+.about-img-fallback svg {
+  inline-size: 2.1rem;
+  block-size: 2.1rem;
+  color: rgb(194 157 104 / 70%);
+}
+.about-img-fallback span {
+  font-size: 0.72rem;
+  color: var(--ab-text-faint);
+  letter-spacing: 0.02em;
+}
+
+/* ─────────────────────────────────────────────
+   Hero — the photograph is the backdrop, not a block beneath the copy.
+   Legibility does not depend on which image is dropped in: three independent
+   layers guarantee contrast — a vertical scrim, a radial text well behind the
+   centred copy, and shadows on the type itself.
+───────────────────────────────────────────── */
+.about-hero {
+  position: relative;
+  /* Contains the z-index:-1 backdrop, so it can sit behind the copy without
+     falling behind the page background. */
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-block-size: clamp(29rem, 76vh, 45rem);
+  padding-inline: 1.25rem;
+  padding-block: 3.5rem 4.5rem;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .about-hero { padding-block: 4.5rem 6rem; }
+}
+
+/* Pulled up under the sticky header so the image starts at the very top of
+   the page rather than leaving a bare strip above it. */
+.about-hero-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset-inline: 0;
+  inset-block-start: calc(-1 * var(--ab-header-h));
+  inset-block-end: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Layer 1 — vertical scrim. Heaviest at the top (the header sits over it) and
+   at the bottom (where the hero meets the first panel); deliberately light
+   through the middle so the photograph is still the thing you see. It stays
+   semi-transparent at every stop: an opaque band would seam against the
+   navy page gradient behind it. */
+.about-hero-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(5 8 14 / 82%) 0%,
+    rgb(10 17 32 / 34%) 28%,
+    rgb(10 17 32 / 38%) 60%,
+    rgb(7 12 22 / 55%) 86%,
+    transparent 100%
+  );
+}
+
+/* Layer 2 — text well. Darkens exactly the area the copy occupies and fades
+   out well before the edges, so the centre never washes out no matter how
+   bright the photograph is. */
+.about-hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    62% 56% at 50% 47%,
+    rgb(5 8 14 / 76%),
+    rgb(5 8 14 / 42%) 55%,
+    transparent 80%
+  );
+}
+
+.about-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-inline-size: 52rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.35rem;
+}
+.about-hero .about-lead {
+  max-inline-size: 42rem;
+}
+
+/* Layer 3 — type shadows. */
+.about-hero .about-h1 {
+  text-shadow: 0 2px 20px rgb(5 8 14 / 80%), 0 1px 4px rgb(5 8 14 / 65%);
+}
+.about-hero .about-lead {
+  text-shadow: 0 1px 14px rgb(5 8 14 / 85%);
+}
+/* text-shadow would show through a background-clip:text fill as a dark blur.
+   filter: drop-shadow shadows the painted result instead, so the gold keeps
+   its raised read over a photograph. */
+.about-hero .about-gold {
+  text-shadow: none;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 80%))
+    drop-shadow(0 0 22px rgb(194 157 104 / 34%));
+}
+
+/* Full-width figure used by the vision band (the hero no longer uses one). */
+.about-band-figure {
+  max-inline-size: var(--ab-max);
+  margin-inline: auto;
+  margin-block-start: 2.5rem;
+  padding-inline: 0.5rem;
+}
+
+.about-scrollcue {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-start: 0.5rem;
+  font-family: var(--ab-font-eyebrow);
+  font-size: 0.66rem;
+  letter-spacing: var(--ab-eyebrow-track);
+  color: var(--ab-text-faint);
+  text-transform: uppercase;
+}
+.about-root[dir="rtl"] .about-scrollcue { text-transform: none; }
+.about-scrollcue::after {
+  content: "";
+  inline-size: 1px;
+  block-size: 2.4rem;
+  background: linear-gradient(180deg, var(--ab-gold-line-hi), transparent);
+  animation: abCue 2.6s var(--ab-ease) infinite;
+}
+@keyframes abCue {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.6); transform-origin: top; }
+  50%      { opacity: 1;   transform: scaleY(1);   transform-origin: top; }
+}
+
+/* ─────────────────────────────────────────────
+   Two-column band (mission)
+───────────────────────────────────────────── */
+.about-split {
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+  margin-block-start: 2.5rem;
+}
+@media (min-width: 768px) {
+  .about-split {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+}
+.about-split-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+/* ─────────────────────────────────────────────
+   Services grid
+───────────────────────────────────────────── */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-block-start: 2.75rem;
+}
+@media (min-width: 560px) {
+  .about-grid { grid-template-columns: repeat(1, 1fr); gap: 1.15rem; }
+}
+@media (min-width: 1024px) {
+  .about-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+}
+
+.about-card {
+  position: relative;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.15rem;
+  /* No backdrop-filter: this surface repeats eight times and blurring each one
+     makes mid-range phones stutter while scrolling. Over a dark gradient the
+     flat version is near-identical. */
+  background: var(--ab-glass);
+  border: 1px solid var(--ab-gold-line);
+  box-shadow: var(--ab-shadow);
+  transition: transform 0.4s var(--ab-ease), border-color 0.4s var(--ab-ease),
+    box-shadow 0.4s var(--ab-ease);
+}
+.about-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--ab-gold-line-hi);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 14%),
+    0 26px 55px -26px rgb(0 0 0 / 85%),
+    0 0 30px -12px rgb(194 157 104 / 45%);
+}
+/* Thin specular highlight along the top edge. */
+.about-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(180deg, rgb(255 255 255 / 12%), transparent 38%);
+}
+
+.about-card .about-figure {
+  border: 0;
+  border-radius: 0;
+  border-block-end: 1px solid var(--ab-gold-line);
+}
+.about-card-media {
+  position: relative;
+}
+/* Fades the image into the card body so the icon chip has something to sit on. */
+.about-card-media::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 55%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(8 13 22 / 92%));
+}
+
+.about-chip {
+  position: absolute;
+  z-index: 3;
+  inset-block-end: -1.4rem;
+  inset-inline-start: 1.15rem;
+  display: grid;
+  place-items: center;
+  inline-size: 2.8rem;
+  block-size: 2.8rem;
+  border-radius: 999px;
+  color: var(--ab-gold-bright);
+  border: 1px solid var(--ab-gold-line-hi);
+  background: radial-gradient(120% 120% at 50% 0%, rgb(31 45 69 / 95%), rgb(8 13 22 / 98%));
+  box-shadow: inset 0 1px 0 rgb(247 235 214 / 25%), 0 8px 22px -10px rgb(0 0 0 / 90%);
+}
+.about-chip svg {
+  inline-size: 1.35rem;
+  block-size: 1.35rem;
+}
+
+.about-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 2.25rem 1.15rem 1.5rem;
+}
+.about-card-title {
+  font-family: var(--ab-font-display);
+  font-weight: var(--ab-display-weight);
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: #fff;
+  text-wrap: balance;
+}
+.about-root[lang="en"] .about-card-title {
+  font-size: 1.22rem;
+  line-height: 1.3;
+}
+.about-card-text {
+  font-size: 0.84rem;
+  line-height: 1.95;
+  color: var(--ab-text-dim);
+}
+.about-root[lang="en"] .about-card-text {
+  line-height: 1.75;
+}
+
+/* ─────────────────────────────────────────────
+   Vision — quote
+───────────────────────────────────────────── */
+.about-quote {
+  position: relative;
+  max-inline-size: 46rem;
+  margin-inline: auto;
+  margin-block-start: 2.5rem;
+  padding: 1.75rem 1.5rem;
+  border-radius: 1.15rem;
+  border: 1px solid var(--ab-gold-line-hi);
+  background: linear-gradient(180deg, rgb(31 45 69 / 55%), rgb(8 12 20 / 75%));
+  box-shadow: inset 0 1px 0 rgb(247 235 214 / 18%),
+    0 0 34px -10px rgb(194 157 104 / 40%);
+  text-align: center;
+}
+@media (min-width: 640px) {
+  .about-quote { padding: 2.25rem 2.75rem; }
+}
+.about-quote p {
+  font-family: var(--ab-font-display);
+  font-weight: var(--ab-display-weight);
+  font-size: 1.02rem;
+  line-height: 1.95;
+  color: var(--ab-gold-bright);
+  text-wrap: balance;
+}
+.about-root[lang="en"] .about-quote p {
+  font-size: 1.35rem;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+/* ─────────────────────────────────────────────
+   Footer
+───────────────────────────────────────────── */
+.about-footer {
+  margin-block-start: 1.5rem;
+  padding-inline: 1.25rem;
+  padding-block: 3rem 2.5rem;
+  border-block-start: 1px solid var(--ab-hairline);
+  background: linear-gradient(180deg, transparent, rgb(5 8 14 / 70%));
+}
+.about-footer-inner {
+  max-inline-size: var(--ab-max);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  text-align: center;
+}
+.about-footer-name {
+  font-family: var(--ab-font-display);
+  font-weight: var(--ab-display-weight);
+  font-size: 1.1rem;
+}
+.about-footer-note {
+  font-size: 0.84rem;
+  line-height: 1.9;
+  color: var(--ab-text-faint);
+  max-inline-size: 34rem;
+}
+.about-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+/* ─────────────────────────────────────────────
+   Scroll entrance
+───────────────────────────────────────────── */
+[data-ab-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.8s var(--ab-ease), transform 0.8s var(--ab-ease);
+  transition-delay: var(--ab-delay, 0ms);
+}
+[data-ab-reveal="in"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Never leave content stranded invisible for users who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .about-root [data-ab-reveal],
+  .about-root [data-ab-reveal="in"] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .about-root *,
+  .about-root *::before,
+  .about-root *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+  .about-shell { transition: none; }
+  .about-card:hover { transform: none; }
+}
+
+
+.vision-img{
+  height:auto !important; 
+
+}
+ .vision-figure{
+overflow:visible !important;
+    margin-bottom:8rem !important;
+    }
+  @media(max-width: 768px) {
+    .vision-figure{
+
+    margin-bottom:2rem !important;
+    }
+  }

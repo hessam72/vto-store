@@ -1,0 +1,20 @@
+# Image slots for the About page (components/about).
+#
+# Drop files here with these exact names and they replace the labelled
+# placeholders automatically — no code change needed.
+#
+#   hero.webp                16:9   page hero
+#   mission.webp              3:4   mission band (4:3 on mobile)
+#   vision.webp              16:9   vision band
+#   service-showroom.webp     4:3
+#   service-product.webp      4:3
+#   service-realestate.webp   4:3
+#   service-automotive.webp   4:3
+#   service-jewelry.webp      4:3
+#   service-tryon.webp        4:3
+#   service-events.webp       4:3
+#   service-booking.webp      4:3
+#
+# NOTE next.config.mjs serves /images/* with Cache-Control: immutable,
+# max-age=31536000. Replacing a file AFTER it has been served needs a
+# filename bump — browsers will not revalidate it for a year.
