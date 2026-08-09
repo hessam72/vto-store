@@ -143,7 +143,7 @@ export default function Navigation() {
                 e.currentTarget.style.color = "rgba(255, 255, 255, 0.85)";
               }}
             >
-              تور مجازی
+              تجربه سه‌بعدی
               <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-transparent via-[#ffd700] to-transparent group-hover:w-full transition-all duration-500" style={{ boxShadow: "0 0 8px rgba(255, 215, 0, 0.6)" }} />
             </Link>
           </li>
