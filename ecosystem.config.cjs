@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "vto-store",
+      name: "vto-store-jewel",
       script: "node_modules/next/dist/bin/next",
       args: "start -p 3021",
       exec_mode: "fork",
