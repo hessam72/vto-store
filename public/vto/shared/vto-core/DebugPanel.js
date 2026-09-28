@@ -54,6 +54,10 @@ export class DebugPanel {
    * @param {Object} options.defaults - COMMON_DEFAULTS merged with the app's own.
    * @param {Array}  options.extra - [{ folder, key, args, name }] app-specific controls.
    * @param {Array}  options.readouts - [{ key, name, format }] solved values to display.
+   * @param {string[]} [options.omit] - Common controls that mean nothing for this
+   *   product (a pair of glasses has no bore and no roll about a limb).
+   * @param {Object} [options.labels] - { key: name } overrides for common controls
+   *   whose generic wording would mislead for this product.
    */
   constructor(options) {
     this.options = options;
@@ -121,7 +125,14 @@ export class DebugPanel {
   }
 
   add(folder, key, ...range) {
-    return folder.add(this.params, key, ...range).onChange(() => this.onChange());
+    // Callers chain .name(); omitted or relabelled controls get a stub whose
+    // .name() is a no-op, so the call sites stay unchanged.
+    if (this.options.omit?.includes(key)) return { name: () => null };
+    const controller = folder.add(this.params, key, ...range).onChange(() => this.onChange());
+    const label = this.options.labels?.[key];
+    if (!label) return controller;
+    controller.name(label);
+    return { name: () => controller };
   }
 
   onChange() {

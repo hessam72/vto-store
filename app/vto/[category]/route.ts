@@ -3,7 +3,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { getModelPath, Category } from '../models-config';
 
-const VALID_CATEGORIES = ['earrings', 'necklace', 'rings', 'watch'];
+const VALID_CATEGORIES = ['earrings', 'necklace', 'rings', 'watch', 'glasses'];
 
 // Load products data
 let productsData: Record<string, any> | null = null;
@@ -22,7 +22,8 @@ function getDefaultProductData(category: string) {
     earrings: { name: 'گوشواره', price: null, weight: null },
     necklace: { name: 'گردنبند', price: null, weight: null },
     rings: { name: 'انگشتر', price: null, weight: null },
-    watch: { name: 'ساعت', price: null, weight: null }
+    watch: { name: 'ساعت', price: null, weight: null },
+    glasses: { name: 'عینک', price: null, weight: null }
   };
   return defaults[category] || { name: 'محصول', price: null, weight: null };
 }

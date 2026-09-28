@@ -221,7 +221,9 @@ export class HandSolver {
       fPx,
       view,
       mirrorSign: this.options.mirror ? -1 : 1,
-      handedness: this.resolveHandedness(results)
+      handedness: this.resolveHandedness(results),
+      // Tracker-specific extras (the face tracker's rotation) for the anchor.
+      results
     };
   }
 

@@ -32,7 +32,7 @@ export default function ARPage() {
 
   useEffect(() => {
     // Validate category
-    const validCategories: Category[] = ['earrings', 'necklace', 'rings', 'watch']
+    const validCategories: Category[] = ['earrings', 'necklace', 'rings', 'watch', 'glasses']
     if (!validCategories.includes(category)) {
       setError('Invalid product category')
       return

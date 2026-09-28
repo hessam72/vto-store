@@ -120,7 +120,11 @@ export class ProductPositioner {
       handedness: pose.handedness,
       // Anchor-specific diagnostics pass straight through; undefined for anchors
       // that do not produce them.
-      axisDivergenceDeg: pose.axisDivergenceDeg
+      axisDivergenceDeg: pose.axisDivergenceDeg,
+      // Read by the bootstrap's tracking hint; dropping it here meant the
+      // necklace's "shoulders out of frame" warning could never fire.
+      shoulderVisibility: pose.shoulderVisibility,
+      diagnostics: pose.diagnostics
     };
   }
 

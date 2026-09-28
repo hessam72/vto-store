@@ -60,12 +60,17 @@ function applyBackCameraTransforms(tracker, videoElement, canvasElement, vtoCanv
  * @param {string} spec.label  - Name used in the startup logs.
  * @param {Function} [spec.tracker] - Tracker class owning the camera and the
  *   frame loop. Defaults to the hand landmarker; a torso-anchored product
- *   passes PoseLandmarkerTracker instead. The two are interchangeable here:
- *   same lifecycle, and both emit `{ landmarks[], worldLandmarks[] }`.
+ *   passes PoseLandmarkerTracker, a face-worn one FaceLandmarkerTracker. All
+ *   are interchangeable here: same lifecycle, and all emit
+ *   `{ landmarks[], worldLandmarks[] }`.
+ * @param {Function} [spec.scene] - Scene class. Defaults to VTOScene, which
+ *   fits a product around a limb; a product that is not a loop (glasses)
+ *   supplies a subclass with its own model fitting and occluder.
  * @returns {Promise<Object>} the app state, for debugging from the console.
  */
 export async function startVTO({
-  config, anchor, panel, label = 'VTO', tracker: TrackerClass = MediaPipeTracker
+  config, anchor, panel, label = 'VTO',
+  tracker: TrackerClass = MediaPipeTracker, scene: SceneClass = VTOScene
 }) {
   const app = {
     tracker: null,
@@ -83,7 +88,7 @@ export async function startVTO({
     const vtoCanvas = document.getElementById('VTOCanvas');
     const changeCameraBtn = document.getElementById('changeCamera');
 
-    app.scene = new VTOScene(vtoCanvas, config);
+    app.scene = new SceneClass(vtoCanvas, config);
     window.vtoUI?.setBootStage('در حال بارگذاری محصول…', 'مدل سه‌بعدی در حال آماده‌سازی است');
     await app.scene.loadModel();
     app.scene.addOccluder();

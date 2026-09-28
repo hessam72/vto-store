@@ -36,6 +36,18 @@ export const MODELS_CONFIG = {
       usdz: '/models/usdz/Ring.usdz',
     },
   },
+  glasses: {
+    default: {
+      glb: '/models/glasses/default.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
+    // Bundled WebAR.rocks frame (MIT), so the try-on works before a product
+    // model is added: /vto/glasses?model=demo
+    demo: {
+      glb: '/vto/glasses/assets/demo-glasses.glb',
+      usdz: '/models/usdz/Ring.usdz',
+    },
+  },
 } as const satisfies Record<string, ModelsMap>;
 
 export type Category = keyof typeof MODELS_CONFIG;

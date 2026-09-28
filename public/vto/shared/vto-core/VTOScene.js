@@ -25,7 +25,7 @@ const ANNULARITY_MIN = 0.25;
 const ANNULARITY_MARGIN = 1.6;
 
 /** Value at a percentile of an already-sorted array. */
-function percentile(sorted, fraction) {
+export function percentile(sorted, fraction) {
   if (sorted.length === 0) return 0;
   const index = Math.min(sorted.length - 1, Math.max(0, Math.round(fraction * (sorted.length - 1))));
   return sorted[index];
@@ -208,9 +208,11 @@ const BARYCENTRIC = [
  * plain triangle on the inner surface yields many samples, a thousand tiny
  * triangles of engraving yield about as many as their area deserves.
  *
+ * @param {Function} [include] - (mesh) => boolean; meshes it rejects are not
+ *   sampled, so non-product geometry bundled in a GLB cannot skew a measurement.
  * @returns {number[]|null} flat [x, y, z, ...] relative to `origin`.
  */
-function sampleSurface(model, origin, THREE) {
+export function sampleSurface(model, origin, THREE, include = null) {
   const triangles = [];
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
@@ -223,7 +225,7 @@ function sampleSurface(model, origin, THREE) {
   model.traverse((child) => {
     const geometry = child.isMesh && child.geometry;
     const position = geometry?.getAttribute('position');
-    if (!position) return;
+    if (!position || (include && !include(child))) return;
 
     const index = geometry.getIndex();
     const count = index ? index.count : position.count;

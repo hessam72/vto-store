@@ -84,6 +84,14 @@
     "weight": "120.0",
     "name_fa": "ساعت لوکس",
     "glbPath": "/models/watch/default.glb"
+  },
+  "glasses-classic": {
+    "category": "glasses",
+    "variant": "default",
+    "price": "4,500,000",
+    "weight": "28.0",
+    "name_fa": "عینک کلاسیک",
+    "glbPath": "/models/glasses/default.glb"
   }
 
 }

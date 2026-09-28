@@ -1,7 +1,7 @@
 /**
  * VTO shared UI kit.
  *
- * Owns every piece of chrome the four try-on apps put on screen: the top bar,
+ * Owns every piece of chrome the five try-on apps put on screen: the top bar,
  * the bottom dock, the product chip, the onboarding and detail sheets, the
  * capture/share flow, the error states and the tracking hint. An app supplies
  * its render layers and a handful of callbacks; nothing user-facing is built
@@ -55,7 +55,8 @@
     earrings: 'M9.5 5.2a2.5 2.5 0 0 1 5 0v3.1M14.5 8.8l4 5.4-4 6.3-4-6.3z',
     necklace: 'M4.5 3.5v3a7.5 7.5 0 0 0 15 0v-3M12 14.8a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2',
     rings: 'M12 21.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M12 8.5L8.6 6 12 2.5 15.4 6z',
-    watch: 'M12 18.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M12 8.8V12l2.2 1.3M8.8 6L9.3 2.5h5.4L15.2 6M8.8 18l.5 3.5h5.4l.5-3.5'
+    watch: 'M12 18.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M12 8.8V12l2.2 1.3M8.8 6L9.3 2.5h5.4L15.2 6M8.8 18l.5 3.5h5.4l.5-3.5',
+    glasses: 'M6.5 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M17.5 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M10 12.6c1.3-.9 2.7-.9 4 0M3 13V9.2l2.2-2.7M21 13V9.2l-2.2-2.7'
   };
 
   function icon(name, extraClass) {
@@ -132,6 +133,21 @@
         features: ['ضد آب', 'موتور ژاپنی', 'صفحه ضد خش'],
         care: 'از ضربه و رطوبت بالا پرهیز کنید',
         warranty: 'گارانتی ۲ ساله موتور'
+      }
+    },
+    glasses: {
+      icon: 'glasses',
+      title: 'عینک',
+      steps: [
+        { icon: 'person', text: 'صورت خود را روبه‌روی دوربین و در نور کافی قرار دهید' },
+        { icon: 'cameraSwitch', text: 'سر خود را آرام به چپ و راست بچرخانید تا فریم را از هر زاویه ببینید' }
+      ],
+      searching: 'صورت خود را در کادر دوربین قرار دهید',
+      details: {
+        material: 'فریم استات با عدسی ضد بازتاب',
+        features: ['محافظت UV400', 'لولای فنری', 'سبک و مقاوم'],
+        care: 'با دستمال میکروفایبر تمیز کنید و در کاور نگهداری شود',
+        warranty: 'گارانتی ۱ ساله فریم'
       }
     }
   };
@@ -245,6 +261,7 @@
       if (path.includes('/necklace')) return 'necklace';
       if (path.includes('/rings')) return 'rings';
       if (path.includes('/watch')) return 'watch';
+      if (path.includes('/glasses')) return 'glasses';
       return 'earrings';
     }
 
